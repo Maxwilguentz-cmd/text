@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSLIFE — Life Center</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+
+<style>
+/* ============================================================
+   DESIGN TOKENS — OSLIFE
+   Deep indigo-night ground, blue→green signature gradient for
+   Life Score, Sora for display (shared with the real app),
+   Inter for body, IBM Plex Mono for data/stats.
+============================================================= */
+:root{
+  --bg:#0B0F1A;
+  --bg-elevated:#10141F;
+  --surface:#141926;
+  --surface-2:#1A2030;
+  --border:#232A3B;
+  --border-soft:#1B2130;
+  --text:#EDEFF5;
+  --text-dim:#9AA3B8;
+  --text-faint:#5C6478;
+
+  --blue:#3E7BFA;
+  --blue-soft:rgba(62,123,250,.14);
+  --green:#2FBF87;
+  --green-soft:rgba(47,191,135,.14);
+  --orange:#F5A623;
+  --orange-soft:rgba(245,166,35,.14);
+  --red:#EF4444;
+  --red-soft:rgba(239,68,68,.14);
+
+  --gradient-life: linear-gradient(135deg, var(--blue), var(--green));
+
+  --radius-lg:20px;
+  --radius-md:14px;
+  --radius-sm:9px;
+
+  --font-display:'Sora', sans-serif;
+  --font-body:'Inter', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+
+  --shadow-card: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -12px rgba(0,0,0,.55);
+}
+
+[data-theme="light"]{
+  --bg:#F5F6FA;
+  --bg-elevated:#FFFFFF;
+  --surface:#FFFFFF;
+  --surface-2:#F0F1F6;
+  --border:#E4E6EF;
+  --border-soft:#ECEEF4;
+  --text:#161A24;
+  --text-dim:#5B6376;
+  --text-faint:#8A91A3;
+  --shadow-card: 0 1px 0 rgba(255,255,255,.6) inset, 0 12px 30px -14px rgba(20,24,40,.18);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:
+    radial-gradient(circle at 12% -10%, rgba(62,123,250,.10), transparent 40%),
+    radial-gradient(circle at 100% 0%, rgba(47,191,135,.07), transparent 35%),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  transition:background .3s ease, color .3s ease;
+}
+::selection{background:var(--blue-soft);color:var(--text);}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+a{color:inherit;text-decoration:none;}
+button{font-family:var(--font-body);}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px;}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+}
+
+.mono{font-family:var(--font-mono);}
+
+/* ---------------- LAYOUT SHELL ---------------- */
+.shell{
+  display:grid;
+  grid-template-columns:240px 1fr;
+  min-height:100vh;
+}
+
+/* ---------------- SIDEBAR ---------------- */
+.sidebar{
+  background:var(--bg-elevated);
+  border-right:1px solid var(--border);
+  padding:22px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+  position:sticky;
+  top:0;
+  height:100vh;
+}
+.brand{
+  display:flex;align-items:center;gap:10px;padding:0 8px;
+  font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:.2px;
+}
+.brand .mark{
+  width:30px;height:30px;border-radius:9px;
+  background:var(--gradient-life);
+  display:grid;place-items:center;color:#06110C;font-weight:800;font-size:13px;
+  box-shadow:0 4px 14px -4px rgba(62,123,250,.55);
+}
+.nav-group{display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto;}
+.nav-label{
+  font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--text-faint);
+  padding:14px 12px 6px;font-weight:600;
+}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--radius-sm);
+  color:var(--text-dim);font-size:13.5px;font-weight:500;cursor:pointer;position:relative;
+  transition:background .15s ease, color .15s ease;
+}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;stroke-width:2;}
+.nav-item:hover{background:var(--surface-2);color:var(--text);}
+.nav-item.active{background:var(--blue-soft);color:var(--blue);font-weight:600;}
+.nav-item.active::before{
+  content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);
+  width:3px;height:16px;border-radius:3px;background:var(--blue);
+}
+.sidebar-foot{
+  border-top:1px solid var(--border-soft);padding-top:14px;
+  display:flex;align-items:center;gap:10px;
+}
+.avatar{
+  width:32px;height:32px;border-radius:50%;background:var(--gradient-life);
+  display:grid;place-items:center;font-weight:700;font-size:12.5px;color:#06110C;flex-shrink:0;
+}
+.sidebar-foot .who{min-width:0;}
+.sidebar-foot .who b{display:block;font-size:12.5px;font-weight:600;}
+.sidebar-foot .who span{font-size:11px;color:var(--text-faint);}
+
+/* ---------------- MAIN ---------------- */
+.main{padding:22px 28px 60px;max-width:1180px;}
+
+.topbar{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px;flex-wrap:wrap;
+}
+.greeting h1{
+  font-family:var(--font-display);font-size:26px;font-weight:700;letter-spacing:-.2px;
+}
+.greeting p{color:var(--text-dim);font-size:13px;margin-top:4px;}
+.topbar-actions{display:flex;align-items:center;gap:8px;}
+
+.icon-btn{
+  width:36px;height:36px;border-radius:11px;border:1px solid var(--border);background:var(--surface);
+  color:var(--text-dim);display:grid;place-items:center;cursor:pointer;transition:.15s ease;
+}
+.icon-btn:hover{color:var(--text);border-color:var(--blue);}
+.icon-btn svg{width:16px;height:16px;}
+
+.btn{
+  display:inline-flex;align-items:center;gap:7px;border-radius:11px;border:1px solid transparent;
+  padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s ease;
+}
+.btn svg{width:15px;height:15px;}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 6px 16px -6px rgba(62,123,250,.55);}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-ghost{background:var(--surface);border-color:var(--border);color:var(--text-dim);}
+.btn-ghost:hover{color:var(--text);border-color:var(--blue);}
+
+/* ---------------- HERO ROW: LIFE SCORE + AI BRIEFING ---------------- */
+.hero-row{
+  display:grid;grid-template-columns:320px 1fr;gap:16px;margin-bottom:16px;
+}
+
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);
+  animation:rise .5s ease both;
+}
+@keyframes rise{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+.life-score-card{padding:22px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.life-score-card .label{
+  font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-faint);font-weight:600;
+  align-self:flex-start;
+}
+.dial-wrap{position:relative;width:150px;height:150px;}
+.dial-wrap svg{transform:rotate(-90deg);}
+.dial-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.dial-center .num{font-family:var(--font-mono);font-size:34px;font-weight:600;line-height:1;}
+.dial-center .sub{font-size:10.5px;color:var(--text-faint);margin-top:4px;letter-spacing:.4px;}
+
+.cat-grid{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;}
+.cat-row{display:flex;align-items:center;gap:8px;font-size:11.5px;}
+.cat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.cat-row .name{color:var(--text-dim);flex:1;}
+.cat-row .val{font-family:var(--font-mono);font-weight:600;}
+
+.briefing-card{padding:22px;display:flex;flex-direction:column;gap:14px;}
+.briefing-head{display:flex;align-items:center;gap:10px;}
+.briefing-head .ic{
+  width:34px;height:34px;border-radius:10px;background:var(--gradient-life);display:grid;place-items:center;
+  color:#06110C;flex-shrink:0;
+}
+.briefing-head .ic svg{width:17px;height:17px;}
+.briefing-head h3{font-family:var(--font-display);font-size:15px;font-weight:700;}
+.briefing-head span{font-size:11.5px;color:var(--text-faint);}
+.briefing-body{font-size:13.5px;line-height:1.65;color:var(--text-dim);}
+.briefing-body b{color:var(--text);font-weight:600;}
+.briefing-list{display:flex;flex-direction:column;gap:8px;margin-top:2px;}
+.briefing-list .item{display:flex;align-items:center;gap:9px;font-size:13px;}
+.briefing-list .item svg{width:14px;height:14px;flex-shrink:0;}
+.briefing-cta{margin-top:auto;}
+
+/* ---------------- WIDGET GRID ---------------- */
+.section-label{
+  font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-faint);font-weight:600;
+  margin:26px 2px 12px;
+}
+.widget-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;}
+
+.widget{padding:18px;display:flex;flex-direction:column;gap:12px;}
+.widget-head{display:flex;align-items:center;justify-content:space-between;}
+.widget-head .title{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;}
+.widget-head .title .ic{
+  width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;
+}
+.widget-head .title .ic svg{width:14px;height:14px;}
+.widget-head .more{color:var(--text-faint);cursor:pointer;}
+.widget-head .more svg{width:16px;height:16px;}
+
+.mini-progress{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;}
+.mini-progress span{display:block;height:100%;border-radius:99px;}
+
+.task-row{display:flex;align-items:center;gap:9px;font-size:12.5px;}
+.task-row .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.task-row .t{flex:1;color:var(--text-dim);}
+.task-row.done .t{text-decoration:line-through;color:var(--text-faint);}
+.tag{
+  font-size:9.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;
+  padding:2px 7px;border-radius:99px;
+}
+
+.habit-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.habit-cell{aspect-ratio:1;border-radius:6px;background:var(--surface-2);}
+.habit-cell.on{background:var(--green);}
+
+.stat-line{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-dim);}
+.stat-line b{font-family:var(--font-mono);color:var(--text);font-weight:600;}
+
+.widget-empty{
+  text-align:center;padding:16px 8px;color:var(--text-faint);font-size:12px;
+  border:1px dashed var(--border);border-radius:var(--radius-sm);
+}
+
+.widget.finance .title .ic{background:var(--blue-soft);color:var(--blue);}
+.widget.internet .title .ic{background:var(--orange-soft);color:var(--orange);}
+.widget.goals .title .ic{background:var(--green-soft);color:var(--green);}
+.widget.tasks .title .ic{background:var(--blue-soft);color:var(--blue);}
+.widget.habits .title .ic{background:var(--green-soft);color:var(--green);}
+.widget.learning .title .ic{background:var(--orange-soft);color:var(--orange);}
+
+/* ---------------- RECENT ACTIVITY ---------------- */
+.activity-card{padding:20px 22px;}
+.timeline{display:flex;flex-direction:column;}
+.tl-item{
+  display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:12.5px;
+}
+.tl-item:last-child{border-bottom:none;}
+.tl-dot{
+  width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;margin-top:1px;
+}
+.tl-dot svg{width:13px;height:13px;}
+.tl-text b{font-weight:600;}
+.tl-time{color:var(--text-faint);font-size:11px;margin-left:auto;white-space:nowrap;padding-left:10px;}
+
+/* ---------------- QUICK ACTIONS FAB + PANEL ---------------- */
+.fab{
+  position:fixed;bottom:26px;right:26px;width:52px;height:52px;border-radius:50%;
+  background:var(--gradient-life);color:#06110C;display:grid;place-items:center;cursor:pointer;
+  box-shadow:0 10px 26px -8px rgba(62,123,250,.6);z-index:60;transition:transform .2s ease;
+}
+.fab:hover{transform:scale(1.06);}
+.fab svg{width:22px;height:22px;}
+
+.qa-panel{
+  position:fixed;bottom:90px;right:26px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-md);box-shadow:0 20px 50px -18px rgba(0,0,0,.6);padding:10px;
+  display:none;flex-direction:column;gap:2px;z-index:60;width:210px;
+}
+.qa-panel.open{display:flex;animation:rise .18s ease both;}
+.qa-item{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);
+  font-size:12.5px;color:var(--text-dim);cursor:pointer;
+}
+.qa-item:hover{background:var(--surface-2);color:var(--text);}
+.qa-item svg{width:15px;height:15px;}
+
+/* ---------------- TOAST ---------------- */
+.toast{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--bg-elevated);border:1px solid var(--border);color:var(--text);
+  padding:11px 18px;border-radius:99px;font-size:12.5px;font-weight:500;
+  box-shadow:0 14px 30px -10px rgba(0,0,0,.5);opacity:0;pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease;z-index:80;display:flex;align-items:center;gap:8px;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast svg{width:15px;height:15px;color:var(--green);}
+
+/* ---------------- MOBILE ---------------- */
+@media (max-width: 900px){
+  .shell{grid-template-columns:1fr;}
+  .sidebar{
+    position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;width:100%;
+    flex-direction:row;padding:8px 10px;gap:0;z-index:70;border-right:none;border-top:1px solid var(--border);
+    justify-content:space-around;
+  }
+  .brand,.sidebar-foot,.nav-label{display:none;}
+  .nav-group{flex-direction:row;justify-content:space-around;flex:1;overflow:visible;}
+  .nav-item{flex-direction:column;gap:3px;padding:6px 8px;font-size:9.5px;}
+  .nav-item.active::before{display:none;}
+  .nav-item span{display:none;}
+  .main{padding:18px 16px 100px;}
+  .hero-row{grid-template-columns:1fr;}
+  .widget-grid{grid-template-columns:1fr;}
+  .habit-grid{grid-template-columns:repeat(7,1fr);}
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark">OS</span>
+      OSLIFE
+    </div>
+
+    <nav class="nav-group" id="navGroup"></nav>
+
+    <div class="sidebar-foot">
+      <div class="avatar">W</div>
+      <div class="who">
+        <b>Wilguentz</b>
+        <span>Pétion-Ville</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <div class="topbar">
+      <div class="greeting">
+        <h1 id="greetingText">Bonjou, Wilguentz 👋</h1>
+        <p id="dateText">Jodi a se ...</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="themeToggle" title="Chanje tèm" aria-label="Chanje tèm">
+          <i data-lucide="moon"></i>
+        </button>
+        <button class="icon-btn" title="Notifikasyon" aria-label="Notifikasyon">
+          <i data-lucide="bell"></i>
+        </button>
+        <button class="btn btn-primary" id="quickAddTop">
+          <i data-lucide="plus"></i> Aksyon Rapid
+        </button>
+      </div>
+    </div>
+
+    <!-- HERO: LIFE SCORE + AI BRIEFING -->
+    <div class="hero-row">
+      <div class="card life-score-card">
+        <span class="label">Life Score</span>
+        <div class="dial-wrap">
+          <svg width="150" height="150" viewBox="0 0 150 150">
+            <circle cx="75" cy="75" r="64" fill="none" stroke="var(--surface-2)" stroke-width="12"/>
+            <circle id="scoreArc" cx="75" cy="75" r="64" fill="none" stroke="url(#lifeGrad)"
+                    stroke-width="12" stroke-linecap="round"
+                    stroke-dasharray="402" stroke-dashoffset="402"/>
+            <defs>
+              <linearGradient id="lifeGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="var(--blue)"/>
+                <stop offset="100%" stop-color="var(--green)"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="dial-center">
+            <span class="num" id="scoreNum">0</span>
+            <span class="sub">sou 100</span>
+          </div>
+        </div>
+        <div class="cat-grid" id="catGrid"></div>
+      </div>
+
+      <div class="card briefing-card">
+        <div class="briefing-head">
+          <div class="ic"><i data-lucide="sparkles"></i></div>
+          <div>
+            <h3>Rezime AI Jodi a</h3>
+            <span>Prepare pou ou a 6:00 AM</span>
+          </div>
+        </div>
+        <p class="briefing-body">
+          Jodi a ou gen <b>3 travay enpòtan</b>, e plan entènèt ou ap fini nan
+          <b>2 jou</b>. Ou poko fè abitid ou jodi a, e ou gen
+          <b>45 minit aprantisaj</b> planifye pou apre midi.
+        </p>
+        <div class="briefing-list">
+          <div class="item"><i data-lucide="check-circle-2" style="color:var(--green)"></i> Objektif mwa a rive <b>65%</b> — kontinye konsa.</div>
+          <div class="item"><i data-lucide="flame" style="color:var(--orange)"></i> Ou gen yon <b>streak 10 jou</b> nan abitid ou yo.</div>
+          <div class="item"><i data-lucide="alert-triangle" style="color:var(--red)"></i> Plan entènèt ap ekspire byento — panse renouvle l.</div>
+        </div>
+        <div class="briefing-cta">
+          <button class="btn btn-ghost" id="startLessonBtn">
+            <i data-lucide="book-open"></i> Fè leson JavaScript ou anvan midi
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- WIDGET GRID -->
+    <div class="section-label">Apèsi Jodi a</div>
+    <div class="widget-grid">
+
+      <!-- TASKS -->
+      <div class="card widget tasks">
+        <div class="widget-head">
+          <div class="title"><span class="ic"><i data-lucide="check-square"></i></span> Travay</div>
+          <span class="more"><i data-lucide="more-horizontal"></i></span>
+        </div>
+        <div class="task-row">
+          <span class="dot" style="background:var(--red)"></span>
+          <span class="t">Fini pwopozisyon BWdepot la</span>
+          <span class="tag" style="background:var(--red-soft);color:var(--red)">Ijan</span>
+        </div>
+        <div class="task-row">
+          <span class="dot" style="background:var(--orange)"></span>
+          <span class="t">Reponn kliyan MW Store</span>
+          <span class="tag" style="background:var(--orange-soft);color:var(--orange)">Wo</span>
+        </div>
+        <div class="task-row done">
+          <span class="dot" style="background:var(--green)"></span>
+          <span class="t">Peye fakti entènèt</span>
+        </div>
+        <div class="stat-line"><span>Total jodi a</span><b>3</b></div>
+      </div>
+
+      <!-- HABITS -->
+      <div class="card widget habits">
+        <div class="widget-head">
+          <div class="title"><span class="ic"><i data-lucide="flame"></i></span> Abitid</div>
+          <span class="more"><i data-lucide="more-horizontal"></i></span>
+        </div>
+        <div class="habit-grid" id="habitGrid"></div>
+        <div class="stat-line"><span>Streak aktyèl</span><b>10 jou</b></div>
+      </div>
+
+      <!-- LEARNING -->
+      <div class="card widget learning">
+        <div class="widget-head">
+          <div class="title"><span class="ic"><i data-lucide="graduation-cap"></i></span> Aprantisaj</div>
+          <span class="more"><i data-lucide="more-horizontal"></i></span>
+        </div>
+        <div class="stat-line"><span>JavaScript — Fonksyon</span><b>62%</b></div>
+        <div class="mini-progress"><span style="width:62%;background:var(--orange)"></span></div>
+        <div class="stat-line"><span>XP jodi a</span><b>+120 XP</b></div>
+        <div class="stat-line"><span>Streak aprantisaj</span><b>6 jou</b></div>
+      </div>
+
+      <!-- FINANCE -->
+      <div class="card widget finance">
+        <div class="widget-head">
+          <div class="title"><span class="ic"><i data-lucide="wallet"></i></span> Finans</div>
+          <span class="more"><i data-lucide="more-horizontal"></i></span>
+        </div>
+        <div class="stat-line"><span>Balans aktyèl</span><b>12,450 HTG</b></div>
+        <div class="stat-line"><span>Depans mwa a</span><b>3,200 HTG</b></div>
+        <div class="stat-line"><span>Epay</span><b>4,000 HTG</b></div>
+        <div class="mini-progress"><span style="width:72%;background:var(--blue)"></span></div>
+        <div class="stat-line"><span>Bidjè itilize</span><b>72%</b></div>
+      </div>
+
+      <!-- INTERNET -->
+      <div class="card widget internet">
+        <div class="widget-head">
+          <div class="title"><span class="ic"><i data-lucide="wifi"></i></span> Plan Entènèt</div>
+          <span class="more"><i data-lucide="more-horizontal"></i></span>
+        </div>
+        <div class="stat-line"><span>Operatè</span><b>Digicel</b></div>
+        <div class="stat-line"><span>Plan</span><b>Illimix 30</b></div>
+        <div class="stat-line"><span>Rete</span><b style="color:var(--orange)">2 jou</b></div>
+        <div class="mini-progress"><span style="width:88%;background:var(--orange)"></span></div>
+        <button class="btn btn-ghost" style="margin-top:4px;justify-content:center;">
+          <i data-lucide="refresh-cw"></i> Renouvle Plan
+        </button>
+      </div>
+
+      <!-- GOALS -->
+      <div class="card widget goals">
+        <div class="widget-head">
+          <div class="title"><span class="ic"><i data-lucide="target"></i></span> Objektif</div>
+          <span class="more"><i data-lucide="more-horizontal"></i></span>
+        </div>
+        <div class="stat-line"><span>Lanse BWdepot v2</span><b>65%</b></div>
+        <div class="mini-progress"><span style="width:65%;background:var(--green)"></span></div>
+        <div class="stat-line"><span>Aprann React avanse</span><b>40%</b></div>
+        <div class="mini-progress"><span style="width:40%;background:var(--blue)"></span></div>
+        <div class="stat-line"><span style="color:var(--text-faint)">2 dat limit mwa sa a</span></div>
+      </div>
+
+    </div>
+
+    <!-- RECENT ACTIVITY -->
+    <div class="section-label">Aktivite Resan</div>
+    <div class="card activity-card">
+      <div class="timeline" id="timeline"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- QUICK ACTIONS -->
+<div class="qa-panel" id="qaPanel">
+  <div class="qa-item" data-msg="Nouvo travay ajoute ✓"><i data-lucide="check-square"></i> Ajoute travay</div>
+  <div class="qa-item" data-msg="Depans anrejistre ✓"><i data-lucide="wallet"></i> Ajoute depans</div>
+  <div class="qa-item" data-msg="Sesyon aprantisaj kòmanse ✓"><i data-lucide="graduation-cap"></i> Kòmanse aprann</div>
+  <div class="qa-item" data-msg="Nòt anrejistre ✓"><i data-lucide="notebook-pen"></i> Ajoute nòt</div>
+  <div class="qa-item" data-msg="Timer kòmanse ✓"><i data-lucide="timer"></i> Kòmanse Timer</div>
+  <div class="qa-item" data-msg="Abitid ajoute ✓"><i data-lucide="flame"></i> Ajoute abitid</div>
+</div>
+<button class="fab" id="fabBtn" aria-label="Aksyon rapid"><i data-lucide="plus"></i></button>
+<div class="toast" id="toast"><i data-lucide="check-circle-2"></i><span id="toastText"></span></div>
+
+<script>
+// ==========================================
+// NAVIGATION
+// ==========================================
+const NAV_ITEMS = [
+  { section: "Prensipal", items: [
+    { icon: "layout-dashboard", label: "Dashboard", active: true },
+    { icon: "calendar", label: "Kalandriye" },
+    { icon: "check-square", label: "Travay" },
+    { icon: "flame", label: "Abitid" },
+  ]},
+  { section: "Lavi", items: [
+    { icon: "wallet", label: "Finans" },
+    { icon: "graduation-cap", label: "Aprantisaj" },
+    { icon: "target", label: "Objektif" },
+    { icon: "folder-kanban", label: "Pwojè" },
+  ]},
+  { section: "Pèsonèl", items: [
+    { icon: "notebook-pen", label: "Nòt" },
+    { icon: "book-heart", label: "Jounal" },
+    { icon: "heart-pulse", label: "Sante" },
+    { icon: "wifi", label: "Entènèt" },
+  ]},
+  { section: "Sistèm", items: [
+    { icon: "bar-chart-3", label: "Estatistik" },
+    { icon: "sparkles", label: "Coach AI" },
+    { icon: "settings", label: "Paramèt" },
+  ]},
+];
+
+const navGroup = document.getElementById("navGroup");
+NAV_ITEMS.forEach(group => {
+  const label = document.createElement("div");
+  label.className = "nav-label";
+  label.textContent = group.section;
+  navGroup.appendChild(label);
+  group.items.forEach(item => {
+    const el = document.createElement("div");
+    el.className = "nav-item" + (item.active ? " active" : "");
+    el.title = item.label;
+    el.innerHTML = `<i data-lucide="${item.icon}"></i><span>${item.label}</span>`;
+    navGroup.appendChild(el);
+  });
+});
+
+// ==========================================
+// GREETING + CLOCK
+// ==========================================
+const MONTHS = ["Janvye","Fevriye","Mas","Avril","Me","Jen","Jiyè","Out","Septanm","Oktòb","Novanm","Desanm"];
+const DAYS = ["Dimanch","Lendi","Madi","Mèkredi","Jedi","Vandredi","Samdi"];
+
+function updateGreeting(){
+  const now = new Date();
+  const h = now.getHours();
+  const period = h < 12 ? "Bonjou" : h < 18 ? "Bon apremidi" : "Bonswa";
+  document.getElementById("greetingText").textContent = `${period}, Wilguentz 👋`;
+  document.getElementById("dateText").textContent =
+    `Jodi a se ${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]}`;
+}
+updateGreeting();
+setInterval(updateGreeting, 60_000);
+
+// ==========================================
+// LIFE SCORE DIAL
+// ==========================================
+const CATEGORIES = [
+  { key: "productivity", label: "Pwodiktivite", value: 78, color: "var(--blue)" },
+  { key: "learning", label: "Aprantisaj", value: 62, color: "var(--orange)" },
+  { key: "finance", label: "Finans", value: 55, color: "var(--blue)" },
+  { key: "health", label: "Sante", value: 70, color: "var(--green)" },
+  { key: "discipline", label: "Disiplin", value: 81, color: "var(--green)" },
+  { key: "goals", label: "Objektif", value: 65, color: "var(--orange)" },
+];
+const overall = Math.round(CATEGORIES.reduce((s,c)=>s+c.value,0) / CATEGORIES.length);
+
+const catGrid = document.getElementById("catGrid");
+CATEGORIES.forEach(c => {
+  const row = document.createElement("div");
+  row.className = "cat-row";
+  row.innerHTML = `<span class="cat-dot" style="background:${c.color}"></span>
+                    <span class="name">${c.label}</span>
+                    <span class="val">${c.value}</span>`;
+  catGrid.appendChild(row);
+});
+
+const CIRC = 2 * Math.PI * 64;
+const arc = document.getElementById("scoreArc");
+const numEl = document.getElementById("scoreNum");
+arc.style.strokeDasharray = `${CIRC}`;
+arc.style.strokeDashoffset = `${CIRC}`;
+requestAnimationFrame(() => {
+  arc.style.transition = "stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)";
+  arc.style.strokeDashoffset = `${CIRC * (1 - overall / 100)}`;
+});
+let displayed = 0;
+const step = () => {
+  displayed += Math.ceil((overall - displayed) / 6) || (overall > displayed ? 1 : 0);
+  if (displayed >= overall) displayed = overall;
+  numEl.textContent = displayed;
+  if (displayed < overall) requestAnimationFrame(step);
+};
+requestAnimationFrame(step);
+
+// ==========================================
+// HABIT GRID (last 7 days)
+// ==========================================
+const habitGrid = document.getElementById("habitGrid");
+[1,1,0,1,1,1,1].forEach(on => {
+  const cell = document.createElement("div");
+  cell.className = "habit-cell" + (on ? " on" : "");
+  habitGrid.appendChild(cell);
+});
+
+// ==========================================
+// RECENT ACTIVITY
+// ==========================================
+const ACTIVITY = [
+  { icon: "check-square", color: "var(--blue)", text: "Ou fini travay <b>“Peye fakti entènèt”</b>", time: "10 min" },
+  { icon: "graduation-cap", color: "var(--orange)", text: "Ou konplete leson <b>“Fonksyon Flèch”</b>", time: "1 è" },
+  { icon: "wallet", color: "var(--green)", text: "Ou ajoute yon depans <b>800 HTG</b>", time: "3 è" },
+  { icon: "flame", color: "var(--green)", text: "Ou fè abitid <b>“Li 20 min”</b> jodi a", time: "5 è" },
+  { icon: "target", color: "var(--blue)", text: "Objektif <b>“Lanse BWdepot v2”</b> monte a 65%", time: "Yè" },
+];
+const timeline = document.getElementById("timeline");
+ACTIVITY.forEach(a => {
+  const row = document.createElement("div");
+  row.className = "tl-item";
+  row.innerHTML = `
+    <div class="tl-dot" style="background:color-mix(in srgb, ${a.color} 16%, transparent); color:${a.color}">
+      <i data-lucide="${a.icon}"></i>
+    </div>
+    <div class="tl-text">${a.text}</div>
+    <div class="tl-time">${a.time}</div>`;
+  timeline.appendChild(row);
+});
+
+// ==========================================
+// THEME TOGGLE
+// ==========================================
+const themeToggle = document.getElementById("themeToggle");
+themeToggle.addEventListener("click", () => {
+  const body = document.body;
+  const isDark = body.getAttribute("data-theme") === "dark";
+  body.setAttribute("data-theme", isDark ? "light" : "dark");
+  themeToggle.innerHTML = `<i data-lucide="${isDark ? "sun" : "moon"}"></i>`;
+  lucide.createIcons();
+});
+
+// ==========================================
+// QUICK ACTIONS + TOAST
+// ==========================================
+const fabBtn = document.getElementById("fabBtn");
+const qaPanel = document.getElementById("qaPanel");
+const quickAddTop = document.getElementById("quickAddTop");
+const toast = document.getElementById("toast");
+const toastText = document.getElementById("toastText");
+
+function toggleQaPanel(){ qaPanel.classList.toggle("open"); }
+fabBtn.addEventListener("click", toggleQaPanel);
+quickAddTop.addEventListener("click", toggleQaPanel);
+
+function showToast(msg){
+  toastText.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove("show"), 2400);
+}
+
+qaPanel.querySelectorAll(".qa-item").forEach(item => {
+  item.addEventListener("click", () => {
+    showToast(item.dataset.msg);
+    qaPanel.classList.remove("open");
+  });
+});
+
+document.getElementById("startLessonBtn").addEventListener("click", () => {
+  showToast("Sesyon JavaScript kòmanse — bon travay! ✓");
+});
+
+document.addEventListener("click", (e) => {
+  if (!qaPanel.contains(e.target) && e.target !== fabBtn && e.target !== quickAddTop && !quickAddTop.contains(e.target) && !fabBtn.contains(e.target)) {
+    qaPanel.classList.remove("open");
+  }
+});
+
+// init icons (after dynamic content is in the DOM)
+if (window.lucide) lucide.createIcons();
+else window.addEventListener("load", () => window.lucide && lucide.createIcons());
+</script>
+</body>
+</html>
