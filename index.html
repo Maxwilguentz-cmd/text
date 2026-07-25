@@ -1,0 +1,3222 @@
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSLIFE — Life Center</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+
+<style>
+/* ============================================================
+   DESIGN TOKENS — OSLIFE
+============================================================= */
+:root{
+  --bg:#0B0F1A;
+  --bg-elevated:#10141F;
+  --surface:#141926;
+  --surface-2:#1A2030;
+  --border:#232A3B;
+  --border-soft:#1B2130;
+  --text:#EDEFF5;
+  --text-dim:#9AA3B8;
+  --text-faint:#5C6478;
+
+  --blue:#3E7BFA;
+  --blue-soft:rgba(62,123,250,.14);
+  --green:#2FBF87;
+  --green-soft:rgba(47,191,135,.14);
+  --orange:#F5A623;
+  --orange-soft:rgba(245,166,35,.14);
+  --red:#EF4444;
+  --red-soft:rgba(239,68,68,.14);
+
+  --gradient-life: linear-gradient(135deg, var(--blue), var(--green));
+
+  --radius-lg:20px;
+  --radius-md:14px;
+  --radius-sm:9px;
+
+  --font-display:'Sora', sans-serif;
+  --font-body:'Inter', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
+
+  --shadow-card: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -12px rgba(0,0,0,.55);
+}
+
+[data-theme="light"]{
+  --bg:#F5F6FA;
+  --bg-elevated:#FFFFFF;
+  --surface:#FFFFFF;
+  --surface-2:#F0F1F6;
+  --border:#E4E6EF;
+  --border-soft:#ECEEF4;
+  --text:#161A24;
+  --text-dim:#5B6376;
+  --text-faint:#8A91A3;
+  --shadow-card: 0 1px 0 rgba(255,255,255,.6) inset, 0 12px 30px -14px rgba(20,24,40,.18);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:
+    radial-gradient(circle at 12% -10%, rgba(62,123,250,.10), transparent 40%),
+    radial-gradient(circle at 100% 0%, rgba(47,191,135,.07), transparent 35%),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  transition:background .3s ease, color .3s ease;
+}
+::selection{background:var(--blue-soft);color:var(--text);}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+a{color:inherit;text-decoration:none;}
+button{font-family:var(--font-body);}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px;}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+}
+.mono{font-family:var(--font-mono);}
+
+/* ---------------- LAYOUT SHELL ---------------- */
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+
+/* ---------------- SIDEBAR ---------------- */
+.sidebar{
+  background:var(--bg-elevated);border-right:1px solid var(--border);padding:22px 14px;
+  display:flex;flex-direction:column;gap:22px;position:sticky;top:0;height:100vh;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px;font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:.2px;}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;font-weight:800;font-size:13px;box-shadow:0 4px 14px -4px rgba(62,123,250,.55);}
+.nav-group{display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto;}
+.nav-label{font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--text-faint);padding:14px 12px 6px;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--radius-sm);color:var(--text-dim);font-size:13.5px;font-weight:500;cursor:pointer;position:relative;transition:background .15s ease, color .15s ease;}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;stroke-width:2;}
+.nav-item:hover{background:var(--surface-2);color:var(--text);}
+.nav-item.active{background:var(--blue-soft);color:var(--blue);font-weight:600;}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:16px;border-radius:3px;background:var(--blue);}
+.sidebar-foot{border-top:1px solid var(--border-soft);padding-top:14px;display:flex;align-items:center;gap:10px;}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient-life);display:grid;place-items:center;font-weight:700;font-size:12.5px;color:#06110C;flex-shrink:0;}
+.sidebar-foot .who{min-width:0;}
+.sidebar-foot .who b{display:block;font-size:12.5px;font-weight:600;}
+.sidebar-foot .who span{font-size:11px;color:var(--text-faint);}
+
+/* ---------------- MAIN ---------------- */
+.main{padding:22px 28px 60px;max-width:1180px;}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px;flex-wrap:wrap;}
+.greeting h1{font-family:var(--font-display);font-size:26px;font-weight:700;letter-spacing:-.2px;}
+.greeting p{color:var(--text-dim);font-size:13px;margin-top:4px;}
+.topbar-actions{display:flex;align-items:center;gap:8px;}
+.icon-btn{width:36px;height:36px;border-radius:11px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);display:grid;place-items:center;cursor:pointer;transition:.15s ease;}
+.icon-btn:hover{color:var(--text);border-color:var(--blue);}
+.icon-btn svg{width:16px;height:16px;}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:11px;border:1px solid transparent;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s ease;}
+.btn svg{width:15px;height:15px;}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 6px 16px -6px rgba(62,123,250,.55);}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-ghost{background:var(--surface);border-color:var(--border);color:var(--text-dim);}
+.btn-ghost:hover{color:var(--text);border-color:var(--blue);}
+
+/* ---------------- VIEWS ---------------- */
+.view[hidden]{display:none;}
+.view-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.view-head h2{font-family:var(--font-display);font-size:22px;font-weight:700;}
+
+/* ---------------- HERO ROW ---------------- */
+.hero-row{display:grid;grid-template-columns:320px 1fr;gap:16px;margin-bottom:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);animation:rise .5s ease both;}
+@keyframes rise{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+.life-score-card{padding:22px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.life-score-card .label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-faint);font-weight:600;align-self:flex-start;}
+.dial-wrap{position:relative;width:150px;height:150px;}
+.dial-wrap svg{transform:rotate(-90deg);}
+.dial-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.dial-center .num{font-family:var(--font-mono);font-size:34px;font-weight:600;line-height:1;}
+.dial-center .sub{font-size:10.5px;color:var(--text-faint);margin-top:4px;letter-spacing:.4px;}
+.cat-grid{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;}
+.cat-row{display:flex;align-items:center;gap:8px;font-size:11.5px;}
+.cat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.cat-row .name{color:var(--text-dim);flex:1;}
+.cat-row .val{font-family:var(--font-mono);font-weight:600;}
+.briefing-card{padding:22px;display:flex;flex-direction:column;gap:14px;}
+.briefing-head{display:flex;align-items:center;gap:10px;}
+.briefing-head .ic{width:34px;height:34px;border-radius:10px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;flex-shrink:0;}
+.briefing-head .ic svg{width:17px;height:17px;}
+.briefing-head h3{font-family:var(--font-display);font-size:15px;font-weight:700;}
+.briefing-head span{font-size:11.5px;color:var(--text-faint);}
+.briefing-body{font-size:13.5px;line-height:1.65;color:var(--text-dim);}
+.briefing-body b{color:var(--text);font-weight:600;}
+.briefing-list{display:flex;flex-direction:column;gap:8px;margin-top:2px;}
+.briefing-list .item{display:flex;align-items:center;gap:9px;font-size:13px;}
+.briefing-list .item svg{width:14px;height:14px;flex-shrink:0;}
+.briefing-cta{margin-top:auto;}
+
+/* ---------------- WIDGET GRID ---------------- */
+.section-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-faint);font-weight:600;margin:26px 2px 12px;}
+.widget-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;}
+.widget{padding:18px;display:flex;flex-direction:column;gap:12px;}
+.widget-head{display:flex;align-items:center;justify-content:space-between;}
+.widget-head .title{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;}
+.widget-head .title .ic{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;}
+.widget-head .title .ic svg{width:14px;height:14px;}
+.widget-head .more{color:var(--text-faint);cursor:pointer;}
+.widget-head .more svg{width:16px;height:16px;}
+.mini-progress{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;}
+.mini-progress span{display:block;height:100%;border-radius:99px;}
+.task-row{display:flex;align-items:center;gap:9px;font-size:12.5px;}
+.task-row .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.task-row .t{flex:1;color:var(--text-dim);}
+.task-row.done .t{text-decoration:line-through;color:var(--text-faint);}
+.tag{font-size:9.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding:2px 7px;border-radius:99px;}
+.habit-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.habit-cell{aspect-ratio:1;border-radius:6px;background:var(--surface-2);}
+.habit-cell.on{background:var(--green);}
+.stat-line{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-dim);}
+.stat-line b{font-family:var(--font-mono);color:var(--text);font-weight:600;}
+.widget-empty{text-align:center;padding:16px 8px;color:var(--text-faint);font-size:12px;border:1px dashed var(--border);border-radius:var(--radius-sm);}
+.widget.finance .title .ic{background:var(--blue-soft);color:var(--blue);}
+.widget.internet .title .ic{background:var(--orange-soft);color:var(--orange);}
+.widget.goals .title .ic{background:var(--green-soft);color:var(--green);}
+.widget.tasks .title .ic{background:var(--blue-soft);color:var(--blue);}
+.widget.habits .title .ic{background:var(--green-soft);color:var(--green);}
+.widget.learning .title .ic{background:var(--orange-soft);color:var(--orange);}
+
+/* ---------------- RECENT ACTIVITY ---------------- */
+.activity-card{padding:20px 22px;}
+.timeline{display:flex;flex-direction:column;}
+.tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:12.5px;}
+.tl-item:last-child{border-bottom:none;}
+.tl-dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;margin-top:1px;}
+.tl-dot svg{width:13px;height:13px;}
+.tl-text b{font-weight:600;}
+.tl-time{color:var(--text-faint);font-size:11px;margin-left:auto;white-space:nowrap;padding-left:10px;}
+
+/* ---------------- TOOLBAR / FORM CONTROLS (shared) ---------------- */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:center;}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:8px 12px;flex:1;min-width:180px;}
+.search-box svg{width:15px;height:15px;color:var(--text-faint);flex-shrink:0;}
+.search-box input{border:none;background:transparent;color:var(--text);font-size:13px;outline:none;flex:1;font-family:var(--font-body);}
+select.field, .field-input{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text);font-size:12.5px;font-family:var(--font-body);}
+
+/* ---------------- TASKS: KANBAN ---------------- */
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:14px;overflow-x:auto;padding-bottom:10px;}
+.kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;min-height:140px;display:flex;flex-direction:column;gap:10px;}
+.kanban-col-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text-dim);}
+.kanban-col-head .count{font-family:var(--font-mono);background:var(--surface-2);border-radius:99px;padding:1px 8px;font-size:11px;}
+.kanban-list{display:flex;flex-direction:column;gap:8px;min-height:44px;border-radius:10px;transition:.15s;}
+.kanban-list.drag-over{outline:2px dashed var(--blue);outline-offset:2px;background:var(--blue-soft);}
+.task-card{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:10px 11px;font-size:12.5px;cursor:grab;display:flex;flex-direction:column;gap:6px;transition:.15s;}
+.task-card:hover{border-color:var(--blue);}
+.task-card:active{cursor:grabbing;}
+.task-card .tc-title{font-weight:600;color:var(--text);}
+.task-card .tc-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+.task-card .tc-sub{font-size:10.5px;color:var(--text-faint);display:flex;align-items:center;gap:4px;}
+.pill{font-size:9.5px;font-weight:700;letter-spacing:.2px;text-transform:uppercase;padding:2px 7px;border-radius:99px;}
+.task-stats{display:flex;gap:22px;flex-wrap:wrap;margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 18px;}
+.task-stats .st{display:flex;flex-direction:column;gap:2px;}
+.task-stats .st b{font-family:var(--font-mono);font-size:17px;}
+.task-stats .st span{font-size:10.5px;color:var(--text-faint);}
+
+/* ---------------- MODALS (shared) ---------------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(5,7,12,.6);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:540px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 30px 70px -20px rgba(0,0,0,.6);animation:rise .2s ease both;}
+.modal.narrow{max-width:440px;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-soft);}
+.modal-head h3{font-family:var(--font-display);font-size:16px;}
+.modal-body{padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.modal-body label{font-size:11px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:-6px;display:block;}
+.modal-body input[type=text],.modal-body input[type=datetime-local],.modal-body input[type=date],.modal-body input[type=time],.modal-body input[type=number],.modal-body textarea,.modal-body select,.modal-body input:not([type]){
+  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--text);font-size:13px;font-family:var(--font-body);
+}
+.modal-body input[type=file]{font-size:11.5px;color:var(--text-dim);}
+.modal-body textarea{resize:vertical;min-height:60px;font-family:var(--font-body);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.form-row.three{grid-template-columns:1fr 1fr 1fr;}
+.chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-dim);text-transform:none;letter-spacing:0;font-weight:500;}
+.chk input{width:auto;}
+.modal-foot{display:flex;justify-content:space-between;gap:10px;padding:14px 20px;border-top:1px solid var(--border-soft);flex-wrap:wrap;}
+.subtask-row{display:flex;align-items:center;gap:8px;}
+.subtask-row input[type=text]{flex:1;}
+.subtask-row .rm{cursor:pointer;color:var(--text-faint);flex-shrink:0;}
+.subtask-row .rm:hover{color:var(--red);}
+.attach-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border-radius:99px;padding:4px 10px;font-size:11.5px;margin:2px 4px 2px 0;color:var(--text-dim);}
+.attach-chip .rm{cursor:pointer;}
+.attach-chip .rm:hover{color:var(--red);}
+
+/* ---------------- CALENDAR ---------------- */
+.cal-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+.cal-nav{display:flex;align-items:center;gap:8px;}
+.cal-title{font-family:var(--font-display);font-size:17px;font-weight:700;min-width:170px;}
+.cal-views{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:3px;}
+.cal-view-btn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;}
+.cal-view-btn.active{background:var(--blue);color:#fff;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cal-dow{font-size:10.5px;color:var(--text-faint);text-align:center;font-weight:600;text-transform:uppercase;padding-bottom:4px;}
+.cal-cell{background:var(--surface);border:1px solid var(--border);border-radius:10px;min-height:92px;padding:7px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:.15s;}
+.cal-cell:hover{border-color:var(--blue);}
+.cal-cell.other{opacity:.35;}
+.cal-cell.today{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset;}
+.cal-cell .dnum{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);}
+.cal-evt{font-size:10px;padding:2px 6px;border-radius:6px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cal-week-cols{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.cal-week-col{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;min-height:170px;cursor:pointer;transition:.15s;}
+.cal-week-col:hover{border-color:var(--blue);}
+.cal-week-col h4{font-size:11px;color:var(--text-faint);text-transform:uppercase;margin-bottom:8px;}
+.cal-day-list, .agenda-list{display:flex;flex-direction:column;gap:8px;}
+.agenda-group{margin-bottom:14px;}
+.agenda-group h4{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.evt-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12.5px;cursor:pointer;transition:.15s;}
+.evt-row:hover{border-color:var(--blue);}
+.evt-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.evt-row .time{font-family:var(--font-mono);color:var(--text-faint);font-size:11px;min-width:44px;flex-shrink:0;}
+.evt-row .info{flex:1;min-width:0;}
+.evt-row .info b{font-weight:600;}
+.evt-row .info span{display:block;color:var(--text-faint);font-size:11px;}
+.ai-suggest{display:flex;align-items:center;gap:12px;background:var(--gradient-life);border-radius:var(--radius-md);padding:14px 16px;color:#06110C;margin-bottom:16px;}
+.ai-suggest svg{width:20px;height:20px;flex-shrink:0;}
+.ai-suggest b{display:block;font-size:13px;}
+.ai-suggest span{font-size:11.5px;opacity:.85;}
+
+/* ---------------- FAB / TOAST ---------------- */
+.fab{position:fixed;bottom:26px;right:26px;width:52px;height:52px;border-radius:50%;background:var(--gradient-life);color:#06110C;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 26px -8px rgba(62,123,250,.6);z-index:60;transition:transform .2s ease;}
+.fab:hover{transform:scale(1.06);}
+.fab svg{width:22px;height:22px;}
+.qa-panel{position:fixed;bottom:90px;right:26px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 20px 50px -18px rgba(0,0,0,.6);padding:10px;display:none;flex-direction:column;gap:2px;z-index:60;width:210px;}
+.qa-panel.open{display:flex;animation:rise .18s ease both;}
+.qa-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);font-size:12.5px;color:var(--text-dim);cursor:pointer;}
+.qa-item:hover{background:var(--surface-2);color:var(--text);}
+.qa-item svg{width:15px;height:15px;}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-elevated);border:1px solid var(--border);color:var(--text);padding:11px 18px;border-radius:99px;font-size:12.5px;font-weight:500;box-shadow:0 14px 30px -10px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;z-index:80;display:flex;align-items:center;gap:8px;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast svg{width:15px;height:15px;color:var(--green);}
+
+/* ---------------- HABITS ---------------- */
+.habit-list{display:flex;flex-direction:column;gap:12px;}
+.habit-item{padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+.habit-item-head{display:flex;align-items:center;gap:12px;}
+.habit-item-head .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex-shrink:0;}
+.habit-item-head .ic svg{width:18px;height:18px;}
+.habit-item-head .info{flex:1;min-width:0;}
+.habit-item-head .info b{font-size:13.5px;font-weight:700;display:block;}
+.habit-item-head .info span{font-size:11px;color:var(--text-faint);}
+.habit-check{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);display:grid;place-items:center;cursor:pointer;flex-shrink:0;color:transparent;transition:.15s;}
+.habit-check svg{width:16px;height:16px;}
+.habit-check.checked{background:var(--green);border-color:var(--green);color:#06110C;}
+.habit-stats-row{display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--text-dim);}
+.habit-stats-row b{font-family:var(--font-mono);color:var(--text);}
+.heatmap{display:grid;grid-template-columns:repeat(26,1fr);gap:3px;}
+.heatmap .hcell{aspect-ratio:1;border-radius:3px;background:var(--surface-2);}
+.hb-lvl-0{background:var(--surface-2);}
+.hb-lvl-1{background:color-mix(in srgb, var(--green) 30%, var(--surface-2));}
+.hb-lvl-2{background:color-mix(in srgb, var(--green) 60%, var(--surface-2));}
+.hb-lvl-3{background:var(--green);}
+.xp-bar-wrap{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:16px;}
+.xp-badge{width:40px;height:40px;border-radius:11px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;flex-shrink:0;font-family:var(--font-mono);font-weight:700;font-size:12px;}
+.xp-info{flex:1;}
+.xp-info .row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-dim);margin-bottom:5px;}
+.xp-info .row b{color:var(--text);font-family:var(--font-mono);}
+.badge-chip{display:inline-flex;align-items:center;gap:5px;background:var(--orange-soft);color:var(--orange);border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:700;}
+
+/* ---------------- FINANCE ---------------- */
+.wallet-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+.wallet-card{padding:14px 16px;display:flex;flex-direction:column;gap:6px;cursor:pointer;}
+.wallet-card:hover{border-color:var(--blue);}
+.wallet-card .wname{font-size:11.5px;color:var(--text-faint);}
+.wallet-card .wbal{font-family:var(--font-mono);font-size:17px;font-weight:600;}
+.finance-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start;}
+.tx-list{display:flex;flex-direction:column;}
+.tx-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:12.5px;cursor:pointer;}
+.tx-row:last-child{border-bottom:none;}
+.tx-row .tic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;}
+.tx-row .tic svg{width:15px;height:15px;}
+.tx-row .info{flex:1;min-width:0;}
+.tx-row .info b{font-weight:600;display:block;}
+.tx-row .info span{color:var(--text-faint);font-size:11px;}
+.tx-row .amt{font-family:var(--font-mono);font-weight:600;white-space:nowrap;}
+.amt.income{color:var(--green);}
+.amt.expense{color:var(--red);}
+.budget-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.budget-row .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);}
+.budget-row .lbl b{color:var(--text);font-family:var(--font-mono);}
+.chart-card{padding:18px;}
+.chart-card h4{font-family:var(--font-display);font-size:13.5px;margin-bottom:12px;}
+.legend{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+.legend .lg-row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-dim);}
+.legend .lg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.legend .lg-row b{margin-left:auto;font-family:var(--font-mono);color:var(--text);}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:10px;}
+.bar-chart .bc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.bar-chart .bc-fill{width:100%;border-radius:5px 5px 0 0;background:var(--blue);min-height:3px;}
+.bar-chart .bc-lbl{font-size:9.5px;color:var(--text-faint);}
+
+/* ---------------- INTERNET / PLANS ---------------- */
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+.plan-card{padding:16px 18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;}
+.plan-card:hover{border-color:var(--blue);}
+.plan-card-head{display:flex;align-items:center;gap:10px;}
+.plan-card-head .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;background:var(--orange-soft);color:var(--orange);}
+.plan-card-head .ic svg{width:17px;height:17px;}
+.plan-card-head .info{flex:1;min-width:0;}
+.plan-card-head .info b{font-size:13.5px;font-weight:700;display:block;}
+.plan-card-head .info span{font-size:11px;color:var(--text-faint);}
+.plan-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.plan-progress-row{display:flex;flex-direction:column;gap:5px;}
+.plan-progress-row .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);}
+.plan-progress-row .lbl b{font-family:var(--font-mono);color:var(--text);}
+.plan-foot{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--text-faint);}
+.plan-foot b{color:var(--text);font-family:var(--font-mono);}
+.plan-stats{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 18px;}
+.plan-stats .st{display:flex;flex-direction:column;gap:2px;}
+.plan-stats .st b{font-family:var(--font-mono);font-size:17px;}
+.plan-stats .st span{font-size:10.5px;color:var(--text-faint);}
+
+/* ---------------- NOTES ---------------- */
+.notes-layout{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start;}
+.notes-folders{padding:14px;display:flex;flex-direction:column;gap:8px;}
+.nf-head{display:flex;align-items:center;justify-content:space-between;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-faint);font-weight:700;}
+.nf-head svg{width:15px;height:15px;color:var(--text-dim);}
+.folder-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--radius-sm);font-size:12.5px;color:var(--text-dim);cursor:pointer;}
+.folder-item:hover{background:var(--surface-2);color:var(--text);}
+.folder-item.active{background:var(--blue-soft);color:var(--blue);font-weight:600;}
+.folder-item .cnt{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);}
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;align-content:start;}
+.note-card{padding:14px 16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;position:relative;}
+.note-card:hover{border-color:var(--blue);}
+.note-card .nc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;}
+.note-card .nc-title{font-size:13.5px;font-weight:700;flex:1;min-width:0;}
+.note-card .nc-pin{width:14px;height:14px;color:var(--orange);flex-shrink:0;}
+.note-card .nc-snippet{font-size:12px;color:var(--text-dim);line-height:1.5;max-height:54px;overflow:hidden;}
+.note-card .nc-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:2px;}
+.note-card .nc-date{font-size:10.5px;color:var(--text-faint);margin-left:auto;}
+.tag-pill{font-size:9.5px;font-weight:700;background:var(--surface-2);color:var(--text-dim);padding:2px 7px;border-radius:99px;}
+.empty-note{grid-column:1/-1;text-align:center;padding:34px 8px;color:var(--text-faint);font-size:12.5px;border:1px dashed var(--border);border-radius:var(--radius-md);}
+
+.rt-toolbar{display:flex;flex-wrap:wrap;gap:3px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px 10px 0 0;padding:6px;}
+.rt-toolbar button{width:28px;height:28px;border-radius:7px;border:none;background:transparent;color:var(--text-dim);display:grid;place-items:center;cursor:pointer;}
+.rt-toolbar button:hover{background:var(--surface);color:var(--text);}
+.rt-toolbar svg{width:14px;height:14px;}
+.rt-sep{width:1px;background:var(--border);margin:3px 4px;}
+.rt-body{border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:12px 14px;min-height:220px;max-height:400px;overflow-y:auto;font-size:13.5px;line-height:1.65;color:var(--text);}
+.rt-body:focus{outline:none;border-color:var(--blue);}
+.rt-body:empty:before{content:attr(data-placeholder);color:var(--text-faint);}
+.rt-body h2{font-family:var(--font-display);font-size:17px;margin:8px 0;}
+.rt-body blockquote{border-left:3px solid var(--blue);padding-left:12px;color:var(--text-dim);margin:8px 0;}
+.rt-body pre{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--font-mono);font-size:12px;overflow-x:auto;margin:8px 0;white-space:pre-wrap;}
+.rt-body table{border-collapse:collapse;width:100%;margin:8px 0;}
+.rt-body td,.rt-body th{border:1px solid var(--border);padding:6px 8px;font-size:12.5px;}
+.rt-body img{max-width:100%;border-radius:8px;margin:6px 0;}
+.rt-body ul,.rt-body ol{padding-left:20px;margin:6px 0;}
+.modal.wide{max-width:680px;}
+
+/* ---------------- PROJECTS ---------------- */
+.project-card .tc-files{display:flex;align-items:center;gap:4px;}
+
+/* ---------------- MOBILE ---------------- */
+@media (max-width: 900px){
+  .shell{grid-template-columns:1fr;}
+  .sidebar{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;width:100%;flex-direction:row;padding:8px 10px;gap:0;z-index:70;border-right:none;border-top:1px solid var(--border);justify-content:space-around;}
+  .brand,.sidebar-foot,.nav-label{display:none;}
+  .nav-group{flex-direction:row;justify-content:space-around;flex:1;overflow:visible;}
+  .nav-item{flex-direction:column;gap:3px;padding:6px 8px;font-size:9.5px;}
+  .nav-item.active::before{display:none;}
+  .nav-item span{display:none;}
+  .main{padding:18px 16px 100px;}
+  .hero-row{grid-template-columns:1fr;}
+  .widget-grid{grid-template-columns:1fr;}
+  .kanban{grid-template-columns:1fr;}
+  .cal-week-cols{grid-template-columns:1fr;}
+  .form-row,.form-row.three{grid-template-columns:1fr;}
+  .finance-grid{grid-template-columns:1fr;}
+  .plan-grid{grid-template-columns:1fr;}
+  .notes-layout{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand"><span class="mark">OS</span>OSLIFE</div>
+    <nav class="nav-group" id="navGroup"></nav>
+    <div class="sidebar-foot">
+      <div class="avatar">W</div>
+      <div class="who"><b>Wilguentz</b><span>Pétion-Ville</span></div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <div class="topbar">
+      <div class="greeting">
+        <h1 id="greetingText">Bonjou, Wilguentz 👋</h1>
+        <p id="dateText">Jodi a se ...</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="themeToggle" title="Chanje tèm" aria-label="Chanje tèm"><i data-lucide="moon"></i></button>
+        <button class="icon-btn" title="Notifikasyon" aria-label="Notifikasyon"><i data-lucide="bell"></i></button>
+        <button class="btn btn-primary" id="quickAddTop"><i data-lucide="plus"></i> Aksyon Rapid</button>
+      </div>
+    </div>
+
+    <!-- ================= DASHBOARD VIEW ================= -->
+    <section class="view" id="view-dashboard">
+      <div class="hero-row">
+        <div class="card life-score-card">
+          <span class="label">Life Score</span>
+          <div class="dial-wrap">
+            <svg width="150" height="150" viewBox="0 0 150 150">
+              <circle cx="75" cy="75" r="64" fill="none" stroke="var(--surface-2)" stroke-width="12"/>
+              <circle id="scoreArc" cx="75" cy="75" r="64" fill="none" stroke="url(#lifeGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="402" stroke-dashoffset="402"/>
+              <defs><linearGradient id="lifeGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--blue)"/><stop offset="100%" stop-color="var(--green)"/></linearGradient></defs>
+            </svg>
+            <div class="dial-center"><span class="num" id="scoreNum">0</span><span class="sub">sou 100</span></div>
+          </div>
+          <div class="cat-grid" id="catGrid"></div>
+        </div>
+
+        <div class="card briefing-card">
+          <div class="briefing-head">
+            <div class="ic"><i data-lucide="sparkles"></i></div>
+            <div><h3>Rezime AI Jodi a</h3><span>Prepare pou ou a 6:00 AM</span></div>
+          </div>
+          <p class="briefing-body">
+            Jodi a ou gen <b>3 travay enpòtan</b>, e plan entènèt ou ap fini nan <b>2 jou</b>.
+            Ou poko fè abitid ou jodi a, e ou gen <b>45 minit aprantisaj</b> planifye pou apre midi.
+          </p>
+          <div class="briefing-list">
+            <div class="item"><i data-lucide="check-circle-2" style="color:var(--green)"></i> Objektif mwa a rive <b>65%</b> — kontinye konsa.</div>
+            <div class="item"><i data-lucide="flame" style="color:var(--orange)"></i> Ou gen yon <b>streak 10 jou</b> nan abitid ou yo.</div>
+            <div class="item"><i data-lucide="alert-triangle" style="color:var(--red)"></i> Plan entènèt ap ekspire byento — panse renouvle l.</div>
+          </div>
+          <div class="briefing-cta">
+            <button class="btn btn-ghost" id="startLessonBtn"><i data-lucide="book-open"></i> Fè leson JavaScript ou anvan midi</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Apèsi Jodi a</div>
+      <div class="widget-grid">
+
+        <div class="card widget tasks">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="check-square"></i></span> Travay</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>Total jodi a</span><b>3</b></div>
+        </div>
+
+        <div class="card widget habits">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="flame"></i></span> Abitid</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="habit-grid" id="habitGrid"></div>
+          <div class="stat-line"><span>Streak aktyèl</span><b id="dashHabitStreak">10 jou</b></div>
+        </div>
+
+        <div class="card widget learning">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="graduation-cap"></i></span> Aprantisaj</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>JavaScript — Fonksyon</span><b>62%</b></div>
+          <div class="mini-progress"><span style="width:62%;background:var(--orange)"></span></div>
+          <div class="stat-line"><span>XP jodi a</span><b>+120 XP</b></div>
+          <div class="stat-line"><span>Streak aprantisaj</span><b>6 jou</b></div>
+        </div>
+
+        <div class="card widget finance">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="wallet"></i></span> Finans</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>Balans aktyèl</span><b id="dashFinBalance">12,450 HTG</b></div>
+          <div class="stat-line"><span>Depans mwa a</span><b id="dashFinExpense">3,200 HTG</b></div>
+          <div class="stat-line"><span>Epay</span><b id="dashFinSavings">4,000 HTG</b></div>
+          <div class="mini-progress"><span id="dashFinBudgetBar" style="width:72%;background:var(--blue)"></span></div>
+          <div class="stat-line"><span>Bidjè itilize</span><b id="dashFinBudgetPct">72%</b></div>
+        </div>
+
+        <div class="card widget internet">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="wifi"></i></span> Plan Entènèt</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>Operatè</span><b id="dashNetOperator">—</b></div>
+          <div class="stat-line"><span>Plan</span><b id="dashNetName">—</b></div>
+          <div class="stat-line"><span>Rete</span><b id="dashNetRemaining" style="color:var(--orange)">—</b></div>
+          <div class="mini-progress"><span id="dashNetBar" style="width:0%;background:var(--orange)"></span></div>
+          <button class="btn btn-ghost" id="renewInternetBtn" style="margin-top:4px;justify-content:center;"><i data-lucide="refresh-cw"></i> Renouvle Plan</button>
+        </div>
+
+        <div class="card widget goals">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="target"></i></span> Objektif</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>Lanse BWdepot v2</span><b>65%</b></div>
+          <div class="mini-progress"><span style="width:65%;background:var(--green)"></span></div>
+          <div class="stat-line"><span>Aprann React avanse</span><b>40%</b></div>
+          <div class="mini-progress"><span style="width:40%;background:var(--blue)"></span></div>
+          <div class="stat-line"><span style="color:var(--text-faint)">2 dat limit mwa sa a</span></div>
+        </div>
+
+      </div>
+
+      <div class="section-label">Aktivite Resan</div>
+      <div class="card activity-card"><div class="timeline" id="timeline"></div></div>
+    </section>
+
+    <!-- ================= TASKS VIEW ================= -->
+    <section class="view" id="view-tasks" hidden>
+      <div class="view-head">
+        <h2>Jesyon Travay</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" id="manageTemplatesBtn"><i data-lucide="layout-template"></i> Modèl</button>
+          <button class="btn btn-primary" id="newTaskBtn"><i data-lucide="plus"></i> Nouvo Travay</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="taskSearch" placeholder="Chèche travay oswa tag..."></div>
+        <select class="field" id="filterPriority">
+          <option value="">Tout priyorite</option>
+          <option value="low">Ba</option>
+          <option value="medium">Mwayen</option>
+          <option value="high">Wo</option>
+          <option value="urgent">Ijan</option>
+        </select>
+        <select class="field" id="filterCategory"><option value="">Tout kategori</option></select>
+        <select class="field" id="sortTasks">
+          <option value="deadline">Triye pa dat limit</option>
+          <option value="priority">Triye pa priyorite</option>
+          <option value="title">Triye pa non (A-Z)</option>
+        </select>
+      </div>
+
+      <div class="kanban" id="kanbanBoard"></div>
+      <div class="task-stats" id="taskStats"></div>
+    </section>
+
+    <!-- ================= CALENDAR VIEW ================= -->
+    <section class="view" id="view-calendar" hidden>
+      <div class="view-head">
+        <h2>Kalandriye</h2>
+        <button class="btn btn-primary" id="newEventBtn"><i data-lucide="plus"></i> Nouvo Evènman</button>
+      </div>
+
+      <div class="cal-head">
+        <div class="cal-nav">
+          <button class="icon-btn" id="calPrev"><i data-lucide="chevron-left"></i></button>
+          <span class="cal-title" id="calTitle">—</span>
+          <button class="icon-btn" id="calNext"><i data-lucide="chevron-right"></i></button>
+          <button class="btn btn-ghost" id="calToday">Jodi a</button>
+        </div>
+        <div class="cal-views">
+          <span class="cal-view-btn" data-view="month">Mwa</span>
+          <span class="cal-view-btn" data-view="week">Semèn</span>
+          <span class="cal-view-btn" data-view="day">Jou</span>
+          <span class="cal-view-btn" data-view="agenda">Ajanda</span>
+        </div>
+      </div>
+
+      <div id="calGridWrap"></div>
+    </section>
+
+    <!-- ================= HABITS VIEW ================= -->
+    <section class="view" id="view-habits" hidden>
+      <div class="view-head">
+        <h2>Abitid</h2>
+        <button class="btn btn-primary" id="newHabitBtn"><i data-lucide="plus"></i> Nouvo Abitid</button>
+      </div>
+
+      <div class="xp-bar-wrap">
+        <div class="xp-badge" id="xpLevelBadge">Lv.1</div>
+        <div class="xp-info">
+          <div class="row"><span>XP total</span><b id="xpTotalLbl">0 XP</b></div>
+          <div class="mini-progress"><span id="xpBarFill" style="width:0%;background:var(--gradient-life)"></span></div>
+          <div class="row" style="margin-top:6px;margin-bottom:0;"><span>Badj</span><span id="badgeList"></span></div>
+        </div>
+      </div>
+
+      <div class="habit-list" id="habitList"></div>
+    </section>
+
+    <!-- ================= FINANCE VIEW ================= -->
+    <section class="view" id="view-finance" hidden>
+      <div class="view-head">
+        <h2>Finans</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" id="manageWalletsBtn"><i data-lucide="landmark"></i> Kont</button>
+          <button class="btn btn-ghost" id="manageBudgetsBtn"><i data-lucide="pie-chart"></i> Bidjè</button>
+          <button class="btn btn-primary" id="newTxBtn"><i data-lucide="plus"></i> Nouvo Tranzaksyon</button>
+        </div>
+      </div>
+
+      <div class="wallet-strip" id="walletStrip"></div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="txSearch" placeholder="Chèche tranzaksyon..."></div>
+        <select class="field" id="filterTxType">
+          <option value="">Antre + Sòti</option>
+          <option value="income">Antre</option>
+          <option value="expense">Sòti</option>
+        </select>
+        <select class="field" id="filterTxCategory"><option value="">Tout kategori</option></select>
+      </div>
+
+      <div class="finance-grid">
+        <div class="card" style="padding:18px;">
+          <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:10px;">Tranzaksyon Resan</h4>
+          <div class="tx-list" id="txList"></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card" style="padding:18px;">
+            <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:10px;">Bidjè Mwa a</h4>
+            <div id="budgetSummary"></div>
+          </div>
+          <div class="card chart-card">
+            <h4>Depans pa Kategori</h4>
+            <div id="pieChartWrap"></div>
+          </div>
+          <div class="card chart-card">
+            <h4>Antre vs Sòti — 6 dènye mwa</h4>
+            <div id="barChartWrap"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= INTERNET / PLANS VIEW ================= -->
+    <section class="view" id="view-internet" hidden>
+      <div class="view-head">
+        <h2>Plan Entènèt & Selilè</h2>
+        <button class="btn btn-primary" id="newPlanBtn"><i data-lucide="plus"></i> Nouvo Plan</button>
+      </div>
+
+      <div id="planAiSuggest"></div>
+
+      <div class="plan-stats" id="planStats"></div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="planSearch" placeholder="Chèche plan oswa operatè..."></div>
+        <select class="field" id="filterPlanOperator"><option value="">Tout operatè</option></select>
+        <select class="field" id="filterPlanStatus">
+          <option value="">Tout estati</option>
+          <option value="active">Aktif</option>
+          <option value="paused">An Poz</option>
+          <option value="expired">Ekspire</option>
+          <option value="completed">Fini</option>
+          <option value="cancelled">Anile</option>
+        </select>
+      </div>
+
+      <div class="plan-grid" id="planGrid"></div>
+    </section>
+
+    <!-- ================= PROJECTS VIEW ================= -->
+    <section class="view" id="view-projects" hidden>
+      <div class="view-head">
+        <h2>Jesyon Pwojè</h2>
+        <button class="btn btn-primary" id="newProjectBtn"><i data-lucide="plus"></i> Nouvo Pwojè</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="projectSearch" placeholder="Chèche pwojè..."></div>
+        <select class="field" id="sortProjects">
+          <option value="deadline">Triye pa dat limit</option>
+          <option value="progress">Triye pa pwogrè</option>
+          <option value="name">Triye pa non (A-Z)</option>
+        </select>
+      </div>
+
+      <div class="kanban" id="projectBoard"></div>
+      <div class="task-stats" id="projectStats"></div>
+    </section>
+
+    <!-- ================= NOTES VIEW ================= -->
+    <section class="view" id="view-notes" hidden>
+      <div class="view-head">
+        <h2>Nòt</h2>
+        <button class="btn btn-primary" id="newNoteBtn"><i data-lucide="plus"></i> Nouvo Nòt</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="noteSearch" placeholder="Chèche nòt oswa tag..."></div>
+        <label class="chk" style="background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:8px 12px;">
+          <input type="checkbox" id="showArchivedNotes"> Montre achiv
+        </label>
+      </div>
+
+      <div class="notes-layout">
+        <div class="card notes-folders">
+          <div class="nf-head"><span>Dosye</span><i data-lucide="folder-plus" id="addFolderBtn" title="Nouvo dosye"></i></div>
+          <div id="folderList"></div>
+        </div>
+        <div id="notesGrid" class="notes-grid"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============ TASK MODAL ============ -->
+<div class="modal-overlay" id="taskModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="taskModalTitle">Nouvo Travay</h3><button class="icon-btn" id="closeTaskModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Tit</label><input type="text" id="taskTitle" placeholder="Ekri tit travay la"></div>
+      <div><label>Deskripsyon</label><textarea id="taskDesc" placeholder="Detay travay la (opsyonèl)"></textarea></div>
+      <div class="form-row three">
+        <div><label>Priyorite</label><select id="taskPriority">
+          <option value="low">Ba</option><option value="medium">Mwayen</option><option value="high">Wo</option><option value="urgent">Ijan</option>
+        </select></div>
+        <div><label>Kategori</label><input type="text" id="taskCategory" placeholder="Pw. BWdepot"></div>
+        <div><label>Estati</label><select id="taskStatus">
+          <option value="inbox">Resepsyon</option><option value="planned">Planifye</option><option value="in-progress">An Kou</option><option value="completed">Fini</option><option value="archived">Achive</option>
+        </select></div>
+      </div>
+      <div><label>Tag (separe ak vigil)</label><input type="text" id="taskTags" placeholder="pwojè, ijan, kliyan"></div>
+      <div class="form-row">
+        <div><label>Dat limit</label><input type="datetime-local" id="taskDeadline"></div>
+        <div style="display:flex;align-items:flex-end;"><label class="chk"><input type="checkbox" id="taskReminderEnabled"> Aktive rapèl</label></div>
+      </div>
+      <div class="form-row">
+        <div style="display:flex;align-items:flex-end;"><label class="chk"><input type="checkbox" id="taskRecurring"> Travay repetitif</label></div>
+        <div id="recurringFreqWrap" hidden><label>Frekans</label><select id="taskRecurFreq">
+          <option value="daily">Chak jou</option><option value="weekly">Chak semèn</option><option value="monthly">Chak mwa</option>
+        </select></div>
+      </div>
+      <div>
+        <label>Sou-travay / Checklist</label>
+        <div id="subtaskList" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+        <button class="btn btn-ghost" id="addSubtaskBtn" type="button" style="margin-top:8px;"><i data-lucide="plus"></i> Ajoute sou-travay</button>
+      </div>
+      <div>
+        <label>Atachman</label>
+        <div id="attachList" style="margin-top:6px;"></div>
+        <input type="file" id="attachInput" multiple style="margin-top:6px;">
+      </div>
+      <div><label>Nòt</label><textarea id="taskNotes" placeholder="Nòt anplis..."></textarea></div>
+      <label class="chk"><input type="checkbox" id="saveAsTemplate"> Anrejistre kòm modèl pou pita</label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteTaskBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveTaskBtn" style="margin-left:auto;">Anrejistre Travay</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TEMPLATES MODAL ============ -->
+<div class="modal-overlay" id="templatesModalOverlay">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>Modèl Travay</h3><button class="icon-btn" id="closeTemplatesModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body" id="templatesList"></div>
+  </div>
+</div>
+
+<!-- ============ EVENT MODAL ============ -->
+<div class="modal-overlay" id="eventModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="eventModalTitle">Nouvo Evènman</h3><button class="icon-btn" id="closeEventModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Tit</label><input type="text" id="eventTitle" placeholder="Non evènman an"></div>
+      <div><label>Deskripsyon</label><textarea id="eventDesc" placeholder="Detay (opsyonèl)"></textarea></div>
+      <div class="form-row">
+        <div><label>Dat</label><input type="date" id="eventDate"></div>
+        <div><label>Lè</label><input type="time" id="eventTime"></div>
+      </div>
+      <div><label>Kote</label><input type="text" id="eventLocation" placeholder="Pw. Pétion-Ville"></div>
+      <div class="form-row">
+        <div><label>Kategori</label><select id="eventCategory">
+          <option value="event">Evènman</option>
+          <option value="deadline">Dat Limit</option>
+          <option value="birthday">Anivèsè</option>
+          <option value="study">Sesyon Etid</option>
+          <option value="appointment">Randevou</option>
+        </select></div>
+        <div><label>Repetisyon</label><select id="eventRecurrence">
+          <option value="none">Pa repete</option><option value="daily">Chak jou</option><option value="weekly">Chak semèn</option><option value="monthly">Chak mwa</option><option value="yearly">Chak ane</option>
+        </select></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="eventReminder"> Aktive rapèl</label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteEventBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveEventBtn" style="margin-left:auto;">Anrejistre Evènman</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HABIT MODAL ============ -->
+<div class="modal-overlay" id="habitModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="habitModalTitle">Nouvo Abitid</h3><button class="icon-btn" id="closeHabitModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Non</label><input type="text" id="habitName" placeholder="Pw. Li 20 minit"></div>
+      <div><label>Deskripsyon</label><textarea id="habitDesc" placeholder="Detay (opsyonèl)"></textarea></div>
+      <div class="form-row three">
+        <div><label>Frekans</label><select id="habitFrequency">
+          <option value="daily">Chak jou</option><option value="weekly">Chak semèn</option><option value="monthly">Chak mwa</option>
+        </select></div>
+        <div><label>Kategori</label><input type="text" id="habitCategory" placeholder="Pw. Sante"></div>
+        <div><label>Objektif</label><input type="text" id="habitGoal" placeholder="Pw. 30 jou"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="habitReminder"> Aktive rapèl</label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteHabitBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveHabitBtn" style="margin-left:auto;">Anrejistre Abitid</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TRANSACTION MODAL ============ -->
+<div class="modal-overlay" id="txModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="txModalTitle">Nouvo Tranzaksyon</h3><button class="icon-btn" id="closeTxModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div><label>Tip</label><select id="txType">
+          <option value="expense">Sòti (Depans)</option><option value="income">Antre (Revni)</option>
+        </select></div>
+        <div><label>Montan (HTG)</label><input type="number" id="txAmount" placeholder="0"></div>
+      </div>
+      <div><label>Deskripsyon</label><input type="text" id="txDesc" placeholder="Pw. Manje midi"></div>
+      <div class="form-row">
+        <div><label id="txCategoryLabel">Kategori</label><select id="txCategory"></select></div>
+        <div><label>Kont</label><select id="txWallet"></select></div>
+      </div>
+      <div><label>Dat</label><input type="date" id="txDate"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteTxBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveTxBtn" style="margin-left:auto;">Anrejistre Tranzaksyon</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ WALLETS MODAL ============ -->
+<div class="modal-overlay" id="walletsModalOverlay">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>Kont / Wallet</h3><button class="icon-btn" id="closeWalletsModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div id="walletsManageList"></div>
+      <div class="form-row">
+        <div><label>Non nouvo kont</label><input type="text" id="newWalletName" placeholder="Pw. Sogebank"></div>
+        <div><label>Balans depa</label><input type="number" id="newWalletBalance" placeholder="0"></div>
+      </div>
+      <button class="btn btn-primary" id="addWalletBtn" style="justify-content:center;"><i data-lucide="plus"></i> Ajoute Kont</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BUDGETS MODAL ============ -->
+<div class="modal-overlay" id="budgetsModalOverlay">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>Bidjè pa Kategori</h3><button class="icon-btn" id="closeBudgetsModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Peryòd</label><select id="budgetPeriod">
+        <option value="monthly">Mansyèl</option><option value="weekly">Semenèl</option>
+      </select></div>
+      <div id="budgetsManageList"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="saveBudgetsBtn" style="margin-left:auto;">Anrejistre Bidjè</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PLAN MODAL ============ -->
+<div class="modal-overlay" id="planModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="planModalTitle">Nouvo Plan</h3><button class="icon-btn" id="closePlanModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div><label>Operatè</label><select id="planOperator">
+          <option value="Natcom">Natcom</option>
+          <option value="Digicel">Digicel</option>
+          <option value="custom">Lòt (presize)...</option>
+        </select></div>
+        <div id="planOperatorCustomWrap" hidden><label>Non operatè</label><input type="text" id="planOperatorCustom" placeholder="Pw. Access Haiti"></div>
+        <div id="planTypeWrap"><label>Tip Plan</label><select id="planType">
+          <option value="internet">Entènèt</option>
+          <option value="unlimited">Ilimite</option>
+          <option value="calls">Apèl</option>
+          <option value="sms">SMS</option>
+          <option value="combo">Combo</option>
+          <option value="custom">Lòt</option>
+        </select></div>
+      </div>
+      <div><label>Non Plan</label><input type="text" id="planName" placeholder="Pw. Illimix 30"></div>
+      <div class="form-row three">
+        <div><label>Pri (HTG)</label><input type="number" id="planPrice" placeholder="0"></div>
+        <div><label>Dire (jou)</label><input type="number" id="planDuration" placeholder="Pw. 30"></div>
+        <div><label class="chk" style="text-transform:none;margin-bottom:0;"><input type="checkbox" id="planIsUnlimited"> Se yon plan ilimite</label></div>
+      </div>
+      <div class="form-row">
+        <div><label>Dat kòmansman</label><input type="date" id="planStartDate"></div>
+        <div><label>Dat ekspirasyon</label><input type="date" id="planExpireDate"></div>
+      </div>
+      <div><label>Sous Peyman (Kont)</label><select id="planWallet"></select></div>
+      <div><label>Nòt</label><textarea id="planNotes" placeholder="Nòt anplis..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deletePlanBtn" hidden>Efase</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" id="duplicatePlanBtn" hidden><i data-lucide="copy"></i> Duplike</button>
+        <button class="btn btn-ghost" id="pauseResumePlanBtn" hidden></button>
+        <button class="btn btn-ghost" id="completePlanBtn" hidden>Fini</button>
+        <button class="btn btn-ghost" id="cancelPlanBtn" hidden>Anile</button>
+        <button class="btn btn-primary" id="savePlanBtn">Anrejistre Plan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK ACTIONS -->
+<!-- ============ PROJECT MODAL ============ -->
+<div class="modal-overlay" id="projectModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="projectModalTitle">Nouvo Pwojè</h3><button class="icon-btn" id="closeProjectModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Non</label><input type="text" id="projectName" placeholder="Non pwojè a"></div>
+      <div><label>Deskripsyon</label><textarea id="projectDesc" placeholder="Detay pwojè a (opsyonèl)"></textarea></div>
+      <div class="form-row">
+        <div><label>Estati</label><select id="projectStatus">
+          <option value="idea">Ide</option><option value="todo">Todo</option><option value="in-progress">An Kou</option><option value="testing">Tès</option><option value="completed">Fini</option>
+        </select></div>
+        <div><label>Dat limit</label><input type="date" id="projectDeadline"></div>
+      </div>
+      <div>
+        <label>Travay / Checklist</label>
+        <div id="projectTaskList" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+        <button class="btn btn-ghost" id="addProjectTaskBtn" type="button" style="margin-top:8px;"><i data-lucide="plus"></i> Ajoute travay</button>
+      </div>
+      <div>
+        <label>Pwogrè (<span id="projectProgressLbl">0%</span>)</label>
+        <div class="mini-progress"><span id="projectProgressPreview" style="width:0%;background:var(--gradient-life)"></span></div>
+      </div>
+      <div>
+        <label>Fichye</label>
+        <div id="projectFileList" style="margin-top:6px;"></div>
+        <input type="file" id="projectFileInput" multiple style="margin-top:6px;">
+      </div>
+      <div><label>Nòt</label><textarea id="projectNotes" placeholder="Nòt anplis..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteProjectBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveProjectBtn" style="margin-left:auto;">Anrejistre Pwojè</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ NOTE MODAL ============ -->
+<div class="modal-overlay" id="noteModalOverlay">
+  <div class="modal wide">
+    <div class="modal-head">
+      <h3 id="noteModalTitle">Nouvo Nòt</h3>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <i data-lucide="pin" id="notePinBtn" title="Epingle nòt la" style="cursor:pointer;color:var(--text-faint);"></i>
+        <button class="icon-btn" id="closeNoteModal"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div><label>Tit</label><input type="text" id="noteTitle" placeholder="Tit nòt la"></div>
+      <div class="form-row">
+        <div><label>Dosye</label><select id="noteFolder"></select></div>
+        <div><label>Tag (separe ak vigil)</label><input type="text" id="noteTags" placeholder="travay, ide, resous"></div>
+      </div>
+      <div>
+        <label>Kontni</label>
+        <div class="rt-toolbar" id="rtToolbar">
+          <button type="button" data-cmd="bold" title="Gra"><i data-lucide="bold"></i></button>
+          <button type="button" data-cmd="italic" title="Italik"><i data-lucide="italic"></i></button>
+          <button type="button" data-cmd="underline" title="Souliye"><i data-lucide="underline"></i></button>
+          <span class="rt-sep"></span>
+          <button type="button" data-cmd="formatBlock" data-val="H2" title="Tit"><i data-lucide="heading"></i></button>
+          <button type="button" data-cmd="insertUnorderedList" title="Lis"><i data-lucide="list"></i></button>
+          <button type="button" data-cmd="insertOrderedList" title="Lis Nimewote"><i data-lucide="list-ordered"></i></button>
+          <button type="button" data-cmd="formatBlock" data-val="BLOCKQUOTE" title="Sitasyon"><i data-lucide="quote"></i></button>
+          <span class="rt-sep"></span>
+          <button type="button" id="rtCodeBtn" title="Bloc kòd"><i data-lucide="code"></i></button>
+          <button type="button" id="rtTableBtn" title="Tablo"><i data-lucide="table"></i></button>
+          <button type="button" id="rtImgBtn" title="Imaj"><i data-lucide="image"></i></button>
+          <input type="file" id="rtImgInput" accept="image/*" hidden>
+        </div>
+        <div class="rt-body" id="noteBody" contenteditable="true" data-placeholder="Ekri nòt ou a... (sipòte tèks anrichi ak markdown)"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteNoteBtn" hidden>Efase</button>
+      <button class="btn btn-ghost" id="archiveNoteBtn" hidden>Achive</button>
+      <button class="btn btn-primary" id="saveNoteBtn" style="margin-left:auto;">Anrejistre Nòt</button>
+    </div>
+  </div>
+</div>
+
+<div class="qa-panel" id="qaPanel">
+  <div class="qa-item" data-action="task"><i data-lucide="check-square"></i> Ajoute travay</div>
+  <div class="qa-item" data-action="event"><i data-lucide="calendar-plus"></i> Ajoute evènman</div>
+  <div class="qa-item" data-action="tx"><i data-lucide="wallet"></i> Ajoute depans</div>
+  <div class="qa-item" data-action="project"><i data-lucide="folder-kanban"></i> Ajoute pwojè</div>
+  <div class="qa-item" data-action="note"><i data-lucide="notebook-pen"></i> Ajoute nòt</div>
+  <div class="qa-item" data-action="habit"><i data-lucide="flame"></i> Ajoute abitid</div>
+  <div class="qa-item" data-action="plan"><i data-lucide="wifi"></i> Ajoute plan</div>
+</div>
+<button class="fab" id="fabBtn" aria-label="Aksyon rapid"><i data-lucide="plus"></i></button>
+<div class="toast" id="toast"><i data-lucide="check-circle-2"></i><span id="toastText"></span></div>
+
+<script>
+// ==========================================
+// CONSTANTS
+// ==========================================
+const MONTHS = ["Janvye","Fevriye","Mas","Avril","Me","Jen","Jiyè","Out","Septanm","Oktòb","Novanm","Desanm"];
+const DAYS = ["Dimanch","Lendi","Madi","Mèkredi","Jedi","Vandredi","Samdi"];
+const DAYS_SHORT = ["Dim","Len","Mad","Mèk","Jed","Van","Sam"];
+
+const STATUSES = [
+  {key:'inbox', label:'Resepsyon'},
+  {key:'planned', label:'Planifye'},
+  {key:'in-progress', label:'An Kou'},
+  {key:'completed', label:'Fini'},
+  {key:'archived', label:'Achive'},
+];
+const PRIORITY = {low:'Ba', medium:'Mwayen', high:'Wo', urgent:'Ijan'};
+const PROJECT_STATUSES = [
+  {key:'idea', label:'Ide'},
+  {key:'todo', label:'Todo'},
+  {key:'in-progress', label:'An Kou'},
+  {key:'testing', label:'Tès'},
+  {key:'completed', label:'Fini'},
+];
+const EVENT_TYPES = {
+  event:{label:'Evènman', color:'var(--blue)'},
+  deadline:{label:'Dat Limit', color:'var(--red)'},
+  birthday:{label:'Anivèsè', color:'var(--orange)'},
+  study:{label:'Sesyon Etid', color:'var(--green)'},
+  appointment:{label:'Randevou', color:'var(--blue)'},
+};
+
+function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function uid(){ return 'id'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function priorityColor(p){ return {urgent:'var(--red)',high:'var(--orange)',medium:'var(--blue)',low:'var(--green)'}[p]||'var(--text-faint)'; }
+function priorityBg(p){ return {urgent:'var(--red-soft)',high:'var(--orange-soft)',medium:'var(--blue-soft)',low:'var(--green-soft)'}[p]||'var(--surface-2)'; }
+function priorityRank(p){ return {low:1,medium:2,high:3,urgent:4}[p]||0; }
+function fmtHTG(n){ return (Math.round(n||0)).toLocaleString('en-US') + ' HTG'; }
+
+// ==========================================
+// STORE (localStorage)
+// ==========================================
+const LS = { tasks:'oslife.tasks', templates:'oslife.templates', events:'oslife.events',
+  habits:'oslife.habits', gami:'oslife.gami', tx:'oslife.tx', wallets:'oslife.wallets', budgets:'oslife.budgets',
+  plans:'oslife.plans', projects:'oslife.projects', notes:'oslife.notes', noteFolders:'oslife.noteFolders' };
+function loadLS(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch(e){ return fallback; } }
+function saveLS(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+function seedTasks(){
+  const now = new Date();
+  const d1 = new Date(now); d1.setHours(now.getHours()+5);
+  const d2 = new Date(now); d2.setDate(now.getDate()+2);
+  return [
+    { id:uid(), title:'Fini pwopozisyon BWdepot la', description:'', priority:'urgent', category:'BWdepot', tags:['pwojè'],
+      deadline:d1.toISOString().slice(0,16), reminder:{enabled:true}, subtasks:[{id:uid(),text:'Fè maket la',done:true},{id:uid(),text:'Voye bay kliyan an',done:false}],
+      attachments:[], notes:'', status:'in-progress', recurring:{enabled:false,freq:'weekly'}, createdAt:now.toISOString(), completedAt:null },
+    { id:uid(), title:'Reponn kliyan MW Store', description:'', priority:'high', category:'MW Store', tags:[],
+      deadline:d2.toISOString().slice(0,16), reminder:{enabled:false}, subtasks:[], attachments:[], notes:'', status:'planned',
+      recurring:{enabled:false,freq:'weekly'}, createdAt:now.toISOString(), completedAt:null },
+    { id:uid(), title:'Peye fakti entènèt', description:'', priority:'medium', category:'Finans', tags:[],
+      deadline:'', reminder:{enabled:false}, subtasks:[], attachments:[], notes:'', status:'completed',
+      recurring:{enabled:false,freq:'weekly'}, createdAt:now.toISOString(), completedAt:now.toISOString() },
+  ];
+}
+function seedEvents(){
+  const today = new Date();
+  const d = off => { const x=new Date(today); x.setDate(x.getDate()+off); return x.toISOString().slice(0,10); };
+  return [
+    { id:uid(), title:'Leson JavaScript — Fonksyon Flèch', description:'', date:d(0), time:'14:00', location:'', category:'study', reminder:{enabled:true}, recurrence:'none' },
+    { id:uid(), title:'Rankont ak kliyan BWdepot', description:'', date:d(3), time:'10:30', location:'Pétion-Ville', category:'appointment', reminder:{enabled:true}, recurrence:'none' },
+  ];
+}
+function seedHabits(){
+  const today = new Date();
+  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); };
+  return [
+    { id:uid(), name:'Li 20 minit', description:'Li yon liv oswa atik chak jou', frequency:'daily', reminder:true, category:'Aprantisaj', goal:'30 jou san rate',
+      completions:[iso(0),iso(1),iso(3),iso(4),iso(5),iso(6)], createdAt:today.toISOString() },
+    { id:uid(), name:'Egzèsis matinal', description:'15 minit egzèsis fizik', frequency:'daily', reminder:true, category:'Sante', goal:'Konsistans chak jou',
+      completions:[iso(0),iso(2),iso(3)], createdAt:today.toISOString() },
+  ];
+}
+function seedWallets(){
+  return [
+    { id:uid(), name:'Cash', type:'cash', balance:3200 },
+    { id:uid(), name:'MonCash', type:'moncash', balance:5250 },
+    { id:uid(), name:'Sogebank', type:'bank', balance:4000 },
+  ];
+}
+function seedTx(w){
+  const today = new Date();
+  const d = off => { const x=new Date(today); x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); };
+  const cash = w.find(x=>x.type==='cash'), mon = w.find(x=>x.type==='moncash');
+  return [
+    { id:uid(), type:'expense', amount:800, description:'Manje midi', category:'Manje', walletId:cash?.id||'', date:d(0) },
+    { id:uid(), type:'expense', amount:500, description:'Transpò', category:'Transpò', walletId:cash?.id||'', date:d(1) },
+    { id:uid(), type:'income', amount:15000, description:'Salè', category:'Salè', walletId:mon?.id||'', date:d(5) },
+    { id:uid(), type:'expense', amount:1900, description:'Abònman entènèt', category:'Entènèt', walletId:mon?.id||'', date:d(6) },
+  ];
+}
+function seedPlans(w){
+  const today = new Date();
+  const iso = off => { const x=new Date(today); x.setDate(x.getDate()+off); return x.toISOString().slice(0,10); };
+  const mon = w.find(x=>x.type==='moncash');
+  return [
+    { id:uid(), operator:'Digicel', type:'unlimited', name:'Illimix 30', price:1900, duration:30, isUnlimited:true,
+      startDate:iso(-28), expireDate:iso(2), walletId:mon?.id||'', notes:'', status:'active', createdAt:today.toISOString() },
+    { id:uid(), operator:'Natcom', type:'internet', name:'Data Pass 5G', price:500, duration:5, isUnlimited:false,
+      startDate:iso(-20), expireDate:iso(-15), walletId:mon?.id||'', notes:'', status:'expired', createdAt:today.toISOString() },
+    { id:uid(), operator:'Natcom', type:'internet', name:'Data Pass 5G', price:500, duration:5, isUnlimited:false,
+      startDate:iso(-13), expireDate:iso(-8), walletId:mon?.id||'', notes:'', status:'expired', createdAt:today.toISOString() },
+    { id:uid(), operator:'Natcom', type:'internet', name:'Data Pass 5G', price:500, duration:5, isUnlimited:false,
+      startDate:iso(-6), expireDate:iso(-1), walletId:mon?.id||'', notes:'', status:'expired', createdAt:today.toISOString() },
+  ];
+}
+
+function seedProjects(){
+  const today = new Date();
+  const iso = off => { const x=new Date(today); x.setDate(x.getDate()+off); return x.toISOString().slice(0,10); };
+  return [
+    { id:uid(), name:'Refonte sit OSLIFE', description:'Amelyore koub UX pou modil finans lan', status:'in-progress',
+      deadline: iso(12), tasks:[{id:uid(),text:'Fè wireframe',done:true},{id:uid(),text:'Entegre API',done:false},{id:uid(),text:'Tès QA',done:false}],
+      files:[], notes:'', createdAt: today.toISOString() },
+    { id:uid(), name:'Lansman kanpay maketing', description:'', status:'idea',
+      deadline: iso(30), tasks:[{id:uid(),text:'Defini objektif',done:false}], files:[], notes:'', createdAt: today.toISOString() },
+    { id:uid(), name:'Migrasyon done kliyan', description:'Deplase done nan nouvo baz done a', status:'testing',
+      deadline: iso(3), tasks:[{id:uid(),text:'Ekspòte done',done:true},{id:uid(),text:'Enpòte done',done:true},{id:uid(),text:'Valide entegrite',done:false}],
+      files:[], notes:'', createdAt: today.toISOString() },
+  ];
+}
+function seedNoteFolders(){
+  return [ {id:'f-general', name:'Jeneral'}, {id:'f-travay', name:'Travay'}, {id:'f-ide', name:'Ide'} ];
+}
+function seedNotes(){
+  const today = new Date();
+  return [
+    { id:uid(), title:'Byenveni nan Nòt', folderId:'f-general', tags:['gid'],
+      bodyHtml:'<p>Sa a se yon nòt egzanp. Ou ka itilize <b>tèks gra</b>, <i>italik</i>, lis, ak plis ankò.</p>', pinned:true, archived:false,
+      createdAt: today.toISOString(), updatedAt: today.toISOString() },
+    { id:uid(), title:'Ide pou pwojè', folderId:'f-ide', tags:['ide','pwojè'],
+      bodyHtml:'<p>Lis kèk ide pou devlope pi devan...</p>', pinned:false, archived:false,
+      createdAt: today.toISOString(), updatedAt: today.toISOString() },
+  ];
+}
+
+let tasks = loadLS(LS.tasks, seedTasks());
+let templates = loadLS(LS.templates, []);
+let events = loadLS(LS.events, seedEvents());
+let habits = loadLS(LS.habits, seedHabits());
+let gami = loadLS(LS.gami, { xp:0, badges:[] });
+let wallets = loadLS(LS.wallets, seedWallets());
+let tx = loadLS(LS.tx, seedTx(wallets));
+let budgets = loadLS(LS.budgets, { period:'monthly', limits:{ 'Manje':6000, 'Transpò':3000, 'Entènèt':2500, 'Abònman':1500 } });
+let plans = loadLS(LS.plans, seedPlans(wallets));
+let projects = loadLS(LS.projects, seedProjects());
+let noteFolders = loadLS(LS.noteFolders, seedNoteFolders());
+let notes = loadLS(LS.notes, seedNotes());
+let activeFolderFilter = '';
+
+function persistTasks(){ saveLS(LS.tasks, tasks); refreshDashboardTaskWidget(); }
+function persistEvents(){ saveLS(LS.events, events); }
+function persistTemplates(){ saveLS(LS.templates, templates); }
+function persistHabits(){ saveLS(LS.habits, habits); refreshDashboardHabitWidget(); }
+function persistGami(){ saveLS(LS.gami, gami); }
+function persistWallets(){ saveLS(LS.wallets, wallets); }
+function persistTx(){ saveLS(LS.tx, tx); refreshDashboardFinanceWidget(); }
+function persistBudgets(){ saveLS(LS.budgets, budgets); }
+function persistPlans(){ saveLS(LS.plans, plans); refreshDashboardInternetWidget(); }
+function persistProjects(){ saveLS(LS.projects, projects); }
+function persistNoteFolders(){ saveLS(LS.noteFolders, noteFolders); }
+function persistNotes(){ saveLS(LS.notes, notes); }
+
+// ==========================================
+// NAVIGATION + VIEW ROUTER
+// ==========================================
+const NAV_ITEMS = [
+  { section: "Prensipal", items: [
+    { icon: "layout-dashboard", label: "Dashboard", active: true, view:"dashboard" },
+    { icon: "calendar", label: "Kalandriye", view:"calendar" },
+    { icon: "check-square", label: "Travay", view:"tasks" },
+    { icon: "flame", label: "Abitid", view:"habits" },
+  ]},
+  { section: "Lavi", items: [
+    { icon: "wallet", label: "Finans", view:"finance" },
+    { icon: "graduation-cap", label: "Aprantisaj" },
+    { icon: "target", label: "Objektif" },
+    { icon: "folder-kanban", label: "Pwojè", view:"projects" },
+  ]},
+  { section: "Pèsonèl", items: [
+    { icon: "notebook-pen", label: "Nòt", view:"notes" },
+    { icon: "book-heart", label: "Jounal" },
+    { icon: "heart-pulse", label: "Sante" },
+    { icon: "wifi", label: "Entènèt", view:"internet" },
+  ]},
+  { section: "Sistèm", items: [
+    { icon: "bar-chart-3", label: "Estatistik" },
+    { icon: "sparkles", label: "Coach AI" },
+    { icon: "settings", label: "Paramèt" },
+  ]},
+];
+
+const navGroup = document.getElementById("navGroup");
+NAV_ITEMS.forEach(group => {
+  const label = document.createElement("div");
+  label.className = "nav-label";
+  label.textContent = group.section;
+  navGroup.appendChild(label);
+  group.items.forEach(item => {
+    const el = document.createElement("div");
+    el.className = "nav-item" + (item.active ? " active" : "");
+    el.title = item.label;
+    el.dataset.view = item.view || "";
+    el.innerHTML = `<i data-lucide="${item.icon}"></i><span>${item.label}</span>`;
+    el.addEventListener("click", () => {
+      if (item.view) showView(item.view);
+      else showToast("Modil sa a ap vini pi devan ✨");
+    });
+    navGroup.appendChild(el);
+  });
+});
+
+function showView(view){
+  document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-' + view));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+  if (view === 'tasks') renderTasks();
+  if (view === 'calendar') renderCalendar();
+  if (view === 'habits') renderHabits();
+  if (view === 'finance') renderFinance();
+  if (view === 'internet') renderPlans();
+  if (view === 'projects') renderProjects();
+  if (view === 'notes') renderNotes();
+  if (window.lucide) lucide.createIcons();
+}
+
+// ==========================================
+// GREETING + CLOCK
+// ==========================================
+function updateGreeting(){
+  const now = new Date();
+  const h = now.getHours();
+  const period = h < 12 ? "Bonjou" : h < 18 ? "Bon apremidi" : "Bonswa";
+  document.getElementById("greetingText").textContent = `${period}, Wilguentz 👋`;
+  document.getElementById("dateText").textContent = `Jodi a se ${DAYS[now.getDay()]} ${now.getDate()} ${MONTHS[now.getMonth()]}`;
+}
+updateGreeting();
+setInterval(updateGreeting, 60_000);
+
+// ==========================================
+// LIFE SCORE DIAL
+// ==========================================
+const CATEGORIES = [
+  { key: "productivity", label: "Pwodiktivite", value: 78, color: "var(--blue)" },
+  { key: "learning", label: "Aprantisaj", value: 62, color: "var(--orange)" },
+  { key: "finance", label: "Finans", value: 55, color: "var(--blue)" },
+  { key: "health", label: "Sante", value: 70, color: "var(--green)" },
+  { key: "discipline", label: "Disiplin", value: 81, color: "var(--green)" },
+  { key: "goals", label: "Objektif", value: 65, color: "var(--orange)" },
+];
+const catGrid = document.getElementById("catGrid");
+let scoreArc, scoreNumEl, scoreDisplayed = 0;
+function renderCatGrid(){
+  catGrid.innerHTML = '';
+  CATEGORIES.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "cat-row";
+    row.innerHTML = `<span class="cat-dot" style="background:${c.color}"></span><span class="name">${c.label}</span><span class="val">${c.value}</span>`;
+    catGrid.appendChild(row);
+  });
+}
+renderCatGrid();
+const CIRC = 2 * Math.PI * 64;
+function renderLifeScore(){
+  scoreArc = document.getElementById("scoreArc");
+  scoreNumEl = document.getElementById("scoreNum");
+  const overall = Math.round(CATEGORIES.reduce((s,c)=>s+c.value,0) / CATEGORIES.length);
+  scoreArc.style.strokeDasharray = `${CIRC}`;
+  scoreArc.style.transition = "stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)";
+  requestAnimationFrame(() => { scoreArc.style.strokeDashoffset = `${CIRC * (1 - overall / 100)}`; });
+  (function step(){
+    scoreDisplayed += Math.ceil((overall - scoreDisplayed) / 6) || (overall > scoreDisplayed ? 1 : 0);
+    if (scoreDisplayed >= overall) scoreDisplayed = overall;
+    scoreNumEl.textContent = scoreDisplayed;
+    if (scoreDisplayed < overall) requestAnimationFrame(step);
+  })();
+}
+renderLifeScore();
+function bumpCategory(key, delta){
+  const c = CATEGORIES.find(x => x.key === key);
+  if (!c) return;
+  c.value = Math.max(0, Math.min(100, c.value + delta));
+  renderCatGrid();
+  scoreDisplayed = 0;
+  renderLifeScore();
+}
+
+// ==========================================
+// RECENT ACTIVITY
+// ==========================================
+const ACTIVITY = [
+  { icon: "check-square", color: "var(--blue)", text: "Ou fini travay <b>“Peye fakti entènèt”</b>", time: "10 min" },
+  { icon: "graduation-cap", color: "var(--orange)", text: "Ou konplete leson <b>“Fonksyon Flèch”</b>", time: "1 è" },
+  { icon: "wallet", color: "var(--green)", text: "Ou ajoute yon depans <b>800 HTG</b>", time: "3 è" },
+  { icon: "flame", color: "var(--green)", text: "Ou fè abitid <b>“Li 20 min”</b> jodi a", time: "5 è" },
+  { icon: "target", color: "var(--blue)", text: "Objektif <b>“Lanse BWdepot v2”</b> monte a 65%", time: "Yè" },
+];
+const timeline = document.getElementById("timeline");
+function renderActivity(extra){
+  timeline.innerHTML = '';
+  (extra ? extra.concat(ACTIVITY) : ACTIVITY).slice(0,8).forEach(a => {
+    const row = document.createElement("div");
+    row.className = "tl-item";
+    row.innerHTML = `<div class="tl-dot" style="background:color-mix(in srgb, ${a.color} 16%, transparent); color:${a.color}"><i data-lucide="${a.icon}"></i></div>
+      <div class="tl-text">${a.text}</div><div class="tl-time">${a.time}</div>`;
+    timeline.appendChild(row);
+  });
+  if (window.lucide) lucide.createIcons();
+}
+renderActivity();
+
+// ==========================================
+// DASHBOARD <-> TASKS INTEGRATION
+// ==========================================
+function refreshDashboardTaskWidget(){
+  const widget = document.querySelector('.widget.tasks');
+  if (!widget) return;
+  widget.querySelectorAll('.task-row').forEach(r => r.remove());
+  const statLine = widget.querySelector('.stat-line');
+  const active = tasks.filter(t => t.status !== 'completed' && t.status !== 'archived')
+    .sort((a,b) => priorityRank(b.priority) - priorityRank(a.priority)).slice(0,3);
+  active.forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'task-row' + (t.status === 'completed' ? ' done' : '');
+    row.innerHTML = `<span class="dot" style="background:${priorityColor(t.priority)}"></span>
+      <span class="t">${escapeHtml(t.title)}</span>
+      <span class="tag" style="background:${priorityBg(t.priority)};color:${priorityColor(t.priority)}">${PRIORITY[t.priority]}</span>`;
+    widget.insertBefore(row, statLine);
+  });
+  statLine.innerHTML = `<span>Total jodi a</span><b>${tasks.filter(t => t.status !== 'archived').length}</b>`;
+  if (window.lucide) lucide.createIcons();
+}
+refreshDashboardTaskWidget();
+
+// ==========================================
+// TASKS: FILTER / SORT / RENDER
+// ==========================================
+function populateCategoryFilter(){
+  const sel = document.getElementById('filterCategory');
+  const current = sel.value;
+  const cats = [...new Set(tasks.map(t => t.category).filter(Boolean))];
+  sel.innerHTML = '<option value="">Tout kategori</option>' + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  sel.value = current;
+}
+
+function getFilteredSortedTasks(){
+  const q = (document.getElementById('taskSearch').value || '').toLowerCase();
+  const pf = document.getElementById('filterPriority').value;
+  const cf = document.getElementById('filterCategory').value;
+  const sortBy = document.getElementById('sortTasks').value;
+  let list = tasks.filter(t => {
+    if (q && !(t.title.toLowerCase().includes(q) || (t.tags||[]).join(' ').toLowerCase().includes(q))) return false;
+    if (pf && t.priority !== pf) return false;
+    if (cf && t.category !== cf) return false;
+    return true;
+  });
+  list.sort((a,b) => {
+    if (sortBy === 'priority') return priorityRank(b.priority) - priorityRank(a.priority);
+    if (sortBy === 'title') return a.title.localeCompare(b.title);
+    return (a.deadline || '9999') > (b.deadline || '9999') ? 1 : -1;
+  });
+  return list;
+}
+
+function formatDeadline(v){
+  const d = new Date(v);
+  if (isNaN(d)) return '';
+  return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)}${v.includes('T') ? ' · ' + v.slice(11,16) : ''}`;
+}
+
+function buildTaskCard(t){
+  const el = document.createElement('div');
+  el.className = 'task-card';
+  el.draggable = true;
+  el.dataset.id = t.id;
+  const doneSub = (t.subtasks||[]).filter(s => s.done).length;
+  const totalSub = (t.subtasks||[]).length;
+  const deadlineTxt = t.deadline ? formatDeadline(t.deadline) : '';
+  el.innerHTML = `
+    <div class="tc-title">${escapeHtml(t.title)}</div>
+    <div class="tc-meta">
+      <span class="pill" style="background:${priorityBg(t.priority)};color:${priorityColor(t.priority)}">${PRIORITY[t.priority]}</span>
+      ${t.category ? `<span class="pill" style="background:var(--surface-2);color:var(--text-dim)">${escapeHtml(t.category)}</span>` : ''}
+      ${t.recurring?.enabled ? '<i data-lucide="repeat" style="width:12px;height:12px;color:var(--text-faint)"></i>' : ''}
+      ${t.reminder?.enabled ? '<i data-lucide="bell" style="width:12px;height:12px;color:var(--text-faint)"></i>' : ''}
+    </div>
+    ${totalSub ? `<div class="tc-sub"><i data-lucide="list-checks" style="width:11px;height:11px"></i> ${doneSub}/${totalSub} sou-travay</div>` : ''}
+    ${deadlineTxt ? `<div class="tc-sub"><i data-lucide="calendar" style="width:11px;height:11px"></i> ${deadlineTxt}</div>` : ''}
+  `;
+  el.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', t.id));
+  el.addEventListener('click', () => openTaskModal(t.id));
+  return el;
+}
+
+function renderTasks(){
+  populateCategoryFilter();
+  const board = document.getElementById('kanbanBoard');
+  board.innerHTML = '';
+  const list = getFilteredSortedTasks();
+  STATUSES.forEach(s => {
+    const col = document.createElement('div');
+    col.className = 'kanban-col';
+    const colTasks = list.filter(t => t.status === s.key);
+    col.innerHTML = `<div class="kanban-col-head"><span>${s.label}</span><span class="count">${colTasks.length}</span></div>
+      <div class="kanban-list" data-status="${s.key}"></div>`;
+    board.appendChild(col);
+    const listEl = col.querySelector('.kanban-list');
+    colTasks.forEach(t => listEl.appendChild(buildTaskCard(t)));
+    listEl.addEventListener('dragover', e => { e.preventDefault(); listEl.classList.add('drag-over'); });
+    listEl.addEventListener('dragleave', () => listEl.classList.remove('drag-over'));
+    listEl.addEventListener('drop', e => {
+      e.preventDefault(); listEl.classList.remove('drag-over');
+      const id = e.dataTransfer.getData('text/plain');
+      moveTaskStatus(id, s.key);
+    });
+  });
+  renderTaskStats();
+  if (window.lucide) lucide.createIcons();
+}
+
+function moveTaskStatus(id, status){
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  const wasCompleted = t.status === 'completed';
+  t.status = status;
+  if (status === 'completed' && !wasCompleted){
+    t.completedAt = new Date().toISOString();
+    if (t.recurring?.enabled) spawnNextOccurrence(t);
+  }
+  persistTasks();
+  renderTasks();
+}
+
+function spawnNextOccurrence(t){
+  if (!t.deadline) return;
+  const d = new Date(t.deadline);
+  const freq = t.recurring.freq || 'weekly';
+  if (freq === 'daily') d.setDate(d.getDate()+1);
+  else if (freq === 'weekly') d.setDate(d.getDate()+7);
+  else if (freq === 'monthly') d.setMonth(d.getMonth()+1);
+  tasks.push({
+    ...t, id: uid(), status: 'planned', completedAt: null,
+    deadline: d.toISOString().slice(0,16),
+    subtasks: (t.subtasks||[]).map(s => ({...s, done:false})),
+  });
+}
+
+function renderTaskStats(){
+  const el = document.getElementById('taskStats');
+  const total = tasks.filter(t => t.status !== 'archived').length;
+  const todayStr = new Date().toDateString();
+  const completedToday = tasks.filter(t => t.completedAt && new Date(t.completedAt).toDateString() === todayStr).length;
+  const overdue = tasks.filter(t => t.deadline && new Date(t.deadline) < new Date() && t.status !== 'completed' && t.status !== 'archived').length;
+  const doneCount = tasks.filter(t => t.status === 'completed').length;
+  const rate = total ? Math.round((doneCount/total)*100) : 0;
+  el.innerHTML = `
+    <div class="st"><b>${total}</b><span>Total aktif</span></div>
+    <div class="st"><b>${completedToday}</b><span>Fini jodi a</span></div>
+    <div class="st"><b style="${overdue?'color:var(--red)':''}">${overdue}</b><span>An reta</span></div>
+    <div class="st"><b>${rate}%</b><span>To konplisman</span></div>
+  `;
+}
+
+['taskSearch','filterPriority','filterCategory','sortTasks'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderTasks);
+  document.getElementById(id).addEventListener('change', renderTasks);
+});
+
+// ==========================================
+// TASK MODAL
+// ==========================================
+let editingTaskId = null;
+let subtaskDraft = [];
+let attachDraft = [];
+
+function openTaskModal(id){
+  editingTaskId = id || null;
+  const t = id ? tasks.find(x => x.id === id) : null;
+  document.getElementById('taskModalTitle').textContent = t ? 'Modifye Travay' : 'Nouvo Travay';
+  document.getElementById('taskTitle').value = t?.title || '';
+  document.getElementById('taskDesc').value = t?.description || '';
+  document.getElementById('taskPriority').value = t?.priority || 'medium';
+  document.getElementById('taskCategory').value = t?.category || '';
+  document.getElementById('taskStatus').value = t?.status || 'inbox';
+  document.getElementById('taskTags').value = (t?.tags || []).join(', ');
+  document.getElementById('taskDeadline').value = t?.deadline || '';
+  document.getElementById('taskReminderEnabled').checked = !!t?.reminder?.enabled;
+  document.getElementById('taskRecurring').checked = !!t?.recurring?.enabled;
+  document.getElementById('taskRecurFreq').value = t?.recurring?.freq || 'weekly';
+  document.getElementById('recurringFreqWrap').hidden = !t?.recurring?.enabled;
+  document.getElementById('taskNotes').value = t?.notes || '';
+  document.getElementById('saveAsTemplate').checked = false;
+  document.getElementById('deleteTaskBtn').hidden = !t;
+  subtaskDraft = t?.subtasks ? t.subtasks.map(s => ({...s})) : [];
+  attachDraft = t?.attachments ? t.attachments.map(a => ({...a})) : [];
+  renderSubtaskDraft();
+  renderAttachDraft();
+  document.getElementById('taskModalOverlay').classList.add('open');
+}
+function closeTaskModal(){ document.getElementById('taskModalOverlay').classList.remove('open'); editingTaskId = null; }
+
+function renderSubtaskDraft(){
+  const wrap = document.getElementById('subtaskList');
+  wrap.innerHTML = '';
+  subtaskDraft.forEach((s,i) => {
+    const row = document.createElement('div');
+    row.className = 'subtask-row';
+    row.innerHTML = `<input type="checkbox" ${s.done?'checked':''} data-i="${i}" class="sub-chk">
+      <input type="text" value="${escapeHtml(s.text)}" data-i="${i}" class="sub-text" placeholder="Sou-travay...">
+      <i data-lucide="x" class="rm" data-i="${i}"></i>`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('.sub-chk').forEach(c => c.addEventListener('change', e => { subtaskDraft[+e.target.dataset.i].done = e.target.checked; }));
+  wrap.querySelectorAll('.sub-text').forEach(c => c.addEventListener('input', e => { subtaskDraft[+e.target.dataset.i].text = e.target.value; }));
+  wrap.querySelectorAll('.rm').forEach(c => c.addEventListener('click', e => { subtaskDraft.splice(+e.currentTarget.dataset.i, 1); renderSubtaskDraft(); }));
+  if (window.lucide) lucide.createIcons();
+}
+document.getElementById('addSubtaskBtn').addEventListener('click', () => {
+  subtaskDraft.push({ id: uid(), text: '', done: false });
+  renderSubtaskDraft();
+});
+
+function renderAttachDraft(){
+  const wrap = document.getElementById('attachList');
+  wrap.innerHTML = attachDraft.map((a,i) => `<span class="attach-chip"><i data-lucide="paperclip" style="width:11px;height:11px"></i>${escapeHtml(a.name)} <i data-lucide="x" class="rm" data-i="${i}" style="width:11px;height:11px"></i></span>`).join('') || '<span style="color:var(--text-faint);font-size:11.5px;">Pa gen atachman</span>';
+  wrap.querySelectorAll('.rm').forEach(c => c.addEventListener('click', e => { attachDraft.splice(+e.currentTarget.dataset.i, 1); renderAttachDraft(); }));
+  if (window.lucide) lucide.createIcons();
+}
+document.getElementById('attachInput').addEventListener('change', e => {
+  [...e.target.files].forEach(f => attachDraft.push({ name: f.name }));
+  e.target.value = '';
+  renderAttachDraft();
+});
+document.getElementById('taskRecurring').addEventListener('change', e => {
+  document.getElementById('recurringFreqWrap').hidden = !e.target.checked;
+});
+
+document.getElementById('saveTaskBtn').addEventListener('click', () => {
+  const title = document.getElementById('taskTitle').value.trim();
+  if (!title){ showToast('Mete yon tit pou travay la'); return; }
+  const data = {
+    title,
+    description: document.getElementById('taskDesc').value.trim(),
+    priority: document.getElementById('taskPriority').value,
+    category: document.getElementById('taskCategory').value.trim(),
+    status: document.getElementById('taskStatus').value,
+    tags: document.getElementById('taskTags').value.split(',').map(s => s.trim()).filter(Boolean),
+    deadline: document.getElementById('taskDeadline').value || '',
+    reminder: { enabled: document.getElementById('taskReminderEnabled').checked },
+    recurring: { enabled: document.getElementById('taskRecurring').checked, freq: document.getElementById('taskRecurFreq').value },
+    notes: document.getElementById('taskNotes').value.trim(),
+    subtasks: subtaskDraft,
+    attachments: attachDraft,
+  };
+  if (editingTaskId){
+    const t = tasks.find(x => x.id === editingTaskId);
+    const wasCompleted = t.status === 'completed';
+    Object.assign(t, data);
+    if (data.status === 'completed' && !wasCompleted) t.completedAt = new Date().toISOString();
+  } else {
+    tasks.push({ id: uid(), createdAt: new Date().toISOString(), completedAt: null, ...data });
+  }
+  if (document.getElementById('saveAsTemplate').checked){
+    templates.push({ id: uid(), name: title, data: { ...data } });
+    persistTemplates();
+  }
+  persistTasks();
+  closeTaskModal();
+  renderTasks();
+  showToast('Travay anrejistre ✓');
+});
+document.getElementById('deleteTaskBtn').addEventListener('click', () => {
+  tasks = tasks.filter(t => t.id !== editingTaskId);
+  persistTasks();
+  closeTaskModal();
+  renderTasks();
+  showToast('Travay efase');
+});
+document.getElementById('closeTaskModal').addEventListener('click', closeTaskModal);
+document.getElementById('taskModalOverlay').addEventListener('click', e => { if (e.target.id === 'taskModalOverlay') closeTaskModal(); });
+document.getElementById('newTaskBtn').addEventListener('click', () => openTaskModal(null));
+
+// ==========================================
+// TEMPLATES MODAL
+// ==========================================
+function openTemplatesModal(){
+  const wrap = document.getElementById('templatesList');
+  wrap.innerHTML = '';
+  if (!templates.length){
+    wrap.innerHTML = '<div class="widget-empty">Ou poko gen modèl travay. Kreye yon travay epi koche "Anrejistre kòm modèl".</div>';
+  }
+  templates.forEach(tpl => {
+    const row = document.createElement('div');
+    row.className = 'evt-row';
+    row.innerHTML = `<span class="dot" style="background:var(--blue)"></span>
+      <div class="info"><b>${escapeHtml(tpl.name)}</b><span>${escapeHtml(tpl.data.category || 'San kategori')}</span></div>
+      <button class="btn btn-ghost" data-act="use" data-id="${tpl.id}">Itilize</button>
+      <button class="icon-btn" data-act="del" data-id="${tpl.id}"><i data-lucide="trash-2"></i></button>`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('[data-act=use]').forEach(b => b.addEventListener('click', e => {
+    const tpl = templates.find(x => x.id === e.currentTarget.dataset.id);
+    document.getElementById('templatesModalOverlay').classList.remove('open');
+    openTaskModal(null);
+    document.getElementById('taskTitle').value = tpl.name;
+    document.getElementById('taskDesc').value = tpl.data.description || '';
+    document.getElementById('taskPriority').value = tpl.data.priority || 'medium';
+    document.getElementById('taskCategory').value = tpl.data.category || '';
+    document.getElementById('taskTags').value = (tpl.data.tags || []).join(', ');
+    document.getElementById('taskNotes').value = tpl.data.notes || '';
+    subtaskDraft = (tpl.data.subtasks || []).map(s => ({...s, done:false}));
+    renderSubtaskDraft();
+  }));
+  wrap.querySelectorAll('[data-act=del]').forEach(b => b.addEventListener('click', e => {
+    templates = templates.filter(x => x.id !== e.currentTarget.dataset.id);
+    persistTemplates();
+    openTemplatesModal();
+  }));
+  document.getElementById('templatesModalOverlay').classList.add('open');
+  if (window.lucide) lucide.createIcons();
+}
+document.getElementById('manageTemplatesBtn').addEventListener('click', openTemplatesModal);
+document.getElementById('closeTemplatesModal').addEventListener('click', () => document.getElementById('templatesModalOverlay').classList.remove('open'));
+document.getElementById('templatesModalOverlay').addEventListener('click', e => { if (e.target.id === 'templatesModalOverlay') document.getElementById('templatesModalOverlay').classList.remove('open'); });
+
+// ==========================================
+// CALENDAR: DATA HELPERS
+// ==========================================
+let calState = { date: new Date(), view: 'month' };
+
+function allCalendarItems(){
+  const virtual = tasks.filter(t => t.deadline && t.status !== 'archived').map(t => ({
+    id: 'task-' + t.id, title: t.title, description: t.description,
+    date: t.deadline.slice(0,10), time: t.deadline.length > 10 ? t.deadline.slice(11,16) : '',
+    location: '', category: 'deadline', recurrence: 'none', source: 'task', taskId: t.id,
+  }));
+  return [...events.map(e => ({...e, source:'user'})), ...virtual];
+}
+
+function expandOccurrences(item, rangeStart, rangeEnd){
+  const out = [];
+  if (!item.recurrence || item.recurrence === 'none'){
+    const d = new Date(item.date + 'T00:00:00');
+    if (d >= rangeStart && d <= rangeEnd) out.push({...item});
+    return out;
+  }
+  let d = new Date(item.date + 'T00:00:00');
+  let guard = 0;
+  while (d <= rangeEnd && guard < 400){
+    if (d >= rangeStart) out.push({...item, date: d.toISOString().slice(0,10)});
+    if (item.recurrence === 'daily') d.setDate(d.getDate()+1);
+    else if (item.recurrence === 'weekly') d.setDate(d.getDate()+7);
+    else if (item.recurrence === 'monthly') d.setMonth(d.getMonth()+1);
+    else if (item.recurrence === 'yearly') d.setFullYear(d.getFullYear()+1);
+    else break;
+    guard++;
+  }
+  return out;
+}
+
+function getItemsInRange(start, end){
+  const all = allCalendarItems();
+  let result = [];
+  all.forEach(it => { result = result.concat(expandOccurrences(it, start, end)); });
+  result.sort((a,b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||'')));
+  return result;
+}
+
+function buildEvtRow(it){
+  const row = document.createElement('div');
+  row.className = 'evt-row';
+  const color = EVENT_TYPES[it.category]?.color || 'var(--blue)';
+  row.innerHTML = `<span class="dot" style="background:${color}"></span>
+    <span class="time">${it.time || '—'}</span>
+    <div class="info"><b>${escapeHtml(it.title)}</b><span>${EVENT_TYPES[it.category]?.label || ''}${it.location ? ' · ' + escapeHtml(it.location) : ''}</span></div>`;
+  row.addEventListener('click', () => {
+    if (it.source === 'task') showToast('Sa se dat limit yon travay — modifye l nan Travay');
+    else openEventModal(it.id);
+  });
+  return row;
+}
+
+// ==========================================
+// CALENDAR: RENDER
+// ==========================================
+function renderCalendar(){
+  document.querySelectorAll('.cal-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === calState.view));
+  const wrap = document.getElementById('calGridWrap');
+  wrap.innerHTML = '';
+  if (calState.view === 'month') renderCalMonth(wrap);
+  else if (calState.view === 'week') renderCalWeek(wrap);
+  else if (calState.view === 'day') renderCalDay(wrap);
+  else renderCalAgenda(wrap);
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderCalMonth(wrap){
+  const y = calState.date.getFullYear(), m = calState.date.getMonth();
+  document.getElementById('calTitle').textContent = `${MONTHS[m]} ${y}`;
+  const first = new Date(y,m,1);
+  const startOffset = first.getDay();
+  const gridStart = new Date(y,m,1 - startOffset);
+  const gridEnd = new Date(y,m,1 - startOffset + 41);
+  const items = getItemsInRange(gridStart, gridEnd);
+  const grid = document.createElement('div');
+  grid.className = 'cal-grid';
+  DAYS_SHORT.forEach(d => { const el = document.createElement('div'); el.className = 'cal-dow'; el.textContent = d; grid.appendChild(el); });
+  const todayStr = new Date().toDateString();
+  for (let i=0;i<42;i++){
+    const d = new Date(gridStart); d.setDate(gridStart.getDate()+i);
+    const dISO = d.toISOString().slice(0,10);
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell' + (d.getMonth() !== m ? ' other' : '') + (d.toDateString() === todayStr ? ' today' : '');
+    const dayItems = items.filter(it => it.date === dISO);
+    cell.innerHTML = `<span class="dnum">${d.getDate()}</span>` +
+      dayItems.slice(0,2).map(it => `<span class="cal-evt" style="background:${(EVENT_TYPES[it.category]?.color||'var(--blue)')}22;color:${EVENT_TYPES[it.category]?.color||'var(--blue)'}">${escapeHtml(it.title)}</span>`).join('') +
+      (dayItems.length > 2 ? `<span class="cal-evt" style="color:var(--text-faint)">+${dayItems.length-2} ankò</span>` : '');
+    cell.addEventListener('click', () => { calState.date = d; calState.view = 'day'; renderCalendar(); });
+    grid.appendChild(cell);
+  }
+  wrap.appendChild(grid);
+}
+
+function renderCalWeek(wrap){
+  const d0 = new Date(calState.date);
+  const dow = d0.getDay();
+  const weekStart = new Date(d0); weekStart.setDate(d0.getDate()-dow);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
+  document.getElementById('calTitle').textContent = `${weekStart.getDate()} ${MONTHS[weekStart.getMonth()].slice(0,3)} – ${weekEnd.getDate()} ${MONTHS[weekEnd.getMonth()].slice(0,3)}`;
+  const items = getItemsInRange(weekStart, weekEnd);
+  const cols = document.createElement('div');
+  cols.className = 'cal-week-cols';
+  for (let i=0;i<7;i++){
+    const d = new Date(weekStart); d.setDate(weekStart.getDate()+i);
+    const dISO = d.toISOString().slice(0,10);
+    const dayItems = items.filter(it => it.date === dISO);
+    const col = document.createElement('div');
+    col.className = 'cal-week-col';
+    col.innerHTML = `<h4>${DAYS_SHORT[d.getDay()]} ${d.getDate()}</h4>` +
+      (dayItems.length ? dayItems.map(it => `<div class="cal-evt" style="background:${(EVENT_TYPES[it.category]?.color||'var(--blue)')}22;color:${EVENT_TYPES[it.category]?.color||'var(--blue)'};margin-bottom:4px;padding:4px 7px;">${it.time ? it.time+' · ' : ''}${escapeHtml(it.title)}</div>`).join('')
+        : '<div style="color:var(--text-faint);font-size:11px">Anyen pwograme</div>');
+    col.addEventListener('click', () => { calState.date = d; calState.view = 'day'; renderCalendar(); });
+    cols.appendChild(col);
+  }
+  wrap.appendChild(cols);
+}
+
+function renderCalDay(wrap){
+  const d = calState.date;
+  document.getElementById('calTitle').textContent = `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const items = getItemsInRange(dayStart, dayStart);
+  const list = document.createElement('div');
+  list.className = 'cal-day-list';
+  if (!items.length) list.innerHTML = '<div class="widget-empty">Pa gen evènman jou sa a</div>';
+  items.forEach(it => list.appendChild(buildEvtRow(it)));
+  wrap.appendChild(list);
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn btn-primary';
+  addBtn.style.marginTop = '14px';
+  addBtn.innerHTML = '<i data-lucide="plus"></i> Ajoute evènman jou sa a';
+  addBtn.addEventListener('click', () => openEventModal(null, dayStart.toISOString().slice(0,10)));
+  wrap.appendChild(addBtn);
+}
+
+function renderCalAgenda(wrap){
+  document.getElementById('calTitle').textContent = 'Ajanda — 30 pwochen jou';
+  const start = new Date();
+  const end = new Date(); end.setDate(end.getDate()+30);
+  const items = getItemsInRange(start, end);
+  const hasStudy = items.some(it => it.category === 'study' || (it.category === 'deadline' && /aprann|learning|javascript|react/i.test(it.title)));
+  if (hasStudy){
+    const banner = document.createElement('div');
+    banner.className = 'ai-suggest';
+    banner.innerHTML = `<i data-lucide="sparkles"></i><div><b>AI Planner</b><span>Ou gen yon dat limit oswa sesyon aprantisaj k ap pwoche — vle m ede w kreye yon plan etid?</span></div>`;
+    wrap.appendChild(banner);
+  }
+  const groups = {};
+  items.forEach(it => { (groups[it.date] = groups[it.date] || []).push(it); });
+  const keys = Object.keys(groups).sort();
+  if (!keys.length){
+    wrap.innerHTML += '<div class="widget-empty">Pa gen anyen pwograme pou 30 jou k ap vini yo</div>';
+    return;
+  }
+  keys.forEach(dateKey => {
+    const d = new Date(dateKey + 'T00:00:00');
+    const g = document.createElement('div');
+    g.className = 'agenda-group';
+    g.innerHTML = `<h4>${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}</h4>`;
+    const list = document.createElement('div');
+    list.className = 'agenda-list';
+    groups[dateKey].forEach(it => list.appendChild(buildEvtRow(it)));
+    g.appendChild(list);
+    wrap.appendChild(g);
+  });
+}
+
+document.querySelectorAll('.cal-view-btn').forEach(b => b.addEventListener('click', () => { calState.view = b.dataset.view; renderCalendar(); }));
+document.getElementById('calPrev').addEventListener('click', () => calNav(-1));
+document.getElementById('calNext').addEventListener('click', () => calNav(1));
+document.getElementById('calToday').addEventListener('click', () => { calState.date = new Date(); renderCalendar(); });
+function calNav(dir){
+  const d = new Date(calState.date);
+  if (calState.view === 'month') d.setMonth(d.getMonth()+dir);
+  else if (calState.view === 'week') d.setDate(d.getDate()+7*dir);
+  else d.setDate(d.getDate()+dir);
+  calState.date = d;
+  renderCalendar();
+}
+document.getElementById('newEventBtn').addEventListener('click', () => openEventModal(null));
+
+// ==========================================
+// EVENT MODAL
+// ==========================================
+let editingEventId = null;
+function openEventModal(id, presetDate){
+  editingEventId = id || null;
+  const ev = id ? events.find(x => x.id === id) : null;
+  document.getElementById('eventModalTitle').textContent = ev ? 'Modifye Evènman' : 'Nouvo Evènman';
+  document.getElementById('eventTitle').value = ev?.title || '';
+  document.getElementById('eventDesc').value = ev?.description || '';
+  document.getElementById('eventDate').value = ev?.date || presetDate || new Date().toISOString().slice(0,10);
+  document.getElementById('eventTime').value = ev?.time || '';
+  document.getElementById('eventLocation').value = ev?.location || '';
+  document.getElementById('eventCategory').value = ev?.category || 'event';
+  document.getElementById('eventReminder').checked = !!ev?.reminder?.enabled;
+  document.getElementById('eventRecurrence').value = ev?.recurrence || 'none';
+  document.getElementById('deleteEventBtn').hidden = !ev;
+  document.getElementById('eventModalOverlay').classList.add('open');
+}
+document.getElementById('saveEventBtn').addEventListener('click', () => {
+  const title = document.getElementById('eventTitle').value.trim();
+  if (!title){ showToast('Mete yon tit pou evènman an'); return; }
+  const data = {
+    title, description: document.getElementById('eventDesc').value.trim(),
+    date: document.getElementById('eventDate').value,
+    time: document.getElementById('eventTime').value,
+    location: document.getElementById('eventLocation').value.trim(),
+    category: document.getElementById('eventCategory').value,
+    reminder: { enabled: document.getElementById('eventReminder').checked },
+    recurrence: document.getElementById('eventRecurrence').value,
+  };
+  if (editingEventId) Object.assign(events.find(x => x.id === editingEventId), data);
+  else events.push({ id: uid(), ...data });
+  persistEvents();
+  document.getElementById('eventModalOverlay').classList.remove('open');
+  renderCalendar();
+  showToast('Evènman anrejistre ✓');
+});
+document.getElementById('deleteEventBtn').addEventListener('click', () => {
+  events = events.filter(e => e.id !== editingEventId);
+  persistEvents();
+  document.getElementById('eventModalOverlay').classList.remove('open');
+  renderCalendar();
+  showToast('Evènman efase');
+});
+document.getElementById('closeEventModal').addEventListener('click', () => document.getElementById('eventModalOverlay').classList.remove('open'));
+document.getElementById('eventModalOverlay').addEventListener('click', e => { if (e.target.id === 'eventModalOverlay') document.getElementById('eventModalOverlay').classList.remove('open'); });
+
+// ==========================================
+// HABITS MODULE
+// ==========================================
+const XP_PER_COMPLETION = 10;
+const BADGE_DEFS = [
+  { id:'streak3', label:'3 Jou', min:3 },
+  { id:'streak7', label:'Semèn Solid', min:7 },
+  { id:'streak30', label:'Mwa Fè', min:30 },
+];
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function isoOffset(base, off){ const d = new Date(base+'T00:00:00'); d.setDate(d.getDate()+off); return d.toISOString().slice(0,10); }
+
+function calcStreaks(h){
+  const set = new Set(h.completions||[]);
+  let current = 0, cursor = todayISO();
+  if (!set.has(cursor)) cursor = isoOffset(cursor,-1);
+  while (set.has(cursor)){ current++; cursor = isoOffset(cursor,-1); }
+  let longest = 0, run = 0;
+  const sorted = [...set].sort();
+  for (let i=0;i<sorted.length;i++){
+    if (i===0 || isoOffset(sorted[i-1],1) === sorted[i]) run++; else run = 1;
+    longest = Math.max(longest, run);
+  }
+  const totalDays = Math.max(1, Math.ceil((new Date() - new Date(h.createdAt)) / 86400000) + 1);
+  const rate = Math.round((set.size / totalDays) * 100);
+  return { current, longest, rate: Math.min(100,rate) };
+}
+
+function toggleHabitToday(id){
+  const h = habits.find(x => x.id === id);
+  if (!h) return;
+  const t = todayISO();
+  const i = h.completions.indexOf(t);
+  if (i >= 0){ h.completions.splice(i,1); }
+  else {
+    h.completions.push(t);
+    gami.xp += XP_PER_COMPLETION;
+    const { current } = calcStreaks(h);
+    BADGE_DEFS.forEach(b => { if (current >= b.min && !gami.badges.includes(b.id)) gami.badges.push(b.id); });
+    bumpCategory('discipline', 1);
+    renderActivity([{ icon:'flame', color:'var(--green)', text:`Ou fè abitid <b>"${escapeHtml(h.name)}"</b> jodi a`, time:'kounye a' }]);
+    persistGami();
+  }
+  persistHabits();
+  renderHabits();
+}
+
+function buildHeatmap(h){
+  const days = 91;
+  const set = new Set(h.completions||[]);
+  const cells = [];
+  for (let i=days-1;i>=0;i--){
+    const d = isoOffset(todayISO(), -i);
+    const lvl = set.has(d) ? 3 : 0;
+    cells.push(`<div class="hcell hb-lvl-${lvl}" title="${d}"></div>`);
+  }
+  return `<div class="heatmap">${cells.join('')}</div>`;
+}
+
+function habitIconFor(cat){
+  const c = (cat||'').toLowerCase();
+  if (/sante|egzèsis|exercise|health/.test(c)) return {ic:'heart-pulse', bg:'var(--red-soft)', col:'var(--red)'};
+  if (/aprann|etid|learn|study/.test(c)) return {ic:'graduation-cap', bg:'var(--orange-soft)', col:'var(--orange)'};
+  if (/finans|lajan|money/.test(c)) return {ic:'wallet', bg:'var(--blue-soft)', col:'var(--blue)'};
+  return {ic:'flame', bg:'var(--green-soft)', col:'var(--green)'};
+}
+
+function renderHabits(){
+  const list = document.getElementById('habitList');
+  list.innerHTML = '';
+  if (!habits.length){
+    list.innerHTML = '<div class="card widget-empty" style="padding:24px;">Ou poko gen abitid. Klike "Nouvo Abitid" pou kòmanse.</div>';
+  }
+  habits.forEach(h => {
+    const { current, longest, rate } = calcStreaks(h);
+    const doneToday = (h.completions||[]).includes(todayISO());
+    const iconInfo = habitIconFor(h.category);
+    const el = document.createElement('div');
+    el.className = 'card habit-item';
+    el.innerHTML = `
+      <div class="habit-item-head">
+        <div class="ic" style="background:${iconInfo.bg};color:${iconInfo.col}"><i data-lucide="${iconInfo.ic}"></i></div>
+        <div class="info">
+          <b>${escapeHtml(h.name)}</b>
+          <span>${escapeHtml(h.category||'Jeneral')} · ${h.frequency==='daily'?'Chak jou':h.frequency==='weekly'?'Chak semèn':'Chak mwa'}${h.goal ? ' · '+escapeHtml(h.goal) : ''}</span>
+        </div>
+        <div class="habit-check ${doneToday?'checked':''}" data-id="${h.id}"><i data-lucide="check"></i></div>
+      </div>
+      <div class="habit-stats-row">
+        <span>Streak: <b>${current} jou</b></span>
+        <span>Pi long: <b>${longest} jou</b></span>
+        <span>To siksè: <b>${rate}%</b></span>
+      </div>
+      ${buildHeatmap(h)}
+    `;
+    el.querySelector('.habit-check').addEventListener('click', e => { e.stopPropagation(); toggleHabitToday(h.id); });
+    el.addEventListener('click', () => openHabitModal(h.id));
+    list.appendChild(el);
+  });
+  const level = Math.floor(gami.xp / 100) + 1;
+  const pctInLevel = gami.xp % 100;
+  document.getElementById('xpLevelBadge').textContent = 'Lv.'+level;
+  document.getElementById('xpTotalLbl').textContent = gami.xp + ' XP';
+  document.getElementById('xpBarFill').style.width = pctInLevel + '%';
+  document.getElementById('badgeList').innerHTML = gami.badges.length
+    ? gami.badges.map(id => `<span class="badge-chip"><i data-lucide="award" style="width:10px;height:10px"></i>${BADGE_DEFS.find(b=>b.id===id)?.label||id}</span>`).join(' ')
+    : '<span style="color:var(--text-faint);font-size:11px;">Poko gen badj</span>';
+  if (window.lucide) lucide.createIcons();
+}
+
+function refreshDashboardHabitWidget(){
+  const grid = document.getElementById('habitGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const primary = habits[0];
+  const last7 = [];
+  for (let i=6;i>=0;i--) last7.push(isoOffset(todayISO(), -i));
+  const set = primary ? new Set(primary.completions||[]) : new Set();
+  last7.forEach(d => {
+    const cell = document.createElement('div');
+    cell.className = 'habit-cell' + (set.has(d) ? ' on' : '');
+    grid.appendChild(cell);
+  });
+  const streakLbl = document.getElementById('dashHabitStreak');
+  if (streakLbl && primary) streakLbl.textContent = calcStreaks(primary).current + ' jou';
+}
+refreshDashboardHabitWidget();
+
+let editingHabitId = null;
+function openHabitModal(id){
+  editingHabitId = id || null;
+  const h = id ? habits.find(x => x.id === id) : null;
+  document.getElementById('habitModalTitle').textContent = h ? 'Modifye Abitid' : 'Nouvo Abitid';
+  document.getElementById('habitName').value = h?.name || '';
+  document.getElementById('habitDesc').value = h?.description || '';
+  document.getElementById('habitFrequency').value = h?.frequency || 'daily';
+  document.getElementById('habitCategory').value = h?.category || '';
+  document.getElementById('habitGoal').value = h?.goal || '';
+  document.getElementById('habitReminder').checked = !!h?.reminder;
+  document.getElementById('deleteHabitBtn').hidden = !h;
+  document.getElementById('habitModalOverlay').classList.add('open');
+}
+document.getElementById('newHabitBtn').addEventListener('click', () => openHabitModal(null));
+document.getElementById('closeHabitModal').addEventListener('click', () => document.getElementById('habitModalOverlay').classList.remove('open'));
+document.getElementById('habitModalOverlay').addEventListener('click', e => { if (e.target.id === 'habitModalOverlay') document.getElementById('habitModalOverlay').classList.remove('open'); });
+document.getElementById('saveHabitBtn').addEventListener('click', () => {
+  const name = document.getElementById('habitName').value.trim();
+  if (!name){ showToast('Mete yon non pou abitid la'); return; }
+  const data = {
+    name, description: document.getElementById('habitDesc').value.trim(),
+    frequency: document.getElementById('habitFrequency').value,
+    category: document.getElementById('habitCategory').value.trim(),
+    goal: document.getElementById('habitGoal').value.trim(),
+    reminder: document.getElementById('habitReminder').checked,
+  };
+  if (editingHabitId) Object.assign(habits.find(x => x.id === editingHabitId), data);
+  else habits.push({ id: uid(), completions: [], createdAt: new Date().toISOString(), ...data });
+  persistHabits();
+  document.getElementById('habitModalOverlay').classList.remove('open');
+  renderHabits();
+  showToast('Abitid anrejistre ✓');
+});
+document.getElementById('deleteHabitBtn').addEventListener('click', () => {
+  habits = habits.filter(h => h.id !== editingHabitId);
+  persistHabits();
+  document.getElementById('habitModalOverlay').classList.remove('open');
+  renderHabits();
+  showToast('Abitid efase');
+});
+
+// ==========================================
+// FINANCE MODULE
+// ==========================================
+const EXPENSE_CATS = ['Manje','Transpò','Entènèt','Abònman','Custom'];
+const INCOME_CATS = ['Salè','Kado','Biznis','Lòt'];
+const WALLET_ICONS = { cash:'banknote', natcash:'smartphone', moncash:'smartphone', bank:'landmark', savings:'piggy-bank', custom:'wallet' };
+function walletTypeGuess(name){
+  const n = (name||'').toLowerCase();
+  if (n.includes('natcash')) return 'natcash';
+  if (n.includes('moncash')) return 'moncash';
+  if (n.includes('cash')) return 'cash';
+  if (n.includes('epay')||n.includes('saving')) return 'savings';
+  if (n.includes('bank')||n.includes('sogeb')||n.includes('unibank')||n.includes('capital')) return 'bank';
+  return 'custom';
+}
+
+function walletBalance(w){
+  const delta = tx.filter(t => t.walletId === w.id).reduce((s,t) => s + (t.type==='income'? t.amount : -t.amount), 0);
+  return w.balance + delta;
+}
+function totalBalance(){ return wallets.reduce((s,w) => s + walletBalance(w), 0); }
+function monthTx(){ const m = new Date().toISOString().slice(0,7); return tx.filter(t => t.date.slice(0,7) === m); }
+function monthExpenseByCategory(){
+  const map = {};
+  monthTx().filter(t => t.type==='expense').forEach(t => { map[t.category] = (map[t.category]||0) + t.amount; });
+  return map;
+}
+
+function renderWalletStrip(){
+  const strip = document.getElementById('walletStrip');
+  strip.innerHTML = '';
+  wallets.forEach(w => {
+    const el = document.createElement('div');
+    el.className = 'card wallet-card';
+    el.innerHTML = `<span class="wname"><i data-lucide="${WALLET_ICONS[w.type]||'wallet'}" style="width:12px;height:12px;vertical-align:-2px;margin-right:4px"></i>${escapeHtml(w.name)}</span><span class="wbal">${fmtHTG(walletBalance(w))}</span>`;
+    el.addEventListener('click', openWalletsModal);
+    strip.appendChild(el);
+  });
+  if (window.lucide) lucide.createIcons();
+}
+
+function populateTxCategoryFilter(){
+  const sel = document.getElementById('filterTxCategory');
+  const current = sel.value;
+  const cats = [...new Set(tx.map(t => t.category).filter(Boolean))];
+  sel.innerHTML = '<option value="">Tout kategori</option>' + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  sel.value = current;
+}
+
+function getFilteredTx(){
+  const q = (document.getElementById('txSearch').value || '').toLowerCase();
+  const tf = document.getElementById('filterTxType').value;
+  const cf = document.getElementById('filterTxCategory').value;
+  return tx.filter(t => {
+    if (q && !(t.description||'').toLowerCase().includes(q) && !(t.category||'').toLowerCase().includes(q)) return false;
+    if (tf && t.type !== tf) return false;
+    if (cf && t.category !== cf) return false;
+    return true;
+  }).sort((a,b) => b.date.localeCompare(a.date));
+}
+
+const TX_ICONS = { 'Manje':'utensils', 'Transpò':'car', 'Entènèt':'wifi', 'Abònman':'repeat', 'Custom':'shapes',
+  'Salè':'briefcase', 'Kado':'gift', 'Biznis':'store', 'Lòt':'circle-dollar-sign' };
+
+function renderTxList(){
+  populateTxCategoryFilter();
+  const wrap = document.getElementById('txList');
+  const list = getFilteredTx().slice(0, 25);
+  wrap.innerHTML = '';
+  if (!list.length){ wrap.innerHTML = '<div class="widget-empty">Pa gen tranzaksyon</div>'; return; }
+  list.forEach(t => {
+    const w = wallets.find(x => x.id === t.walletId);
+    const row = document.createElement('div');
+    row.className = 'tx-row';
+    row.innerHTML = `
+      <div class="tic" style="background:${t.type==='income'?'var(--green-soft)':'var(--red-soft)'};color:${t.type==='income'?'var(--green)':'var(--red)'}"><i data-lucide="${TX_ICONS[t.category]||'circle'}"></i></div>
+      <div class="info"><b>${escapeHtml(t.description||t.category)}</b><span>${escapeHtml(t.category)} · ${escapeHtml(w?.name||'—')} · ${formatDeadline(t.date)}</span></div>
+      <div class="amt ${t.type}">${t.type==='income'?'+':'-'}${fmtHTG(t.amount)}</div>`;
+    row.addEventListener('click', () => openTxModal(t.id));
+    wrap.appendChild(row);
+  });
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderBudgetSummary(){
+  const wrap = document.getElementById('budgetSummary');
+  const spent = monthExpenseByCategory();
+  const limits = budgets.limits || {};
+  const cats = Object.keys(limits);
+  if (!cats.length){ wrap.innerHTML = '<div class="widget-empty">Poko gen bidjè defini</div>'; return; }
+  wrap.innerHTML = cats.map(c => {
+    const s = spent[c] || 0, lim = limits[c] || 1;
+    const pct = Math.min(100, Math.round((s/lim)*100));
+    const over = s > lim;
+    return `<div class="budget-row"><div class="lbl"><span>${escapeHtml(c)}</span><b style="${over?'color:var(--red)':''}">${fmtHTG(s)} / ${fmtHTG(lim)}</b></div>
+      <div class="mini-progress"><span style="width:${pct}%;background:${over?'var(--red)':'var(--blue)'}"></span></div></div>`;
+  }).join('');
+}
+
+const PIE_COLORS = ['var(--blue)','var(--green)','var(--orange)','var(--red)','#8B5CF6','#EC4899'];
+function renderPieChart(){
+  const wrap = document.getElementById('pieChartWrap');
+  const data = monthExpenseByCategory();
+  const entries = Object.entries(data).sort((a,b)=>b[1]-a[1]);
+  const total = entries.reduce((s,[,v])=>s+v,0);
+  if (!total){ wrap.innerHTML = '<div class="widget-empty">Pa gen depans mwa a</div>'; return; }
+  let acc = 0;
+  const stops = entries.map(([cat,v],i) => {
+    const start = acc/total*360; acc += v; const end = acc/total*360;
+    return `${PIE_COLORS[i%PIE_COLORS.length]} ${start}deg ${end}deg`;
+  }).join(', ');
+  wrap.innerHTML = `<div style="width:130px;height:130px;border-radius:50%;background:conic-gradient(${stops});margin:0 auto;"></div>
+    <div class="legend">${entries.map(([cat,v],i) => `<div class="lg-row"><span class="lg-dot" style="background:${PIE_COLORS[i%PIE_COLORS.length]}"></span>${escapeHtml(cat)}<b>${fmtHTG(v)}</b></div>`).join('')}</div>`;
+}
+
+function renderBarChart(){
+  const wrap = document.getElementById('barChartWrap');
+  const months = [];
+  for (let i=5;i>=0;i--){ const d = new Date(); d.setMonth(d.getMonth()-i); months.push(d.toISOString().slice(0,7)); }
+  const maxVal = Math.max(1, ...months.map(m => {
+    const inc = tx.filter(t=>t.type==='income'&&t.date.slice(0,7)===m).reduce((s,t)=>s+t.amount,0);
+    const exp = tx.filter(t=>t.type==='expense'&&t.date.slice(0,7)===m).reduce((s,t)=>s+t.amount,0);
+    return Math.max(inc,exp);
+  }));
+  wrap.innerHTML = `<div class="bar-chart">${months.map(m => {
+    const inc = tx.filter(t=>t.type==='income'&&t.date.slice(0,7)===m).reduce((s,t)=>s+t.amount,0);
+    const exp = tx.filter(t=>t.type==='expense'&&t.date.slice(0,7)===m).reduce((s,t)=>s+t.amount,0);
+    const d = new Date(m+'-01');
+    return `<div class="bc-col">
+      <div style="display:flex;gap:2px;align-items:flex-end;height:100px;width:100%;">
+        <div class="bc-fill" style="height:${(inc/maxVal*100)||1}%;background:var(--green);flex:1;"></div>
+        <div class="bc-fill" style="height:${(exp/maxVal*100)||1}%;background:var(--red);flex:1;"></div>
+      </div>
+      <span class="bc-lbl">${MONTHS[d.getMonth()].slice(0,3)}</span>
+    </div>`;
+  }).join('')}</div>
+  <div class="legend" style="flex-direction:row;gap:14px;margin-top:8px;">
+    <div class="lg-row"><span class="lg-dot" style="background:var(--green)"></span>Antre</div>
+    <div class="lg-row"><span class="lg-dot" style="background:var(--red)"></span>Sòti</div>
+  </div>`;
+}
+
+function refreshDashboardFinanceWidget(){
+  const balEl = document.getElementById('dashFinBalance');
+  if (!balEl) return;
+  balEl.textContent = fmtHTG(totalBalance());
+  const expThisMonth = monthTx().filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const incThisMonth = monthTx().filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  document.getElementById('dashFinExpense').textContent = fmtHTG(expThisMonth);
+  document.getElementById('dashFinSavings').textContent = fmtHTG(Math.max(0, incThisMonth - expThisMonth));
+  const limitTotal = Object.values(budgets.limits||{}).reduce((s,v)=>s+v,0) || 1;
+  const pct = Math.min(100, Math.round((expThisMonth/limitTotal)*100));
+  document.getElementById('dashFinBudgetBar').style.width = pct + '%';
+  document.getElementById('dashFinBudgetPct').textContent = pct + '%';
+}
+refreshDashboardFinanceWidget();
+
+function renderFinance(){
+  renderWalletStrip();
+  renderTxList();
+  renderBudgetSummary();
+  renderPieChart();
+  renderBarChart();
+  refreshDashboardFinanceWidget();
+}
+
+['txSearch','filterTxType','filterTxCategory'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderTxList);
+  document.getElementById(id).addEventListener('change', renderTxList);
+});
+
+// ---- Transaction Modal ----
+let editingTxId = null;
+function populateTxCategorySelect(type){
+  const sel = document.getElementById('txCategory');
+  const cats = type === 'income' ? INCOME_CATS : EXPENSE_CATS;
+  sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  document.getElementById('txCategoryLabel').textContent = type === 'income' ? 'Sous Revni' : 'Kategori';
+}
+function populateTxWalletSelect(){
+  const sel = document.getElementById('txWallet');
+  sel.innerHTML = wallets.map(w => `<option value="${w.id}">${escapeHtml(w.name)}</option>`).join('');
+}
+function openTxModal(id){
+  editingTxId = id || null;
+  const t = id ? tx.find(x => x.id === id) : null;
+  document.getElementById('txModalTitle').textContent = t ? 'Modifye Tranzaksyon' : 'Nouvo Tranzaksyon';
+  document.getElementById('txType').value = t?.type || 'expense';
+  populateTxCategorySelect(document.getElementById('txType').value);
+  populateTxWalletSelect();
+  document.getElementById('txAmount').value = t?.amount || '';
+  document.getElementById('txDesc').value = t?.description || '';
+  document.getElementById('txCategory').value = t?.category || (t?.type==='income'?INCOME_CATS[0]:EXPENSE_CATS[0]);
+  document.getElementById('txWallet').value = t?.walletId || wallets[0]?.id || '';
+  document.getElementById('txDate').value = t?.date || todayISO();
+  document.getElementById('deleteTxBtn').hidden = !t;
+  document.getElementById('txModalOverlay').classList.add('open');
+}
+document.getElementById('txType').addEventListener('change', e => populateTxCategorySelect(e.target.value));
+document.getElementById('newTxBtn').addEventListener('click', () => openTxModal(null));
+document.getElementById('closeTxModal').addEventListener('click', () => document.getElementById('txModalOverlay').classList.remove('open'));
+document.getElementById('txModalOverlay').addEventListener('click', e => { if (e.target.id === 'txModalOverlay') document.getElementById('txModalOverlay').classList.remove('open'); });
+document.getElementById('saveTxBtn').addEventListener('click', () => {
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  if (!amount || amount <= 0){ showToast('Mete yon montan valab'); return; }
+  const data = {
+    type: document.getElementById('txType').value,
+    amount,
+    description: document.getElementById('txDesc').value.trim(),
+    category: document.getElementById('txCategory').value,
+    walletId: document.getElementById('txWallet').value,
+    date: document.getElementById('txDate').value || todayISO(),
+  };
+  if (editingTxId) Object.assign(tx.find(x => x.id === editingTxId), data);
+  else tx.push({ id: uid(), ...data });
+  persistTx();
+  bumpCategory('finance', data.type==='income' ? 2 : -1);
+  document.getElementById('txModalOverlay').classList.remove('open');
+  renderFinance();
+  showToast('Tranzaksyon anrejistre ✓');
+});
+document.getElementById('deleteTxBtn').addEventListener('click', () => {
+  tx = tx.filter(t => t.id !== editingTxId);
+  persistTx();
+  document.getElementById('txModalOverlay').classList.remove('open');
+  renderFinance();
+  showToast('Tranzaksyon efase');
+});
+
+// ---- Wallets Modal ----
+function openWalletsModal(){
+  const wrap = document.getElementById('walletsManageList');
+  wrap.innerHTML = wallets.map(w => `
+    <div class="evt-row" data-id="${w.id}">
+      <span class="dot" style="background:var(--blue)"></span>
+      <div class="info"><b>${escapeHtml(w.name)}</b><span>${fmtHTG(walletBalance(w))}</span></div>
+      <button class="icon-btn" data-del="${w.id}"><i data-lucide="trash-2"></i></button>
+    </div>`).join('') || '<div class="widget-empty">Pa gen kont</div>';
+  wrap.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', e => {
+    const id = e.currentTarget.dataset.del;
+    if (tx.some(t => t.walletId === id)){ showToast('Kont sa a gen tranzaksyon — pa ka efase l'); return; }
+    wallets = wallets.filter(w => w.id !== id);
+    persistWallets();
+    openWalletsModal();
+    renderFinance();
+  }));
+  document.getElementById('walletsModalOverlay').classList.add('open');
+  if (window.lucide) lucide.createIcons();
+}
+document.getElementById('manageWalletsBtn').addEventListener('click', openWalletsModal);
+document.getElementById('closeWalletsModal').addEventListener('click', () => document.getElementById('walletsModalOverlay').classList.remove('open'));
+document.getElementById('walletsModalOverlay').addEventListener('click', e => { if (e.target.id === 'walletsModalOverlay') document.getElementById('walletsModalOverlay').classList.remove('open'); });
+document.getElementById('addWalletBtn').addEventListener('click', () => {
+  const name = document.getElementById('newWalletName').value.trim();
+  const bal = parseFloat(document.getElementById('newWalletBalance').value) || 0;
+  if (!name){ showToast('Mete yon non pou kont lan'); return; }
+  wallets.push({ id: uid(), name, type: walletTypeGuess(name), balance: bal });
+  persistWallets();
+  document.getElementById('newWalletName').value = '';
+  document.getElementById('newWalletBalance').value = '';
+  openWalletsModal();
+  renderFinance();
+  showToast('Kont ajoute ✓');
+});
+
+// ---- Budgets Modal ----
+function openBudgetsModal(){
+  document.getElementById('budgetPeriod').value = budgets.period || 'monthly';
+  const wrap = document.getElementById('budgetsManageList');
+  wrap.innerHTML = EXPENSE_CATS.filter(c=>c!=='Custom').map(c => `
+    <div class="form-row" style="align-items:center;margin-bottom:8px;">
+      <label style="text-transform:none;font-size:12.5px;color:var(--text-dim);font-weight:500;margin:0;">${c}</label>
+      <input type="number" class="budget-input" data-cat="${c}" value="${budgets.limits?.[c]||''}" placeholder="Limit HTG">
+    </div>`).join('');
+  document.getElementById('budgetsModalOverlay').classList.add('open');
+}
+document.getElementById('manageBudgetsBtn').addEventListener('click', openBudgetsModal);
+document.getElementById('closeBudgetsModal').addEventListener('click', () => document.getElementById('budgetsModalOverlay').classList.remove('open'));
+document.getElementById('budgetsModalOverlay').addEventListener('click', e => { if (e.target.id === 'budgetsModalOverlay') document.getElementById('budgetsModalOverlay').classList.remove('open'); });
+document.getElementById('saveBudgetsBtn').addEventListener('click', () => {
+  const limits = {};
+  document.querySelectorAll('.budget-input').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (v > 0) limits[inp.dataset.cat] = v;
+  });
+  budgets = { period: document.getElementById('budgetPeriod').value, limits };
+  persistBudgets();
+  document.getElementById('budgetsModalOverlay').classList.remove('open');
+  renderFinance();
+  showToast('Bidjè anrejistre ✓');
+});
+
+// ==========================================
+// THEME TOGGLE
+// ==========================================
+const themeToggle = document.getElementById("themeToggle");
+themeToggle.addEventListener("click", () => {
+  const body = document.body;
+  const isDark = body.getAttribute("data-theme") === "dark";
+  body.setAttribute("data-theme", isDark ? "light" : "dark");
+  themeToggle.innerHTML = `<i data-lucide="${isDark ? "sun" : "moon"}"></i>`;
+  lucide.createIcons();
+});
+
+// ==========================================
+// QUICK ACTIONS + TOAST
+// ==========================================
+const fabBtn = document.getElementById("fabBtn");
+const qaPanel = document.getElementById("qaPanel");
+const quickAddTop = document.getElementById("quickAddTop");
+const toast = document.getElementById("toast");
+const toastText = document.getElementById("toastText");
+
+function toggleQaPanel(){ qaPanel.classList.toggle("open"); }
+fabBtn.addEventListener("click", toggleQaPanel);
+quickAddTop.addEventListener("click", toggleQaPanel);
+
+function showToast(msg){
+  toastText.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove("show"), 2400);
+}
+
+qaPanel.querySelectorAll(".qa-item").forEach(item => {
+  item.addEventListener("click", () => {
+    qaPanel.classList.remove("open");
+    if (item.dataset.action === 'task'){ showView('tasks'); openTaskModal(null); return; }
+    if (item.dataset.action === 'event'){ showView('calendar'); openEventModal(null); return; }
+    if (item.dataset.action === 'habit'){ showView('habits'); openHabitModal(null); return; }
+    if (item.dataset.action === 'tx'){ showView('finance'); openTxModal(null); return; }
+    if (item.dataset.action === 'plan'){ showView('internet'); openPlanModal(null); return; }
+    if (item.dataset.action === 'project'){ showView('projects'); openProjectModal(null); return; }
+    if (item.dataset.action === 'note'){ showView('notes'); openNoteModal(null); return; }
+    showToast(item.dataset.msg);
+  });
+});
+
+document.getElementById("startLessonBtn").addEventListener("click", () => {
+  showToast("Sesyon JavaScript kòmanse — bon travay! ✓");
+});
+document.getElementById("renewInternetBtn").addEventListener("click", () => {
+  showView('internet');
+  const active = getActivePlan();
+  if (active) openPlanModal(active.id, true);
+  else openPlanModal(null);
+});
+
+document.addEventListener("click", (e) => {
+  if (!qaPanel.contains(e.target) && e.target !== fabBtn && e.target !== quickAddTop && !quickAddTop.contains(e.target) && !fabBtn.contains(e.target)) {
+    qaPanel.classList.remove("open");
+  }
+});
+
+// ==========================================
+// INTERNET / MOBILE PLAN MANAGER MODULE
+// ==========================================
+const PLAN_TYPES = { internet:'Entènèt', unlimited:'Ilimite', calls:'Apèl', sms:'SMS', combo:'Combo', custom:'Custom' };
+const PLAN_STATUS_LABEL = { active:'Aktif', paused:'An Poz', expired:'Ekspire', completed:'Fini', cancelled:'Anile' };
+const PLAN_STATUS_COLOR = { active:'var(--green)', paused:'var(--orange)', expired:'var(--red)', completed:'var(--text-faint)', cancelled:'var(--text-faint)' };
+const PLAN_TX_CATEGORY = 'Entènèt';
+
+function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000); }
+
+// Recompute derived status (active -> expired) based on today's date, without touching a manually paused/cancelled/completed plan.
+function refreshPlanStatuses(){
+  const t = todayISO();
+  let changed = false;
+  plans.forEach(p => {
+    if (p.status === 'active' && p.expireDate && p.expireDate < t){
+      p.status = 'expired';
+      changed = true;
+    }
+  });
+  if (changed) persistPlans();
+}
+
+function planDaysLeft(p){
+  if (!p.expireDate) return null;
+  return daysBetween(todayISO(), p.expireDate);
+}
+
+function planProgressPct(p){
+  if (!p.startDate || !p.expireDate) return 0;
+  const total = Math.max(1, daysBetween(p.startDate, p.expireDate));
+  const elapsed = Math.max(0, daysBetween(p.startDate, todayISO()));
+  return Math.min(100, Math.round((elapsed/total)*100));
+}
+
+function getActivePlan(){
+  const active = plans.filter(p => p.status === 'active');
+  active.sort((a,b) => (a.expireDate||'9999').localeCompare(b.expireDate||'9999'));
+  return active[0] || null;
+}
+
+function operatorIcon(op){
+  const o = (op||'').toLowerCase();
+  if (o.includes('digicel')) return 'radio-tower';
+  if (o.includes('natcom')) return 'signal';
+  return 'wifi';
+}
+
+// ---- Dashboard widget ----
+function refreshDashboardInternetWidget(){
+  refreshPlanStatuses();
+  const opEl = document.getElementById('dashNetOperator');
+  if (!opEl) return;
+  const p = getActivePlan();
+  if (!p){
+    document.getElementById('dashNetOperator').textContent = '—';
+    document.getElementById('dashNetName').textContent = 'Pa gen plan aktif';
+    document.getElementById('dashNetRemaining').textContent = '—';
+    document.getElementById('dashNetBar').style.width = '0%';
+    return;
+  }
+  document.getElementById('dashNetOperator').textContent = p.operator;
+  document.getElementById('dashNetName').textContent = p.name;
+  if (p.isUnlimited){
+    const left = planDaysLeft(p);
+    document.getElementById('dashNetRemaining').textContent = left != null ? `${left} jou` : 'Ilimite';
+  } else {
+    const left = planDaysLeft(p);
+    document.getElementById('dashNetRemaining').textContent = left != null ? `${left} jou` : '—';
+  }
+  const pct = planProgressPct(p);
+  const left = planDaysLeft(p);
+  const urgent = left != null && left <= 2;
+  document.getElementById('dashNetBar').style.width = pct + '%';
+  document.getElementById('dashNetBar').style.background = urgent ? 'var(--red)' : 'var(--orange)';
+}
+
+// ---- Finance integration ----
+function createPlanTransaction(p){
+  if (!p.walletId || !p.price) return;
+  tx.push({
+    id: uid(), type:'expense', amount: p.price,
+    description: `Plan ${escapeHtml(p.operator)} — ${escapeHtml(p.name)}`,
+    category: PLAN_TX_CATEGORY, walletId: p.walletId, date: p.startDate || todayISO(),
+  });
+  persistTx();
+}
+
+// ---- Notifications (checked on load + when opening the Internet view) ----
+function checkPlanNotifications(){
+  refreshPlanStatuses();
+  const t = todayISO();
+  plans.filter(p => p.status === 'active').forEach(p => {
+    const left = planDaysLeft(p);
+    if (left === null) return;
+    if (left === 3) showToast(`⚠ Plan "${p.name}" ap ekspire nan 3 jou`);
+    else if (left === 2) showToast(`⚠ Plan "${p.name}" ap ekspire nan 2 jou`);
+    else if (left === 1) showToast(`⚠ Plan "${p.name}" ap ekspire demen`);
+    else if (left === 0) showToast(`⏰ Plan "${p.name}" ekspire jodi a`);
+  });
+}
+
+// ---- AI recommendation: if buying short plans from same operator repeatedly, suggest a monthly plan ----
+function renderPlanAiSuggest(){
+  const wrap = document.getElementById('planAiSuggest');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const shortPlans = plans.filter(p => !p.isUnlimited && p.duration && p.duration <= 7);
+  const byOperator = {};
+  shortPlans.forEach(p => { (byOperator[p.operator] = byOperator[p.operator] || []).push(p); });
+  const candidate = Object.entries(byOperator).find(([,list]) => list.length >= 3);
+  if (!candidate) return;
+  const [operator, list] = candidate;
+  const totalSpent = list.reduce((s,p) => s + (p.price||0), 0);
+  const banner = document.createElement('div');
+  banner.className = 'ai-suggest';
+  banner.innerHTML = `<i data-lucide="sparkles"></i><div><b>AI Planner</b><span>Ou achte ${list.length} plan kout ${escapeHtml(operator)} (${fmtHTG(totalSpent)} total) — yon plan mansyèl ka koute w mwens. Vle m ede w konpare?</span></div>`;
+  wrap.appendChild(banner);
+  if (window.lucide) lucide.createIcons();
+}
+
+// ---- Stats ----
+function renderPlanStats(){
+  const el = document.getElementById('planStats');
+  const totalSpent = plans.reduce((s,p) => s + (p.price||0), 0);
+  const monthKey = new Date().toISOString().slice(0,7);
+  const monthlyCost = plans.filter(p => (p.startDate||'').slice(0,7) === monthKey).reduce((s,p) => s + (p.price||0), 0);
+  const opCount = {};
+  plans.forEach(p => { opCount[p.operator] = (opCount[p.operator]||0) + 1; });
+  const mostUsed = Object.entries(opCount).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+  const internetDays = plans.filter(p => !p.isUnlimited).reduce((s,p) => s + (p.duration||0), 0);
+  el.innerHTML = `
+    <div class="st"><b>${fmtHTG(totalSpent)}</b><span>Total depanse</span></div>
+    <div class="st"><b>${fmtHTG(monthlyCost)}</b><span>Kout mwa sa a</span></div>
+    <div class="st"><b>${escapeHtml(mostUsed)}</b><span>Operatè pi itilize</span></div>
+    <div class="st"><b>${plans.length}</b><span>Nonb plan</span></div>
+    <div class="st"><b>${internetDays}</b><span>Jou entènèt achte</span></div>
+  `;
+}
+
+// ---- Filters + render list ----
+function populatePlanOperatorFilter(){
+  const sel = document.getElementById('filterPlanOperator');
+  const current = sel.value;
+  const ops = [...new Set(plans.map(p => p.operator).filter(Boolean))];
+  sel.innerHTML = '<option value="">Tout operatè</option>' + ops.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+  sel.value = current;
+}
+
+function getFilteredPlans(){
+  const q = (document.getElementById('planSearch').value || '').toLowerCase();
+  const opF = document.getElementById('filterPlanOperator').value;
+  const stF = document.getElementById('filterPlanStatus').value;
+  return plans.filter(p => {
+    if (q && !((p.name||'').toLowerCase().includes(q) || (p.operator||'').toLowerCase().includes(q))) return false;
+    if (opF && p.operator !== opF) return false;
+    if (stF && p.status !== stF) return false;
+    return true;
+  }).sort((a,b) => (b.startDate||'').localeCompare(a.startDate||''));
+}
+
+function buildPlanCard(p){
+  const el = document.createElement('div');
+  el.className = 'card plan-card';
+  const left = planDaysLeft(p);
+  const pct = planProgressPct(p);
+  const urgent = p.status === 'active' && left != null && left <= 2;
+  el.innerHTML = `
+    <div class="plan-card-head">
+      <div class="ic"><i data-lucide="${operatorIcon(p.operator)}"></i></div>
+      <div class="info"><b>${escapeHtml(p.name)}</b><span>${escapeHtml(p.operator)} · ${PLAN_TYPES[p.type]||p.type}</span></div>
+      <span class="pill" style="background:color-mix(in srgb, ${PLAN_STATUS_COLOR[p.status]} 16%, transparent);color:${PLAN_STATUS_COLOR[p.status]}">${PLAN_STATUS_LABEL[p.status]}</span>
+    </div>
+    <div class="plan-meta">
+      <span class="pill" style="background:var(--surface-2);color:var(--text-dim)">${fmtHTG(p.price)}</span>
+      ${p.isUnlimited ? '<span class="pill" style="background:var(--surface-2);color:var(--text-dim)">Ilimite</span>' : `<span class="pill" style="background:var(--surface-2);color:var(--text-dim)">${p.duration} jou</span>`}
+    </div>
+    ${p.status === 'active' || p.status === 'paused' ? `
+    <div class="plan-progress-row">
+      <div class="lbl"><span>Pwogrè</span><b style="${urgent?'color:var(--red)':''}">${left != null ? left + ' jou rete' : '—'}</b></div>
+      <div class="mini-progress"><span style="width:${pct}%;background:${urgent?'var(--red)':'var(--orange)'}"></span></div>
+    </div>` : ''}
+    <div class="plan-foot"><span>${p.startDate ? formatDeadline(p.startDate) : '—'} → ${p.expireDate ? formatDeadline(p.expireDate) : '—'}</span></div>
+  `;
+  el.addEventListener('click', () => openPlanModal(p.id));
+  return el;
+}
+
+function renderPlans(){
+  refreshPlanStatuses();
+  populatePlanOperatorFilter();
+  const grid = document.getElementById('planGrid');
+  grid.innerHTML = '';
+  const list = getFilteredPlans();
+  if (!list.length){
+    grid.innerHTML = '<div class="widget-empty">Pa gen plan ki koresponn ak rechèch la</div>';
+  } else {
+    list.forEach(p => grid.appendChild(buildPlanCard(p)));
+  }
+  renderPlanStats();
+  renderPlanAiSuggest();
+  checkPlanNotifications();
+  refreshDashboardInternetWidget();
+  if (window.lucide) lucide.createIcons();
+}
+
+['planSearch','filterPlanOperator','filterPlanStatus'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderPlans);
+  document.getElementById(id).addEventListener('change', renderPlans);
+});
+
+// ---- Plan Modal ----
+let editingPlanId = null;
+
+function populatePlanWalletSelect(){
+  const sel = document.getElementById('planWallet');
+  sel.innerHTML = wallets.map(w => `<option value="${w.id}">${escapeHtml(w.name)}</option>`).join('');
+}
+
+function computeExpireFromStart(){
+  const unlimited = document.getElementById('planIsUnlimited').checked;
+  if (unlimited) return;
+  const start = document.getElementById('planStartDate').value;
+  const dur = parseInt(document.getElementById('planDuration').value, 10);
+  if (start && dur > 0){
+    const d = new Date(start + 'T00:00:00');
+    d.setDate(d.getDate() + dur);
+    document.getElementById('planExpireDate').value = d.toISOString().slice(0,10);
+  }
+}
+['planStartDate','planDuration'].forEach(id => document.getElementById(id).addEventListener('change', computeExpireFromStart));
+document.getElementById('planIsUnlimited').addEventListener('change', e => {
+  document.getElementById('planDuration').disabled = e.target.checked;
+});
+
+document.getElementById('planOperator').addEventListener('change', e => {
+  document.getElementById('planOperatorCustomWrap').hidden = e.target.value !== 'custom';
+});
+
+function openPlanModal(id, prefillDuplicate){
+  editingPlanId = id || null;
+  const p = id ? plans.find(x => x.id === id) : null;
+  populatePlanWalletSelect();
+  document.getElementById('planModalTitle').textContent = p ? 'Modifye Plan' : (prefillDuplicate ? 'Renouvle Plan' : 'Nouvo Plan');
+
+  const knownOps = ['Natcom','Digicel'];
+  const opVal = p?.operator;
+  document.getElementById('planOperator').value = knownOps.includes(opVal) ? opVal : (opVal ? 'custom' : 'Natcom');
+  document.getElementById('planOperatorCustomWrap').hidden = document.getElementById('planOperator').value !== 'custom';
+  document.getElementById('planOperatorCustom').value = knownOps.includes(opVal) ? '' : (opVal || '');
+
+  document.getElementById('planType').value = p?.type || 'internet';
+  document.getElementById('planName').value = p?.name || '';
+  document.getElementById('planPrice').value = p?.price || '';
+  document.getElementById('planDuration').value = p?.duration || '';
+  document.getElementById('planIsUnlimited').checked = !!p?.isUnlimited;
+  document.getElementById('planDuration').disabled = !!p?.isUnlimited;
+  document.getElementById('planStartDate').value = p?.startDate || todayISO();
+  document.getElementById('planExpireDate').value = p?.expireDate || '';
+  document.getElementById('planNotes').value = p?.notes || '';
+
+  document.getElementById('deletePlanBtn').hidden = !p;
+  document.getElementById('duplicatePlanBtn').hidden = !p;
+  document.getElementById('completePlanBtn').hidden = !p || !['active','paused'].includes(p.status);
+  document.getElementById('cancelPlanBtn').hidden = !p || !['active','paused'].includes(p.status);
+  const pauseBtn = document.getElementById('pauseResumePlanBtn');
+  if (p && (p.status === 'active' || p.status === 'paused')){
+    pauseBtn.hidden = false;
+    pauseBtn.textContent = p.status === 'active' ? 'Mete an Poz' : 'Reprann';
+  } else {
+    pauseBtn.hidden = true;
+  }
+
+  document.getElementById('planModalOverlay').classList.add('open');
+}
+function closePlanModal(){ document.getElementById('planModalOverlay').classList.remove('open'); editingPlanId = null; }
+
+function readPlanForm(){
+  const opSel = document.getElementById('planOperator').value;
+  const operator = opSel === 'custom' ? (document.getElementById('planOperatorCustom').value.trim() || 'Lòt') : opSel;
+  const isUnlimited = document.getElementById('planIsUnlimited').checked;
+  return {
+    operator,
+    type: document.getElementById('planType').value,
+    name: document.getElementById('planName').value.trim(),
+    price: parseFloat(document.getElementById('planPrice').value) || 0,
+    duration: isUnlimited ? null : (parseInt(document.getElementById('planDuration').value, 10) || 0),
+    isUnlimited,
+    startDate: document.getElementById('planStartDate').value || todayISO(),
+    expireDate: document.getElementById('planExpireDate').value || '',
+    walletId: document.getElementById('planWallet').value,
+    notes: document.getElementById('planNotes').value.trim(),
+  };
+}
+
+document.getElementById('savePlanBtn').addEventListener('click', () => {
+  const data = readPlanForm();
+  if (!data.name){ showToast('Mete yon non pou plan an'); return; }
+  if (!data.isUnlimited && !data.expireDate){ showToast('Mete dire oswa dat ekspirasyon'); return; }
+  const isNew = !editingPlanId;
+  let plan;
+  if (editingPlanId){
+    plan = plans.find(x => x.id === editingPlanId);
+    Object.assign(plan, data);
+  } else {
+    plan = { id: uid(), status:'active', createdAt: new Date().toISOString(), ...data };
+    plans.push(plan);
+    createPlanTransaction(plan);
+    bumpCategory('finance', -1);
+  }
+  persistPlans();
+  closePlanModal();
+  renderPlans();
+  showToast('Plan anrejistre ✓');
+});
+
+document.getElementById('deletePlanBtn').addEventListener('click', () => {
+  plans = plans.filter(p => p.id !== editingPlanId);
+  persistPlans();
+  closePlanModal();
+  renderPlans();
+  showToast('Plan efase');
+});
+
+document.getElementById('duplicatePlanBtn').addEventListener('click', () => {
+  const src = plans.find(x => x.id === editingPlanId);
+  if (!src) return;
+  const start = todayISO();
+  const newPlan = {
+    ...src, id: uid(), status:'active', startDate: start, createdAt: new Date().toISOString(),
+  };
+  if (!src.isUnlimited && src.duration){
+    const d = new Date(start + 'T00:00:00');
+    d.setDate(d.getDate() + src.duration);
+    newPlan.expireDate = d.toISOString().slice(0,10);
+  }
+  plans.push(newPlan);
+  createPlanTransaction(newPlan);
+  bumpCategory('finance', -1);
+  persistPlans();
+  closePlanModal();
+  renderPlans();
+  showToast('Plan dwaplike ak renouvle ✓');
+});
+
+document.getElementById('pauseResumePlanBtn').addEventListener('click', () => {
+  const p = plans.find(x => x.id === editingPlanId);
+  if (!p) return;
+  p.status = p.status === 'active' ? 'paused' : 'active';
+  persistPlans();
+  closePlanModal();
+  renderPlans();
+  showToast(p.status === 'paused' ? 'Plan mete an poz' : 'Plan reprann');
+});
+
+document.getElementById('completePlanBtn').addEventListener('click', () => {
+  const p = plans.find(x => x.id === editingPlanId);
+  if (!p) return;
+  p.status = 'completed';
+  persistPlans();
+  closePlanModal();
+  renderPlans();
+  showToast('Plan make kòm fini');
+});
+
+document.getElementById('cancelPlanBtn').addEventListener('click', () => {
+  const p = plans.find(x => x.id === editingPlanId);
+  if (!p) return;
+  p.status = 'cancelled';
+  persistPlans();
+  closePlanModal();
+  renderPlans();
+  showToast('Plan anile');
+});
+
+document.getElementById('newPlanBtn').addEventListener('click', () => openPlanModal(null));
+document.getElementById('closePlanModal').addEventListener('click', closePlanModal);
+document.getElementById('planModalOverlay').addEventListener('click', e => { if (e.target.id === 'planModalOverlay') closePlanModal(); });
+
+refreshDashboardInternetWidget();
+
+// ==========================================
+// PROJECTS MODULE
+// ==========================================
+function computeProjectProgress(p){
+  if (!p.tasks || !p.tasks.length) return 0;
+  const done = p.tasks.filter(t => t.done).length;
+  return Math.round((done / p.tasks.length) * 100);
+}
+
+function getFilteredSortedProjects(){
+  const q = (document.getElementById('projectSearch').value || '').toLowerCase();
+  const sort = document.getElementById('sortProjects').value;
+  let list = projects.filter(p => !q || p.name.toLowerCase().includes(q) || (p.description||'').toLowerCase().includes(q));
+  if (sort === 'deadline') list = list.slice().sort((a,b) => (a.deadline||'9999').localeCompare(b.deadline||'9999'));
+  else if (sort === 'progress') list = list.slice().sort((a,b) => computeProjectProgress(b) - computeProjectProgress(a));
+  else if (sort === 'name') list = list.slice().sort((a,b) => a.name.localeCompare(b.name));
+  return list;
+}
+
+function buildProjectCard(p){
+  const el = document.createElement('div');
+  el.className = 'task-card project-card';
+  el.draggable = true;
+  el.dataset.id = p.id;
+  const progress = computeProjectProgress(p);
+  const doneCount = (p.tasks||[]).filter(t=>t.done).length;
+  const overdue = p.deadline && new Date(p.deadline) < new Date() && p.status !== 'completed';
+  el.innerHTML = `
+    <div class="tc-title">${escapeHtml(p.name)}</div>
+    ${p.description ? `<div class="tc-sub">${escapeHtml(p.description).slice(0,70)}</div>` : ''}
+    <div class="mini-progress"><span style="width:${progress}%;background:var(--gradient-life)"></span></div>
+    <div class="tc-meta">
+      ${(p.tasks||[]).length ? `<span class="pill" style="background:var(--surface);color:var(--text-dim);"><i data-lucide="list-checks" style="width:10px;height:10px;"></i> ${doneCount}/${p.tasks.length}</span>` : ''}
+      ${p.deadline ? `<span class="pill" style="background:${overdue?'var(--red-soft)':'var(--surface)'};color:${overdue?'var(--red)':'var(--text-dim)'};">${p.deadline}</span>` : ''}
+      ${(p.files||[]).length ? `<span class="tc-files"><i data-lucide="paperclip" style="width:11px;height:11px;"></i>${p.files.length}</span>` : ''}
+    </div>
+  `;
+  el.addEventListener('click', () => openProjectModal(p.id));
+  el.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', p.id); });
+  return el;
+}
+
+function renderProjects(){
+  const board = document.getElementById('projectBoard');
+  board.innerHTML = '';
+  const list = getFilteredSortedProjects();
+  PROJECT_STATUSES.forEach(s => {
+    const col = document.createElement('div');
+    col.className = 'kanban-col';
+    const colProjects = list.filter(p => p.status === s.key);
+    col.innerHTML = `<div class="kanban-col-head"><span>${s.label}</span><span class="count">${colProjects.length}</span></div>
+      <div class="kanban-list" data-status="${s.key}"></div>`;
+    board.appendChild(col);
+    const listEl = col.querySelector('.kanban-list');
+    colProjects.forEach(p => listEl.appendChild(buildProjectCard(p)));
+    listEl.addEventListener('dragover', e => { e.preventDefault(); listEl.classList.add('drag-over'); });
+    listEl.addEventListener('dragleave', () => listEl.classList.remove('drag-over'));
+    listEl.addEventListener('drop', e => {
+      e.preventDefault(); listEl.classList.remove('drag-over');
+      const id = e.dataTransfer.getData('text/plain');
+      const p = projects.find(x => x.id === id);
+      if (p){ p.status = s.key; persistProjects(); renderProjects(); }
+    });
+  });
+  renderProjectStats();
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderProjectStats(){
+  const el = document.getElementById('projectStats');
+  const total = projects.length;
+  const completed = projects.filter(p => p.status === 'completed').length;
+  const overdue = projects.filter(p => p.deadline && new Date(p.deadline) < new Date() && p.status !== 'completed').length;
+  const avgProgress = total ? Math.round(projects.reduce((s,p) => s + computeProjectProgress(p), 0) / total) : 0;
+  el.innerHTML = `
+    <div class="st"><b>${total}</b><span>Total pwojè</span></div>
+    <div class="st"><b>${completed}</b><span>Fini</span></div>
+    <div class="st"><b style="${overdue?'color:var(--red)':''}">${overdue}</b><span>An reta</span></div>
+    <div class="st"><b>${avgProgress}%</b><span>Pwogrè mwayen</span></div>
+  `;
+}
+
+['projectSearch','sortProjects'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderProjects);
+  document.getElementById(id).addEventListener('change', renderProjects);
+});
+
+let editingProjectId = null;
+let projectTaskDraft = [];
+let projectFileDraft = [];
+
+function updateProjectProgressPreview(){
+  const total = projectTaskDraft.length;
+  const done = projectTaskDraft.filter(t => t.done).length;
+  const pct = total ? Math.round((done/total)*100) : 0;
+  document.getElementById('projectProgressPreview').style.width = pct + '%';
+  document.getElementById('projectProgressLbl').textContent = pct + '%';
+}
+
+function renderProjectTaskDraft(){
+  const wrap = document.getElementById('projectTaskList');
+  wrap.innerHTML = '';
+  projectTaskDraft.forEach((t,i) => {
+    const row = document.createElement('div');
+    row.className = 'subtask-row';
+    row.innerHTML = `<input type="checkbox" ${t.done?'checked':''} data-i="${i}" class="pt-chk">
+      <input type="text" value="${escapeHtml(t.text)}" data-i="${i}" class="pt-text" placeholder="Travay...">
+      <i data-lucide="x" class="rm" data-i="${i}"></i>`;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('.pt-chk').forEach(c => c.addEventListener('change', e => { projectTaskDraft[+e.target.dataset.i].done = e.target.checked; updateProjectProgressPreview(); }));
+  wrap.querySelectorAll('.pt-text').forEach(c => c.addEventListener('input', e => { projectTaskDraft[+e.target.dataset.i].text = e.target.value; }));
+  wrap.querySelectorAll('.rm').forEach(c => c.addEventListener('click', e => { projectTaskDraft.splice(+e.currentTarget.dataset.i, 1); renderProjectTaskDraft(); updateProjectProgressPreview(); }));
+  updateProjectProgressPreview();
+  if (window.lucide) lucide.createIcons();
+}
+document.getElementById('addProjectTaskBtn').addEventListener('click', () => {
+  projectTaskDraft.push({ id: uid(), text: '', done: false });
+  renderProjectTaskDraft();
+});
+
+function renderProjectFileDraft(){
+  const wrap = document.getElementById('projectFileList');
+  wrap.innerHTML = projectFileDraft.map((f,i) => `<span class="attach-chip"><i data-lucide="paperclip" style="width:11px;height:11px"></i>${escapeHtml(f.name)} <i data-lucide="x" class="rm" data-i="${i}" style="width:11px;height:11px"></i></span>`).join('') || '<span style="color:var(--text-faint);font-size:11.5px;">Pa gen fichye</span>';
+  wrap.querySelectorAll('.rm').forEach(c => c.addEventListener('click', e => { projectFileDraft.splice(+e.currentTarget.dataset.i, 1); renderProjectFileDraft(); }));
+  if (window.lucide) lucide.createIcons();
+}
+document.getElementById('projectFileInput').addEventListener('change', e => {
+  [...e.target.files].forEach(f => projectFileDraft.push({ name: f.name }));
+  e.target.value = '';
+  renderProjectFileDraft();
+});
+
+function openProjectModal(id){
+  editingProjectId = id || null;
+  const p = id ? projects.find(x => x.id === id) : null;
+  document.getElementById('projectModalTitle').textContent = p ? 'Modifye Pwojè' : 'Nouvo Pwojè';
+  document.getElementById('projectName').value = p?.name || '';
+  document.getElementById('projectDesc').value = p?.description || '';
+  document.getElementById('projectStatus').value = p?.status || 'idea';
+  document.getElementById('projectDeadline').value = p?.deadline || '';
+  document.getElementById('projectNotes').value = p?.notes || '';
+  document.getElementById('deleteProjectBtn').hidden = !p;
+  projectTaskDraft = p?.tasks ? p.tasks.map(t => ({...t})) : [];
+  projectFileDraft = p?.files ? p.files.map(f => ({...f})) : [];
+  renderProjectTaskDraft();
+  renderProjectFileDraft();
+  document.getElementById('projectModalOverlay').classList.add('open');
+}
+function closeProjectModal(){ document.getElementById('projectModalOverlay').classList.remove('open'); editingProjectId = null; }
+
+document.getElementById('saveProjectBtn').addEventListener('click', () => {
+  const name = document.getElementById('projectName').value.trim();
+  if (!name){ showToast('Mete yon non pou pwojè a'); return; }
+  const data = {
+    name,
+    description: document.getElementById('projectDesc').value.trim(),
+    status: document.getElementById('projectStatus').value,
+    deadline: document.getElementById('projectDeadline').value || '',
+    notes: document.getElementById('projectNotes').value.trim(),
+    tasks: projectTaskDraft.filter(t => t.text.trim()),
+    files: projectFileDraft,
+  };
+  if (editingProjectId){
+    const p = projects.find(x => x.id === editingProjectId);
+    Object.assign(p, data);
+  } else {
+    projects.push({ id: uid(), createdAt: new Date().toISOString(), ...data });
+  }
+  persistProjects();
+  closeProjectModal();
+  renderProjects();
+  showToast('Pwojè anrejistre ✓');
+});
+
+document.getElementById('deleteProjectBtn').addEventListener('click', () => {
+  projects = projects.filter(p => p.id !== editingProjectId);
+  persistProjects();
+  closeProjectModal();
+  renderProjects();
+  showToast('Pwojè efase');
+});
+
+document.getElementById('newProjectBtn').addEventListener('click', () => openProjectModal(null));
+document.getElementById('closeProjectModal').addEventListener('click', closeProjectModal);
+document.getElementById('projectModalOverlay').addEventListener('click', e => { if (e.target.id === 'projectModalOverlay') closeProjectModal(); });
+
+// ==========================================
+// NOTES MODULE
+// ==========================================
+function stripHtml(html){
+  const d = document.createElement('div');
+  d.innerHTML = html || '';
+  return (d.textContent || d.innerText || '').trim();
+}
+
+function renderFolderList(){
+  const wrap = document.getElementById('folderList');
+  wrap.innerHTML = '';
+  const allItem = document.createElement('div');
+  const allCount = notes.filter(n => !n.archived).length;
+  allItem.className = 'folder-item' + (activeFolderFilter === '' ? ' active' : '');
+  allItem.innerHTML = `<i data-lucide="layers" style="width:14px;height:14px;"></i><span>Tout nòt</span><span class="cnt">${allCount}</span>`;
+  allItem.addEventListener('click', () => { activeFolderFilter = ''; renderNotes(); });
+  wrap.appendChild(allItem);
+  noteFolders.forEach(f => {
+    const cnt = notes.filter(n => n.folderId === f.id && !n.archived).length;
+    const item = document.createElement('div');
+    item.className = 'folder-item' + (activeFolderFilter === f.id ? ' active' : '');
+    item.innerHTML = `<i data-lucide="folder" style="width:14px;height:14px;"></i><span>${escapeHtml(f.name)}</span><span class="cnt">${cnt}</span>`;
+    item.addEventListener('click', () => { activeFolderFilter = f.id; renderNotes(); });
+    wrap.appendChild(item);
+  });
+  if (window.lucide) lucide.createIcons();
+}
+
+function populateNoteFolderSelect(){
+  const sel = document.getElementById('noteFolder');
+  sel.innerHTML = noteFolders.map(f => `<option value="${f.id}">${escapeHtml(f.name)}</option>`).join('');
+}
+
+function getFilteredNotes(){
+  const q = (document.getElementById('noteSearch').value || '').toLowerCase();
+  const showArchived = document.getElementById('showArchivedNotes').checked;
+  return notes.filter(n => {
+    if (showArchived ? !n.archived : n.archived) return false;
+    if (activeFolderFilter && n.folderId !== activeFolderFilter) return false;
+    if (q){
+      const hay = (n.title + ' ' + (n.tags||[]).join(' ') + ' ' + stripHtml(n.bodyHtml)).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b) => (b.pinned - a.pinned) || (b.updatedAt||'').localeCompare(a.updatedAt||''));
+}
+
+function renderNotes(){
+  renderFolderList();
+  const grid = document.getElementById('notesGrid');
+  const list = getFilteredNotes();
+  if (!list.length){
+    grid.innerHTML = '<div class="empty-note">Pa gen nòt pou montre. Klike "Nouvo Nòt" pou kòmanse.</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  list.forEach(n => {
+    const folder = noteFolders.find(f => f.id === n.folderId);
+    const el = document.createElement('div');
+    el.className = 'card note-card';
+    el.innerHTML = `
+      <div class="nc-head">
+        <div class="nc-title">${escapeHtml(n.title || 'San tit')}</div>
+        ${n.pinned ? '<i data-lucide="pin" class="nc-pin"></i>' : ''}
+      </div>
+      <div class="nc-snippet">${escapeHtml(stripHtml(n.bodyHtml)).slice(0,140) || 'Nòt vid'}</div>
+      <div class="nc-meta">
+        ${folder ? `<span class="tag-pill">${escapeHtml(folder.name)}</span>` : ''}
+        ${(n.tags||[]).map(t => `<span class="tag-pill">#${escapeHtml(t)}</span>`).join('')}
+        <span class="nc-date">${(n.updatedAt||'').slice(0,10)}</span>
+      </div>
+    `;
+    el.addEventListener('click', () => openNoteModal(n.id));
+    grid.appendChild(el);
+  });
+  if (window.lucide) lucide.createIcons();
+}
+
+['noteSearch','showArchivedNotes'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderNotes);
+  document.getElementById(id).addEventListener('change', renderNotes);
+});
+
+document.getElementById('addFolderBtn').addEventListener('click', () => {
+  const name = prompt('Non nouvo dosye a?');
+  if (!name || !name.trim()) return;
+  noteFolders.push({ id: uid(), name: name.trim() });
+  persistNoteFolders();
+  populateNoteFolderSelect();
+  renderFolderList();
+  showToast('Dosye kreye ✓');
+});
+
+let editingNoteId = null;
+let notePinnedDraft = false;
+
+function openNoteModal(id){
+  editingNoteId = id || null;
+  const n = id ? notes.find(x => x.id === id) : null;
+  populateNoteFolderSelect();
+  document.getElementById('noteModalTitle').textContent = n ? 'Modifye Nòt' : 'Nouvo Nòt';
+  document.getElementById('noteTitle').value = n?.title || '';
+  document.getElementById('noteFolder').value = n?.folderId || (noteFolders[0]?.id || '');
+  document.getElementById('noteTags').value = (n?.tags || []).join(', ');
+  document.getElementById('noteBody').innerHTML = n?.bodyHtml || '';
+  notePinnedDraft = !!n?.pinned;
+  updateNotePinIcon();
+  document.getElementById('deleteNoteBtn').hidden = !n;
+  const archiveBtn = document.getElementById('archiveNoteBtn');
+  archiveBtn.hidden = !n;
+  archiveBtn.textContent = n?.archived ? 'Dezachive' : 'Achive';
+  document.getElementById('noteModalOverlay').classList.add('open');
+}
+function closeNoteModal(){ document.getElementById('noteModalOverlay').classList.remove('open'); editingNoteId = null; }
+
+function updateNotePinIcon(){
+  const el = document.getElementById('notePinBtn');
+  el.style.color = notePinnedDraft ? 'var(--orange)' : 'var(--text-faint)';
+}
+document.getElementById('notePinBtn').addEventListener('click', () => { notePinnedDraft = !notePinnedDraft; updateNotePinIcon(); });
+
+// Rich text toolbar
+document.getElementById('rtToolbar').querySelectorAll('button[data-cmd]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('noteBody').focus();
+    document.execCommand(btn.dataset.cmd, false, btn.dataset.val || null);
+  });
+});
+document.getElementById('rtCodeBtn').addEventListener('click', () => {
+  const body = document.getElementById('noteBody');
+  body.focus();
+  document.execCommand('insertHTML', false, '<pre><code>// kòd ou a isit la</code></pre><p><br></p>');
+});
+document.getElementById('rtTableBtn').addEventListener('click', () => {
+  const body = document.getElementById('noteBody');
+  body.focus();
+  const table = '<table><tr><th>Kolòn 1</th><th>Kolòn 2</th></tr><tr><td>—</td><td>—</td></tr><tr><td>—</td><td>—</td></tr></table><p><br></p>';
+  document.execCommand('insertHTML', false, table);
+});
+document.getElementById('rtImgBtn').addEventListener('click', () => document.getElementById('rtImgInput').click());
+document.getElementById('rtImgInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    document.getElementById('noteBody').focus();
+    document.execCommand('insertHTML', false, `<img src="${reader.result}" alt="${escapeHtml(file.name)}">`);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+document.getElementById('saveNoteBtn').addEventListener('click', () => {
+  const title = document.getElementById('noteTitle').value.trim();
+  if (!title){ showToast('Mete yon tit pou nòt la'); return; }
+  const data = {
+    title,
+    folderId: document.getElementById('noteFolder').value,
+    tags: document.getElementById('noteTags').value.split(',').map(s => s.trim()).filter(Boolean),
+    bodyHtml: document.getElementById('noteBody').innerHTML,
+    pinned: notePinnedDraft,
+  };
+  if (editingNoteId){
+    const n = notes.find(x => x.id === editingNoteId);
+    Object.assign(n, data, { updatedAt: new Date().toISOString() });
+  } else {
+    notes.push({ id: uid(), archived:false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...data });
+  }
+  persistNotes();
+  closeNoteModal();
+  renderNotes();
+  showToast('Nòt anrejistre ✓');
+});
+
+document.getElementById('deleteNoteBtn').addEventListener('click', () => {
+  notes = notes.filter(n => n.id !== editingNoteId);
+  persistNotes();
+  closeNoteModal();
+  renderNotes();
+  showToast('Nòt efase');
+});
+
+document.getElementById('archiveNoteBtn').addEventListener('click', () => {
+  const n = notes.find(x => x.id === editingNoteId);
+  if (!n) return;
+  n.archived = !n.archived;
+  persistNotes();
+  closeNoteModal();
+  renderNotes();
+  showToast(n.archived ? 'Nòt achive' : 'Nòt dezachive');
+});
+
+document.getElementById('newNoteBtn').addEventListener('click', () => openNoteModal(null));
+document.getElementById('closeNoteModal').addEventListener('click', closeNoteModal);
+document.getElementById('noteModalOverlay').addEventListener('click', e => { if (e.target.id === 'noteModalOverlay') closeNoteModal(); });
+
+// init icons (after dynamic content is in the DOM)
+if (window.lucide) lucide.createIcons();
+else window.addEventListener("load", () => window.lucide && lucide.createIcons());
+</script>
+</body>
+</html>
