@@ -487,15 +487,22 @@ NAV_ITEMS.forEach(group => {
     el.dataset.view = item.view || "";
     el.innerHTML = `<i data-lucide="${item.icon}"></i><span>${item.label}</span>`;
     el.addEventListener("click", () => {
-      // Nou deja sou paj Aprantisaj la; pou lòt vi yo, retounen nan OSLIFE.
+      // Nou deja sou paj Aprantisaj la; pou lòt vi yo, ale dirèk sou vi a nan OSLIFE.
       if (item.view === "learning") return;
-      window.location.href = "index.html";
+      window.location.href = "index.html#view=" + item.view;
     });
     navGroup.appendChild(el);
   });
 });
 
-if (window.lucide) lucide.createIcons();
+// Kreye ikòn yo (retante si lib lucide la poko fin chaje, paske li chaje an "defer")
+(function initIcons(){
+  if (window.lucide && typeof lucide.createIcons === "function"){
+    lucide.createIcons();
+  } else {
+    setTimeout(initIcons, 30);
+  }
+})();
 </script>
 </body>
 </html>
