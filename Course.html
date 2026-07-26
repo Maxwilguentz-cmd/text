@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kou — OSLIFE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<style>
+:root{
+  --bg:#0B0F1A; --bg-elevated:#10141F; --surface:#141926; --surface-2:#1A2030;
+  --border:#232A3B; --border-soft:#1B2130;
+  --text:#EDEFF5; --text-dim:#9AA3B8; --text-faint:#5C6478;
+  --blue:#3E7BFA; --blue-soft:rgba(62,123,250,.14);
+  --green:#2FBF87; --green-soft:rgba(47,191,135,.14);
+  --orange:#F5A623; --orange-soft:rgba(245,166,35,.14);
+  --red:#EF4444; --red-soft:rgba(239,68,68,.14);
+  --yellow:#FFC107;
+  --gradient-life: linear-gradient(135deg, var(--blue), var(--green));
+  --radius-lg:20px; --radius-md:14px; --radius-sm:9px;
+  --font-display:'Sora', sans-serif; --font-body:'Inter', sans-serif; --font-mono:'IBM Plex Mono', monospace;
+  --shadow-card: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -12px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+html{background:var(--bg);}
+body{
+  font-family:var(--font-body);
+  background:
+    radial-gradient(circle at 12% -10%, rgba(62,123,250,.10), transparent 40%),
+    radial-gradient(circle at 100% 0%, rgba(47,191,135,.07), transparent 35%),
+    var(--bg);
+  color:var(--text); min-height:100vh;
+}
+a{color:inherit;text-decoration:none;}
+button{font-family:var(--font-body);}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px;}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;}}
+
+.main{max-width:720px;margin:0 auto;padding:20px 20px 70px;}
+.topbar{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+.back-link{display:inline-flex;align-items:center;gap:7px;color:var(--text-dim);font-size:13px;font-weight:600;flex-shrink:0;}
+.back-link svg{width:16px;height:16px;}
+.back-link:hover{color:var(--text);}
+.topbar h1{font-family:var(--font-display);font-size:18px;font-weight:700;flex:1;}
+.hearts-row{display:flex;gap:3px;flex-shrink:0;}
+.hearts-row svg{width:16px;height:16px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
+.course-hero{padding:18px;display:flex;align-items:center;gap:14px;margin-bottom:8px;}
+.course-hero .ic{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;flex-shrink:0;}
+.course-hero .ic svg{width:22px;height:22px;}
+.course-hero .info{flex:1;min-width:0;}
+.course-hero .info b{font-size:15px;}
+.course-hero .bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-top:6px;}
+.course-hero .bar span{display:block;height:100%;border-radius:99px;}
+.course-hero .meta{font-size:11px;color:var(--text-faint);margin-top:4px;}
+
+.unit-banner{border-radius:var(--radius-md);padding:14px 18px;margin:22px 0 26px;color:#fff;box-shadow:0 4px 0 rgba(0,0,0,.15);}
+.unit-banner .unit-label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;opacity:.85;}
+.unit-banner .unit-title{font-size:15px;font-weight:700;margin-top:2px;}
+
+.path{display:flex;flex-direction:column;align-items:center;gap:0;position:relative;padding:6px 0 10px;}
+.path-node-wrap{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
+.path-node-wrap:not(:last-child)::after{content:'';position:absolute;top:66px;width:6px;height:36px;background:var(--border-soft);border-radius:3px;left:50%;transform:translateX(-50%);}
+.path-node-wrap.pos-l{align-self:flex-start;margin-left:14%;}
+.path-node-wrap.pos-r{align-self:flex-end;margin-right:14%;}
+.path-node-wrap.pos-c{align-self:center;}
+
+.node-btn{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;cursor:pointer;border:none;position:relative;box-shadow:0 6px 0 rgba(0,0,0,.18);transition:.12s;background:var(--surface-2);color:var(--text-faint);}
+.node-btn svg{width:24px;height:24px;}
+.node-btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.18);}
+.node-btn.locked{cursor:not-allowed;box-shadow:0 6px 0 rgba(0,0,0,.08);opacity:.55;}
+.node-btn.done{background:var(--green-soft);color:var(--green);box-shadow:0 6px 0 color-mix(in srgb, var(--green) 45%, transparent);}
+.node-btn.current{animation:bounce 1.6s ease-in-out infinite;}
+.node-label{font-size:10px;color:var(--text-dim);margin-top:6px;max-width:88px;text-align:center;line-height:1.2;font-weight:600;}
+.node-start-badge{position:absolute;top:-30px;background:var(--text);color:var(--surface);font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+.node-start-badge::after{content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--text);}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+
+/* Lesson modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(6,9,16,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:50;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);max-width:460px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-card);}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border-soft);}
+.modal-head h3{font-family:var(--font-display);font-size:15px;font-weight:700;}
+.icon-btn{width:32px;height:32px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-dim);display:grid;place-items:center;cursor:pointer;}
+.icon-btn svg{width:15px;height:15px;}
+.modal-body{padding:20px;}
+.progress-track{height:12px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-bottom:16px;}
+.progress-fill{height:100%;border-radius:99px;background:var(--gradient-life);transition:width .3s;}
+.lesson-section{margin-bottom:14px;}
+.lesson-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);font-weight:700;margin-bottom:6px;}
+.lesson-body{font-size:13px;color:var(--text-dim);line-height:1.6;}
+.lesson-body.q{font-weight:700;color:var(--text);}
+.lesson-code{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;font-family:var(--font-mono);font-size:11.5px;color:var(--text);white-space:pre-wrap;}
+.opt{display:flex;align-items:center;gap:8px;padding:12px 14px;border:2px solid var(--border);border-radius:12px;font-size:13px;cursor:pointer;color:var(--text-dim);font-weight:600;transition:.1s;margin-bottom:8px;}
+.opt:hover{border-color:var(--blue);}
+.opt.correct{border-color:var(--green);background:var(--green-soft);color:var(--green);}
+.opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red);}
+.feedback-bar{padding:12px 16px;border-radius:12px;margin-top:8px;font-size:13px;font-weight:700;}
+.feedback-bar.ok{background:var(--green-soft);color:var(--green);}
+.feedback-bar.ko{background:var(--red-soft);color:var(--red);}
+.modal-foot{padding:16px 20px;border-top:1px solid var(--border-soft);}
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;border-radius:11px;border:none;padding:12px 18px;font-size:13.5px;font-weight:700;cursor:pointer;width:100%;transition:.15s ease;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{filter:brightness(1.08);}
+
+@keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.card{animation:rise .4s ease both;}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-faint);}
+</style>
+</head>
+<body>
+
+<div class="main">
+  <div class="topbar">
+    <a href="learning.html" class="back-link"><i data-lucide="arrow-left"></i> Tout Kou</a>
+    <h1 id="courseTitle">Kou</h1>
+    <div class="hearts-row" id="heartsRow"></div>
+  </div>
+
+  <div class="card course-hero">
+    <div class="ic" id="courseIc"><i data-lucide="graduation-cap"></i></div>
+    <div class="info">
+      <b id="courseLabel">—</b>
+      <div class="bar"><span id="courseBar" style="width:0%"></span></div>
+      <div class="meta" id="courseMeta">0/0 leson</div>
+    </div>
+  </div>
+
+  <div id="pathWrap"></div>
+</div>
+
+<div class="modal-overlay" id="lessonModalOverlay">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="lessonModalTitle">Leson</h3><button class="icon-btn" id="closeLessonModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body" id="lessonModalBody"></div>
+    <div class="modal-foot"><button class="btn btn-primary" id="lessonActionBtn">Reponn defi a anvan</button></div>
+  </div>
+</div>
+
+<script>
+const ROADMAPS = [
+  { id:'html', label:'HTML', icon:'file-code-2', color:'var(--orange)', levels:[
+    { id:'html-1', title:'Nivo 1 — Estrikti', lessons:[
+      { id:'html-1-1', title:'Baz HTML', explanation:'HTML se lang ki bay estrikti a yon paj wèb, ak tag ki make tit, paragraf, lis, elatriye.',
+        example:'<!DOCTYPE html>\n<html>\n  <body>\n    <h1>Bonjou</h1>\n  </body>\n</html>',
+        practice:'Ekri yon tag <p> ki di "Mwen ap aprann HTML".',
+        challengeQ:'Ki tag ki make yon paragraf?', options:['<p>','<h1>','<div>','<span>'], correct:0 },
+      { id:'html-1-2', title:'Lyen ak Imaj', explanation:'Tag <a> kreye lyen, tag <img> ajoute imaj ak yon atribi src.',
+        example:'<a href="https://example.com">Vizite</a>\n<img src="foto.jpg" alt="Foto">',
+        practice:'Ekri yon lyen ki mennen nan "https://oslife.app".',
+        challengeQ:'Ki atribi ki bay chemen imaj la?', options:['href','alt','src','link'], correct:2 },
+    ]},
+    { id:'html-2', title:'Nivo 2 — Fòm ak Tablo', lessons:[
+      { id:'html-2-1', title:'Fòm Baz', explanation:'Tag <form> ansanm ak <input> pèmèt itilizatè antre done.',
+        example:'<form>\n  <input type="text" placeholder="Non">\n  <button>Voye</button>\n</form>',
+        practice:'Ajoute yon <input type="email"> nan yon fòm.',
+        challengeQ:'Ki tag ki kontni yon chan antre done?', options:['<input>','<field>','<entry>','<data>'], correct:0 },
+      { id:'html-2-2', title:'Tablo', explanation:'Tag <table>, <tr>, <td> ansanm kreye tablo done.',
+        example:'<table>\n  <tr><td>Non</td><td>Laj</td></tr>\n</table>',
+        practice:'Ajoute yon dezyèm liy nan tablo egzanp la.',
+        challengeQ:'Ki tag ki reprezante yon selil nan tablo?', options:['<cell>','<td>','<tc>','<row>'], correct:1 },
+    ]},
+  ]},
+  { id:'css', label:'CSS', icon:'palette', color:'var(--blue)', levels:[
+    { id:'css-1', title:'Nivo 1 — Estil Baz', lessons:[
+      { id:'css-1-1', title:'Seleksyonè', explanation:'CSS itilize seleksyonè pou vize eleman HTML epi aplike estil sou yo.',
+        example:'p { color: blue; font-size: 16px; }',
+        practice:'Chanje koulè tit <h1> a an vèt.',
+        challengeQ:'Ki pwopriyete ki chanje koulè tèks la?', options:['background','color','font','border'], correct:1 },
+      { id:'css-1-2', title:'Bwat Modèl (Box Model)', explanation:'Chak eleman gen margin, border, padding, ak contenu.',
+        example:'.card { padding: 16px; margin: 10px; border: 1px solid #ccc; }',
+        practice:'Ajoute yon padding 20px sou yon kat.',
+        challengeQ:'Ki pwopriyete ki ajoute espas anndan yon eleman?', options:['margin','padding','gap','space'], correct:1 },
+    ]},
+    { id:'css-2', title:'Nivo 2 — Flexbox', lessons:[
+      { id:'css-2-1', title:'Entwodiksyon Flexbox', explanation:'display:flex pèmèt ou aliye eleman fasilman nan yon liy oswa kolòn.',
+        example:'.row { display: flex; gap: 10px; align-items: center; }',
+        practice:'Kreye yon .row ki gen 3 kat aliye youn bò kot lòt.',
+        challengeQ:'Ki pwopriyete ki aktive flexbox?', options:['display:flex','flex:row','layout:flex','box:flex'], correct:0 },
+      { id:'css-2-2', title:'Jistifikasyon ak Aliyman', explanation:'justify-content ak align-items kontwole pozisyon eleman anndan yon flex container.',
+        example:'.row { justify-content: space-between; }',
+        practice:'Sant yon eleman ak justify-content:center.',
+        challengeQ:'Ki pwopriyete ki jistifye eleman orizontalman?', options:['align-items','justify-content','text-align','flex-wrap'], correct:1 },
+    ]},
+  ]},
+  { id:'javascript', label:'JavaScript', icon:'braces', color:'var(--orange)', levels:[
+    { id:'js-1', title:'Nivo 1 — Varyab ak Fonksyon', lessons:[
+      { id:'js-1-1', title:'Varyab', explanation:'let ak const kreye varyab; const pa chanje valè li apre yo deklare l.',
+        example:'let non = "Wilguentz";\nconst PI = 3.14;',
+        practice:'Kreye yon varyab "laj" ki gen valè 25.',
+        challengeQ:'Ki mo kle ki kreye yon varyab ki PA chanje?', options:['let','var','const','static'], correct:2 },
+      { id:'js-1-2', title:'Fonksyon Flèch', explanation:'Fonksyon flèch se yon fason kout pou ekri fonksyon.',
+        example:'const add = (a, b) => a + b;\nconsole.log(add(2,3));',
+        practice:'Ekri yon fonksyon flèch ki miltipliye 2 nonm.',
+        challengeQ:'Ki senbòl ki make yon fonksyon flèch?', options:['->','=>','::','~>'], correct:1 },
+    ]},
+    { id:'js-2', title:'Nivo 2 — Tablo ak Objè', lessons:[
+      { id:'js-2-1', title:'Metòd Tablo', explanation:'.map(), .filter(), .forEach() pèmèt trete yon tablo san bouk manyèl.',
+        example:'const nums=[1,2,3];\nconst doubled = nums.map(n => n*2);',
+        practice:'Itilize .filter() pou jwenn nonm pè yo nan yon tablo.',
+        challengeQ:'Ki metòd ki kreye yon nouvo tablo apre transfòmasyon?', options:['.filter()','.map()','.find()','.reduce()'], correct:1 },
+      { id:'js-2-2', title:'Objè ak Destriktirasyon', explanation:'Objè estoke done ak pè kle-valè; destriktirasyon ekstrè valè fasilman.',
+        example:'const user = { non:"Ana", laj:22 };\nconst { non } = user;',
+        practice:'Kreye yon objè "pwodwi" ak non ak pri.',
+        challengeQ:'Ki senbòl ki antoure yon objè literal?', options:['[]','{}','()','<>'], correct:1 },
+    ]},
+  ]},
+  { id:'python', label:'Python', icon:'terminal', color:'var(--green)', levels:[
+    { id:'py-1', title:'Nivo 1 — Sentaks Baz', lessons:[
+      { id:'py-1-1', title:'Varyab ak Tip', explanation:'Python pa mande deklarasyon tip; li dedwi tip la otomatikman.',
+        example:'non = "Kessy"\nlaj = 30\nprint(non, laj)',
+        practice:'Kreye yon varyab "vil" ak valè "Pòtoprens".',
+        challengeQ:'Ki fonksyon ki afiche rezilta nan Python?', options:['echo()','print()','display()','log()'], correct:1 },
+      { id:'py-1-2', title:'Kondisyon', explanation:'if/elif/else pèmèt pran desizyon selon kondisyon.',
+        example:'if laj >= 18:\n    print("Majè")\nelse:\n    print("Minè")',
+        practice:'Ekri yon kondisyon ki tcheke si yon nonm pozitif.',
+        challengeQ:'Ki mo kle ki kòmanse yon dezyèm kondisyon?', options:['else if','elseif','elif','elsif'], correct:2 },
+    ]},
+    { id:'py-2', title:'Nivo 2 — Fonksyon ak Lis', lessons:[
+      { id:'py-2-1', title:'Fonksyon', explanation:'def defini yon fonksyon reyitilizab.',
+        example:'def carre(n):\n    return n * n\nprint(carre(4))',
+        practice:'Ekri yon fonksyon ki adisyone 2 nonm.',
+        challengeQ:'Ki mo kle ki defini yon fonksyon?', options:['func','def','function','method'], correct:1 },
+      { id:'py-2-2', title:'Lis ak Bouk', explanation:'Lis estoke plizyè valè; for pèmèt bouke sou yo.',
+        example:'nums = [1,2,3]\nfor n in nums:\n    print(n)',
+        practice:'Kreye yon lis vil ayisyen epi bouke sou li.',
+        challengeQ:'Ki tip done ki itilize [] nan Python?', options:['dict','tuple','list','set'], correct:2 },
+    ]},
+  ]},
+  { id:'ai', label:'AI', icon:'brain-circuit', color:'var(--blue)', levels:[
+    { id:'ai-1', title:'Nivo 1 — Konsèp Fondamantal', lessons:[
+      { id:'ai-1-1', title:'Kisa AI Ye', explanation:'Entèlijans Atifisyèl se sistèm enfòmatik ki imite kapasite kognitif imen tankou aprann ak rezone.',
+        example:'AI = Machine Learning + Deep Learning + NLP + ...',
+        practice:'Site 2 egzanp aplikasyon AI ou itilize chak jou.',
+        challengeQ:'Ki branch AI ki fè machin "aprann" apati done?', options:['Machine Learning','HTML','CSS','SQL'], correct:0 },
+      { id:'ai-1-2', title:'Done ak Antrènman', explanation:'Yon modèl AI aprann apati yon gwo kantite done pandan yon faz antrènman.',
+        example:'Plis done kalite ou genyen, pi bon modèl la ka vin.',
+        practice:'Panse a yon dataset ou ta ka kolekte pou yon pwojè pèsonèl.',
+        challengeQ:'Kisa yo rele faz kote modèl la aprann apati done?', options:['Deplwaman','Antrènman','Enferans','Validasyon'], correct:1 },
+    ]},
+    { id:'ai-2', title:'Nivo 2 — Modèl ak Pwomt', lessons:[
+      { id:'ai-2-1', title:'LLM ak Pwomt', explanation:'Yon Large Language Model jenere tèks apati yon pwomt (enstriksyon) ou bay li.',
+        example:'Pwomt: "Ekri yon rezime an 3 fraz sou..." → LLM jenere repons.',
+        practice:'Ekri yon pwomt klè pou mande yon rezime yon atik.',
+        challengeQ:'Kisa ki rele antre tèks ou bay yon LLM pou jwenn yon repons?', options:['Endèks','Pwomt','Vektè','Tokèn'], correct:1 },
+      { id:'ai-2-2', title:'Etik AI', explanation:'Itilizasyon responsab AI mande transparans, ekitab, ak respè vi prive itilizatè yo.',
+        example:'Egzanp: pa itilize AI pou kreye kontni ki twonpe moun.',
+        practice:'Site yon prensip etik ki enpòtan pou ou lè w ap itilize AI.',
+        challengeQ:'Ki eleman ki fondamantal nan yon itilizasyon etik AI?', options:['Vitès','Transparans','Pri ba','Koulè'], correct:1 },
+    ]},
+  ]},
+  { id:'electronics', label:'Elektwonik', icon:'cpu', color:'var(--green)', levels:[
+    { id:'elec-1', title:'Nivo 1 — Baz Sikwi', lessons:[
+      { id:'elec-1-1', title:'Kouran ak Tansyon', explanation:'Tansyon (V) se fòs ki pouse elektwon; kouran (A) se flux elektwon nan yon sikwi.',
+        example:'Lwa Ohm: V = I × R',
+        practice:'Kalkile V si I=2A ak R=5Ω.',
+        challengeQ:'Ki fòmil ki reprezante Lwa Ohm?', options:['V=I/R','V=I×R','V=R/I','V=I+R'], correct:1 },
+      { id:'elec-1-2', title:'Rezistans', explanation:'Yon rezistans limite kouran ki pase nan yon sikwi.',
+        example:'Rezistans mezire an Ohm (Ω), senbòl li se yon reyaktans nan sikwi.',
+        practice:'Idantifye 2 kote yo itilize rezistans nan yon aparèy elektwonik.',
+        challengeQ:'Nan ki inite yo mezire rezistans?', options:['Volt','Ampè','Ohm','Watt'], correct:2 },
+    ]},
+    { id:'elec-2', title:'Nivo 2 — Konpozan', lessons:[
+      { id:'elec-2-1', title:'Dyòd ak LED', explanation:'Yon dyòd kite kouran pase yon sèl sans; LED se yon dyòd ki limen.',
+        example:'LED bezwen yon rezistans an seri pou limite kouran.',
+        practice:'Deside ki rezistans ou ta bezwen pou pwoteje yon LED.',
+        challengeQ:'Ki kalite konpozan ki kite kouran pase yon sèl direksyon?', options:['Kapasitè','Dyòd','Boben','Switch'], correct:1 },
+      { id:'elec-2-2', title:'Microcontrolè', explanation:'Yon microcontrolè (tankou Arduino) ka li antre ak kontwole sòti selon yon pwogram.',
+        example:'digitalWrite(13, HIGH); // limen yon LED sou pin 13',
+        practice:'Panse a yon pwojè kote ou ta itilize yon Arduino.',
+        challengeQ:'Ki egzanp microcontrolè ki popilè pou débitan?', options:['Arduino','Photoshop','MySQL','Excel'], correct:0 },
+    ]},
+  ]},
+];
+
+
+// ---- Storage (shared shape/key with the main OSLIFE app) ----
+const LS_KEY = 'oslife.learning';
+function loadLearning(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return Object.assign({ xp:0, hearts:5, streak:0, lastStudyDate:null, completed:[], badges:[] }, JSON.parse(raw));
+  }catch(e){}
+  return { xp:0, hearts:5, streak:0, lastStudyDate:null, completed:[], badges:[], lessonLog:[], startedRoadmaps:[] };
+}
+const learning = loadLearning();
+learning.completed = learning.completed || [];
+learning.startedRoadmaps = learning.startedRoadmaps || [];
+learning.studyDates = learning.studyDates || [];
+
+function persistLearning(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(learning)); }catch(e){}
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function isoOffset(iso, days){ const d = new Date(iso); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+function allLessonIdsForRoadmap(r){ return r.levels.flatMap(lvl => lvl.lessons.map(l => l.id)); }
+function roadmapProgress(r){
+  const ids = allLessonIdsForRoadmap(r);
+  const done = ids.filter(id => learning.completed.includes(id)).length;
+  return { done, total: ids.length, pct: ids.length ? Math.round((done/ids.length)*100) : 0 };
+}
+function lessonById(id){
+  for (const r of ROADMAPS) for (const lvl of r.levels) for (const l of lvl.lessons) if (l.id === id) return { roadmap:r, level:lvl, lesson:l };
+  return null;
+}
+function updateLearningStreak(){
+  const t = todayISO();
+  if (!learning.studyDates.includes(t)) learning.studyDates.push(t);
+  const set = new Set(learning.studyDates);
+  let current = 0, cursor = t;
+  if (!set.has(cursor)) cursor = isoOffset(cursor,-1);
+  while (set.has(cursor)){ current++; cursor = isoOffset(cursor,-1); }
+  learning.streak = current;
+  learning.lastStudyDate = t;
+}
+function checkDailyHeartsReset(){
+  const t = todayISO();
+  if (learning.lastStudyDate !== t && learning.hearts < 5){ learning.hearts = 5; persistLearning(); }
+}
+
+const params = new URLSearchParams(location.search);
+const courseId = params.get('id') || ROADMAPS[0].id;
+const course = ROADMAPS.find(r => r.id === courseId) || ROADMAPS[0];
+
+function markStarted(){
+  if (!learning.startedRoadmaps.includes(course.id)){
+    learning.startedRoadmaps.push(course.id);
+    persistLearning();
+  }
+}
+
+function renderHearts(){
+  const row = document.getElementById('heartsRow');
+  row.innerHTML = '';
+  for (let i=0;i<5;i++){
+    const on = i < (learning.hearts ?? 5);
+    row.innerHTML += '<i data-lucide="heart" style="color:' + (on ? 'var(--red)' : 'var(--border)') + '"></i>';
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderCourseHero(){
+  const { done, total, pct } = roadmapProgress(course);
+  document.getElementById('courseTitle').textContent = course.label;
+  document.getElementById('courseIc').style.background = 'color-mix(in srgb, ' + course.color + ' 20%, transparent)';
+  document.getElementById('courseIc').style.color = course.color;
+  document.getElementById('courseIc').innerHTML = '<i data-lucide="' + course.icon + '"></i>';
+  document.getElementById('courseLabel').textContent = course.label;
+  document.getElementById('courseBar').style.width = pct + '%';
+  document.getElementById('courseBar').style.background = course.color;
+  document.getElementById('courseMeta').textContent = done + '/' + total + ' leson · ' + pct + '%';
+}
+
+function renderPath(){
+  checkDailyHeartsReset();
+  const flat = course.levels.flatMap(lvl => lvl.lessons);
+  const posCycle = ['pos-c','pos-r','pos-l'];
+  let globalIdx = 0;
+  let nextMarked = false;
+  let html = '';
+  course.levels.forEach(lvl => {
+    html += '<div class="unit-banner" style="background:' + course.color + '"><div class="unit-label">' + escapeHtml(course.label) + '</div><div class="unit-title">' + escapeHtml(lvl.title) + '</div></div>';
+    html += '<div class="path">';
+    lvl.lessons.forEach(les => {
+      const flatIdx = flat.findIndex(x => x.id === les.id);
+      const done = learning.completed.includes(les.id);
+      const unlocked = flatIdx === 0 || learning.completed.includes(flat[flatIdx-1].id);
+      const isNext = unlocked && !done && !nextMarked;
+      if (isNext) nextMarked = true;
+      const pos = posCycle[globalIdx % posCycle.length];
+      globalIdx++;
+      const icon = done ? 'check' : (unlocked ? 'star' : 'lock');
+      html += '<div class="path-node-wrap ' + pos + '">' +
+        (isNext ? '<div class="node-start-badge">Kòmanse</div>' : '') +
+        '<button class="node-btn ' + (done?'done':'') + ' ' + (unlocked?'':'locked') + ' ' + (isNext?'current':'') + '"' +
+        (unlocked ? ' style="background:color-mix(in srgb, ' + course.color + ' 20%, transparent);color:' + course.color + ';"' : '') +
+        ' data-lesson="' + les.id + '" ' + (unlocked?'':'disabled') + '>' +
+        '<i data-lucide="' + icon + '"></i></button>' +
+        '<div class="node-label">' + escapeHtml(les.title) + '</div></div>';
+    });
+    html += '</div>';
+  });
+  document.getElementById('pathWrap').innerHTML = html;
+  document.querySelectorAll('.node-btn:not(.locked)').forEach(el => el.addEventListener('click', () => openLessonModal(el.dataset.lesson)));
+  if (window.lucide) lucide.createIcons();
+}
+
+let currentLessonId = null;
+let challengeAnswered = false;
+
+function openLessonModal(id){
+  currentLessonId = id;
+  challengeAnswered = false;
+  const found = lessonById(id);
+  if (!found) return;
+  const { lesson } = found;
+  const flat = course.levels.flatMap(lvl => lvl.lessons);
+  const flatIdx = flat.findIndex(x => x.id === id);
+  const progressPct = flat.length ? Math.round((flatIdx/flat.length)*100) : 0;
+  document.getElementById('lessonModalTitle').textContent = lesson.title;
+  const body = document.getElementById('lessonModalBody');
+  body.innerHTML =
+    '<div class="progress-track"><div class="progress-fill" style="width:' + progressPct + '%"></div></div>' +
+    '<div class="lesson-section"><div class="lesson-label">Eksplikasyon</div><div class="lesson-body">' + escapeHtml(lesson.explanation) + '</div></div>' +
+    '<div class="lesson-section"><div class="lesson-label">Egzanp</div><div class="lesson-code">' + escapeHtml(lesson.example) + '</div></div>' +
+    '<div class="lesson-section"><div class="lesson-label">Pratik</div><div class="lesson-body">' + escapeHtml(lesson.practice) + '</div></div>' +
+    '<div class="lesson-section"><div class="lesson-label">Defi</div><div class="lesson-body q" style="margin-bottom:10px;">' + escapeHtml(lesson.challengeQ) + '</div>' +
+    '<div id="challengeOpts"></div><div id="challengeFeedback"></div></div>';
+
+  const optsWrap = document.getElementById('challengeOpts');
+  lesson.options.forEach((opt, i) => {
+    const el = document.createElement('div');
+    el.className = 'opt';
+    el.textContent = opt;
+    el.addEventListener('click', () => {
+      if (challengeAnswered) return;
+      challengeAnswered = true;
+      const isCorrect = i === lesson.correct;
+      learning.attempts = (learning.attempts||0) + 1;
+      if (isCorrect) learning.correctAnswers = (learning.correctAnswers||0) + 1;
+      else learning.hearts = Math.max(0, (learning.hearts??5) - 1);
+      optsWrap.querySelectorAll('.opt').forEach((o, idx) => {
+        if (idx === lesson.correct) o.classList.add('correct');
+        else if (idx === i) o.classList.add('wrong');
+      });
+      document.getElementById('challengeFeedback').innerHTML =
+        '<div class="feedback-bar ' + (isCorrect?'ok':'ko') + '">' + (isCorrect ? 'Bon travay! Kòrèk' : 'Pa kòrèk — ou pèdi yon kè') + '</div>';
+      persistLearning();
+      renderHearts();
+      document.getElementById('lessonActionBtn').textContent = isCorrect ? 'Kontinye' : 'Kontinye kanmenm';
+    });
+    optsWrap.appendChild(el);
+  });
+  document.getElementById('lessonActionBtn').textContent = 'Reponn defi a anvan';
+  document.getElementById('lessonModalOverlay').classList.add('open');
+  if (window.lucide) lucide.createIcons();
+}
+
+document.getElementById('lessonActionBtn').addEventListener('click', () => {
+  if (!challengeAnswered){ return; }
+  if (!learning.completed.includes(currentLessonId)){
+    learning.completed.push(currentLessonId);
+    learning.xp += 15;
+    learning.lessonLog = learning.lessonLog || [];
+    learning.lessonLog.push(todayISO());
+    updateLearningStreak();
+  }
+  persistLearning();
+  document.getElementById('lessonModalOverlay').classList.remove('open');
+  renderCourseHero();
+  renderPath();
+});
+document.getElementById('closeLessonModal').addEventListener('click', () => document.getElementById('lessonModalOverlay').classList.remove('open'));
+document.getElementById('lessonModalOverlay').addEventListener('click', e => { if (e.target.id === 'lessonModalOverlay') document.getElementById('lessonModalOverlay').classList.remove('open'); });
+
+markStarted();
+renderHearts();
+renderCourseHero();
+renderPath();
+</script>
+</body>
+</html>
