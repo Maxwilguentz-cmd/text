@@ -333,7 +333,7 @@ function renderContinue(){
   document.getElementById('continueBar').style.width = pct + '%';
   document.getElementById('continueBar').style.background = active.color;
   document.getElementById('continuePct').textContent = pct + '% konplete';
-  document.getElementById('continueBtn').href = 'course.html?id=' + active.id;
+  document.getElementById('continueBtn').href = 'course.html?course=' + active.id;
   if (window.lucide) lucide.createIcons();
 }
 
@@ -349,7 +349,7 @@ function renderCourseGrid(){
       '<b>' + escapeHtml(r.label) + '</b>' +
       '<div class="ring-bar"><div class="ring-fill" style="width:' + pct + '%;background:' + r.color + '"></div></div>' +
       '<span class="meta">' + done + '/' + total + ' leson · ' + pct + '%</span>' +
-      '<a class="btn btn-ghost" href="course.html?id=' + r.id + '">' + (done > 0 ? 'Kontinye' : 'Kòmanse') + '</a>';
+      '<a class="btn btn-ghost" href="course.html?course=' + r.id + '">' + (done > 0 ? 'Kontinye' : 'Kòmanse') + '</a>';
     grid.appendChild(el);
   });
   if (window.lucide) lucide.createIcons();
