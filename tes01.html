@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aprantisaj — OSLIFE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<style>
+:root{
+  --bg:#0B0F1A; --bg-elevated:#10141F; --surface:#141926; --surface-2:#1A2030;
+  --border:#232A3B; --border-soft:#1B2130;
+  --text:#EDEFF5; --text-dim:#9AA3B8; --text-faint:#5C6478;
+  --blue:#3E7BFA; --blue-soft:rgba(62,123,250,.14);
+  --green:#2FBF87; --green-soft:rgba(47,191,135,.14);
+  --orange:#F5A623; --orange-soft:rgba(245,166,35,.14);
+  --red:#EF4444; --red-soft:rgba(239,68,68,.14);
+  --yellow:#FFC107;
+  --gradient-life: linear-gradient(135deg, var(--blue), var(--green));
+  --radius-lg:20px; --radius-md:14px; --radius-sm:9px;
+  --font-display:'Sora', sans-serif; --font-body:'Inter', sans-serif; --font-mono:'IBM Plex Mono', monospace;
+  --shadow-card: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -12px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow-x:hidden;}
+html{background:var(--bg);}
+body{
+  font-family:var(--font-body);
+  background:
+    radial-gradient(circle at 12% -10%, rgba(62,123,250,.10), transparent 40%),
+    radial-gradient(circle at 100% 0%, rgba(47,191,135,.07), transparent 35%),
+    var(--bg);
+  color:var(--text); min-height:100vh;
+}
+a{color:inherit;text-decoration:none;}
+button{font-family:var(--font-body);}
+
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+.sidebar{
+  background:var(--bg-elevated);border-right:1px solid var(--border);padding:22px 14px;
+  display:flex;flex-direction:column;gap:22px;position:sticky;top:0;height:100vh;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px;font-family:var(--font-display);font-weight:800;font-size:17px;}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;font-weight:800;font-size:13px;}
+.nav-group{display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto;}
+.nav-label{font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--text-faint);padding:14px 12px 6px;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--radius-sm);color:var(--text-dim);font-size:13.5px;font-weight:500;cursor:pointer;position:relative;}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;}
+.nav-item.active{background:var(--blue-soft);color:var(--blue);font-weight:600;}
+.sidebar-foot{border-top:1px solid var(--border-soft);padding-top:14px;display:flex;align-items:center;gap:10px;}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient-life);display:grid;place-items:center;font-weight:700;font-size:12.5px;color:#06110C;}
+
+.main{max-width:1080px;margin:0 auto;padding:24px 20px 60px;width:100%;}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;}
+.back-link{display:inline-flex;align-items:center;gap:7px;color:var(--text-dim);font-size:13px;font-weight:600;}
+.back-link svg{width:16px;height:16px;}
+.topbar h1{font-family:var(--font-display);font-size:22px;font-weight:700;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);}
+
+.hero-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:14px;margin-bottom:16px;}
+.xp-hero{padding:22px;display:flex;align-items:center;gap:18px;}
+.xp-hero .lvl-badge{width:58px;height:58px;border-radius:16px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;font-family:var(--font-mono);font-weight:800;font-size:14px;flex-shrink:0;}
+.xp-hero .lvl-info{flex:1;min-width:0;}
+.xp-hero .lvl-info .row{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+.xp-hero .lvl-info .row b{color:var(--text);font-family:var(--font-mono);}
+.xp-hero .bar{height:10px;border-radius:99px;background:var(--surface-2);overflow:hidden;}
+.xp-hero .bar-fill{height:100%;border-radius:99px;background:var(--gradient-life);transition:width .4s;}
+
+.stat-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.stat-box{padding:18px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;}
+.stat-box .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;}
+.stat-box .ic svg{width:17px;height:17px;}
+.stat-box b{font-family:var(--font-mono);font-size:20px;}
+.stat-box span{font-size:11.5px;color:var(--text-faint);}
+
+.continue-card{padding:22px;display:flex;align-items:center;gap:18px;margin-bottom:26px;flex-wrap:wrap;}
+.continue-card .ic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;flex-shrink:0;}
+.continue-card .ic svg{width:26px;height:26px;}
+.continue-info{flex:1;min-width:200px;}
+.continue-info .eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-faint);font-weight:700;margin-bottom:3px;}
+.continue-info h3{font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:6px;}
+.continue-info .mini-progress{height:7px;border-radius:99px;background:var(--surface-2);overflow:hidden;max-width:280px;}
+.continue-info .mini-progress span{display:block;height:100%;border-radius:99px;}
+.continue-info .pct{font-size:11px;color:var(--text-faint);margin-top:5px;}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:11px;border:none;padding:11px 18px;font-size:13.5px;font-weight:700;cursor:pointer;}
+.btn svg{width:15px;height:15px;}
+.btn-primary{background:var(--blue);color:#fff;}
+
+.section-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-faint);font-weight:600;margin:0 2px 12px;}
+
+.course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;}
+.course-card{padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;}
+.course-card .ic{width:60px;height:60px;border-radius:18px;display:grid;place-items:center;}
+.course-card .ic svg{width:28px;height:28px;}
+.course-card b{font-size:14px;}
+.course-card .ring-bar{width:100%;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;}
+.course-card .ring-fill{height:100%;border-radius:99px;transition:width .3s;}
+.course-card .meta{font-size:11px;color:var(--text-faint);}
+.course-card .btn{width:100%;justify-content:center;padding:9px 12px;font-size:12.5px;}
+.course-card .btn-ghost{background:var(--surface-2);color:var(--text-dim);}
+
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+}
+@media (max-width:600px){
+  .main{padding:16px 12px 50px;}
+  .hero-grid{grid-template-columns:1fr;}
+  .course-grid{grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:10px;}
+  .course-card{padding:14px 10px;}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="mark">OS</span>OSLIFE</div>
+    <nav class="nav-group" id="navGroup"></nav>
+    <div class="sidebar-foot">
+      <div class="avatar">W</div>
+      <div class="who"><b>Wilguentz</b></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <a href="index.html" class="back-link"><i data-lucide="arrow-left"></i> Retounen nan OSLIFE</a>
+      <h1>Aprantisaj</h1>
+      <span></span>
+    </div>
+
+    <div class="hero-grid">
+      <div class="card xp-hero">
+        <div class="lvl-badge" id="lvlBadge">Lv.1</div>
+        <div class="lvl-info">
+          <div class="row"><span>XP Total</span><b id="xpLbl">0 XP</b></div>
+          <div class="bar"><div class="bar-fill" id="xpBarFill" style="width:0%"></div></div>
+          <div class="row" style="margin-top:8px;margin-bottom:0;"><span>Pwogrè jeneral</span><b id="overallPctLbl">0%</b></div>
+        </div>
+      </div>
+      <div class="stat-pair">
+        <div class="card stat-box">
+          <div class="ic" style="background:var(--orange-soft);color:var(--orange);"><i data-lucide="flame"></i></div>
+          <b id="streakLbl">0</b><span>Jou nan yon ranje</span>
+        </div>
+        <div class="card stat-box">
+          <div class="ic" style="background:var(--red-soft);color:var(--red);"><i data-lucide="heart"></i></div>
+          <b id="heartsLbl">5</b><span>Kè disponib</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Kontinye Aprantisaj</div>
+    <div class="card continue-card" id="continueCard">
+      <div class="ic" id="continueIc"><i data-lucide="graduation-cap"></i></div>
+      <div class="continue-info">
+        <div class="eyebrow" id="continueEyebrow">Kou</div>
+        <h3 id="continueTitle">—</h3>
+        <div class="mini-progress"><span id="continueBar" style="width:0%"></span></div>
+        <div class="pct" id="continuePct">0% konplete</div>
+      </div>
+      <a class="btn btn-primary" id="continueBtn" href="#"><i data-lucide="play"></i> Kontinye</a>
+    </div>
+
+    <div class="section-label">Kou Disponib</div>
+    <div class="course-grid" id="courseGrid"></div>
+  </div>
+</div>
+
+<script>
+const COURSES_LIST = [
+  { id:'html', label:'HTML5', icon:'file-code-2', color:'var(--orange)' },
+  { id:'css', label:'CSS', icon:'palette', color:'var(--blue)' },
+  { id:'javascript', label:'JavaScript', icon:'braces', color:'var(--orange)' },
+  { id:'python', label:'Python', icon:'terminal', color:'var(--green)' },
+  { id:'ai', label:'AI', icon:'brain-circuit', color:'var(--blue)' },
+  { id:'electronics', label:'Elektwonik', icon:'cpu', color:'var(--green)' }
+];
+
+const LS_KEY = 'oslife.learning';
+function loadLearning(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e){}
+  return { xp:0, hearts:5, streak:0, completed:[], startedCourses:[] };
+}
+
+const learning = loadLearning();
+
+function renderDashboard(){
+  const level = Math.floor(learning.xp / 100) + 1;
+  document.getElementById('lvlBadge').textContent = 'Lv.' + level;
+  document.getElementById('xpLbl').textContent = learning.xp + ' XP';
+  document.getElementById('xpBarFill').style.width = (learning.xp % 100) + '%';
+  document.getElementById('streakLbl').textContent = learning.streak || 0;
+  document.getElementById('heartsLbl').textContent = learning.hearts ?? 5;
+
+  const grid = document.getElementById('courseGrid');
+  grid.innerHTML = '';
+
+  COURSES_LIST.forEach(c => {
+    const done = (learning.completed || []).filter(k => k.startsWith(c.id + ':')).length;
+    const total = c.id === 'html' ? 23 : 4; // 23 leson pou HTML5
+    const pct = Math.round((done / total) * 100);
+
+    const el = document.createElement('div');
+    el.className = 'card course-card';
+    el.innerHTML = `
+      <div class="ic" style="background:color-mix(in srgb, ${c.color} 18%, transparent);color:${c.color}">
+        <i data-lucide="${c.icon}"></i>
+      </div>
+      <b>${c.label}</b>
+      <div class="ring-bar"><div class="ring-fill" style="width:${pct}%;background:${c.color}"></div></div>
+      <span class="meta">${done}/${total} leson · ${pct}%</span>
+      <a class="btn btn-ghost" href="course.html?course=${c.id}">${done > 0 ? 'Kontinye' : 'Kòmanse'}</a>
+    `;
+    grid.appendChild(el);
+  });
+
+  const activeId = (learning.startedCourses && learning.startedCourses[0]) || 'html';
+  const active = COURSES_LIST.find(x => x.id === activeId) || COURSES_LIST[0];
+  const done = (learning.completed || []).filter(k => k.startsWith(active.id + ':')).length;
+  const total = active.id === 'html' ? 23 : 4;
+  const pct = Math.round((done / total) * 100);
+
+  document.getElementById('continueIc').style.background = `color-mix(in srgb, ${active.color} 20%, transparent)`;
+  document.getElementById('continueIc').style.color = active.color;
+  document.getElementById('continueIc').innerHTML = `<i data-lucide="${active.icon}"></i>`;
+  document.getElementById('continueEyebrow').textContent = 'Kou Aktif';
+  document.getElementById('continueTitle').textContent = active.label;
+  document.getElementById('continueBar').style.width = pct + '%';
+  document.getElementById('continueBar').style.background = active.color;
+  document.getElementById('continuePct').textContent = pct + '% konplete';
+  document.getElementById('continueBtn').href = `course.html?course=${active.id}`;
+
+  if (window.lucide) lucide.createIcons();
+}
+
+renderDashboard();
+</script>
+</body>
+</html>
