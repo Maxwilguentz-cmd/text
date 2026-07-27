@@ -268,6 +268,12 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 .modal-body textarea{resize:vertical;min-height:60px;font-family:var(--font-body);}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .form-row.three{grid-template-columns:1fr 1fr 1fr;}
+/* ---- Tx modal: kategori-espesifik chan (Dlo / Bwason) — expand ak animasyon ---- */
+.tx-extra-fields{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s cubic-bezier(.4,0,.2,1);}
+.tx-extra-fields.open{grid-template-rows:1fr;}
+.tx-extra-fields-inner{overflow:hidden;display:flex;flex-direction:column;gap:12px;min-height:0;}
+.tx-extra-fields-inner .hint{font-size:11px;color:var(--text-faint);display:flex;align-items:center;gap:6px;margin-top:-2px;}
+.tx-extra-fields-inner .hint i{width:12px;height:12px;}
 .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-dim);text-transform:none;letter-spacing:0;font-weight:500;}
 .chk input{width:auto;}
 .modal-foot{display:flex;justify-content:space-between;gap:10px;padding:14px 20px;border-top:1px solid var(--border-soft);flex-wrap:wrap;}
@@ -1700,6 +1706,34 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div><label id="txCategoryLabel">Kategori</label><select id="txCategory"></select></div>
         <div><label>Kont</label><select id="txWallet"></select></div>
       </div>
+
+      <!-- DLO: chan senplifye pou idratasyon -->
+      <div class="tx-extra-fields" id="txDloFields"><div class="tx-extra-fields-inner">
+        <div class="form-row">
+          <div><label>Kantite Dlo</label><input type="number" id="txWaterAmount" placeholder="Pw. 750" min="0" step="1"></div>
+          <div><label>Inite</label><select id="txWaterUnit"><option value="ml">ml</option><option value="L">L</option></select></div>
+        </div>
+        <div class="hint"><i data-lucide="sparkles"></i> AI ap mete l otomatikman nan Sante ak amelyore nòt idratasyon ou.</div>
+      </div></div>
+
+      <!-- BWASON: fòm elaji ak tip bwason -->
+      <div class="tx-extra-fields" id="txBwasonFields"><div class="tx-extra-fields-inner">
+        <div class="form-row">
+          <div><label>Non Bwason</label><input type="text" id="txDrinkName" placeholder="Pw. Coca-Cola"></div>
+          <div><label>Tip Bwason</label><select id="txDrinkType">
+            <option value="sugary">Bwason Sikre</option>
+            <option value="energy">Bwason Enèjetik</option>
+            <option value="milk">Lèt</option>
+            <option value="other">Lòt</option>
+          </select></div>
+        </div>
+        <div class="form-row">
+          <div><label>Kantite</label><input type="number" id="txDrinkQty" placeholder="Pw. 500" min="0" step="1"></div>
+          <div><label>Inite</label><select id="txDrinkUnit"><option value="ml">ml</option><option value="L">L</option></select></div>
+        </div>
+        <div class="hint"><i data-lucide="sparkles"></i> AI ap analize enpak li sou Sante selon tip bwason an.</div>
+      </div></div>
+
       <div><label>Dat</label><input type="date" id="txDate"></div>
     </div>
     <div class="modal-foot">
@@ -1733,6 +1767,13 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <option value="monthly">Mansyèl</option><option value="weekly">Semenèl</option>
       </select></div>
       <div id="budgetsManageList"></div>
+      <div class="form-row" style="align-items:end;margin-top:2px;">
+        <div><label>Non Bidjè (tape oswa chwazi)</label>
+          <input type="text" id="budgetAddCatInput" list="budgetAddCatList" placeholder="Pw. Manje, oswa non ou vle">
+          <datalist id="budgetAddCatList"></datalist>
+        </div>
+        <button type="button" class="btn btn-ghost" id="budgetAddCatBtn" style="height:38px;"><i data-lucide="plus"></i> Ajoute</button>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-primary" id="saveBudgetsBtn" style="margin-left:auto;">Anrejistre Bidjè</button>
@@ -2319,15 +2360,8 @@ function seedWallets(){
   ];
 }
 function seedTx(w){
-  const today = new Date();
-  const d = off => { const x=new Date(today); x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); };
-  const cash = w.find(x=>x.type==='cash'), mon = w.find(x=>x.type==='moncash');
-  return [
-    { id:uid(), type:'expense', amount:800, description:'Manje midi', category:'Manje', walletId:cash?.id||'', date:d(0) },
-    { id:uid(), type:'expense', amount:500, description:'Transpò', category:'Transpò', walletId:cash?.id||'', date:d(1) },
-    { id:uid(), type:'income', amount:15000, description:'Salè', category:'Salè', walletId:mon?.id||'', date:d(5) },
-    { id:uid(), type:'expense', amount:1900, description:'Abònman entènèt', category:'Entènèt', walletId:mon?.id||'', date:d(6) },
-  ];
+  // Pa gen tranzaksyon demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 function seedPlans(w){
   const today = new Date();
@@ -2404,6 +2438,8 @@ let gami = loadLS(LS.gami, { xp:0, badges:[] });
 let wallets = loadLS(LS.wallets, seedWallets());
 let tx = loadLS(LS.tx, seedTx(wallets));
 let budgets = loadLS(LS.budgets, { period:'monthly', limits:{ 'Manje':6000, 'Transpò':3000, 'Entènèt':2500, 'Abònman':1500 } });
+// Dlo/Bwason/Custom pa dwe janm gen limit bidjè — yo se kategori espesyal ki pa itilize sistèm bidjè a
+if (budgets.limits){ delete budgets.limits['Dlo']; delete budgets.limits['Bwason']; delete budgets.limits['Custom']; }
 let plans = loadLS(LS.plans, seedPlans(wallets));
 let projects = loadLS(LS.projects, seedProjects());
 let noteFolders = loadLS(LS.noteFolders, seedNoteFolders());
@@ -4366,8 +4402,18 @@ renderMissions();
 // ==========================================
 // FINANCE MODULE
 // ==========================================
-const EXPENSE_CATS = ['Manje','Transpò','Entènèt','Abònman','Custom'];
+const EXPENSE_CATS = ['Manje','Transpò','Entènèt','Abònman','Dlo','Bwason','Custom'];
 const INCOME_CATS = ['Salè','Kado','Biznis','Lòt'];
+
+// ---- Dlo / Bwason: konstant ak èd konvèsyon ----
+const ML_PER_GLASS = 250; // 1 vè (unit healthLog.water) = 250ml, itilize pou konvèti Dlo/Bwason an vè
+const DRINK_TYPE_LABELS = { sugary:'Bwason Sikre', energy:'Bwason Enèjetik', milk:'Lèt', other:'Lòt' };
+// Pousantaj idratasyon chak tip bwason bay (sou 1.0) — sèlman Dlo bay 100%
+const DRINK_HYDRATION_FACTOR = { milk:0.5, other:0.3, sugary:0, energy:0 };
+// "Pwa" penalite sante pou bwason ki pa fè byen pou kò a (itilize nan computeHealthScore)
+const DRINK_HEALTH_PENALTY = { sugary:1, energy:1.5, milk:0, other:0 };
+function toMl(amount, unit){ return (unit === 'L' ? amount*1000 : amount); }
+function mlToGlasses(ml){ return ml / ML_PER_GLASS; }
 const WALLET_ICONS = { cash:'banknote', natcash:'smartphone', moncash:'smartphone', bank:'landmark', savings:'piggy-bank', custom:'wallet' };
 function walletTypeGuess(name){
   const n = (name||'').toLowerCase();
@@ -4425,6 +4471,7 @@ function getFilteredTx(){
 }
 
 const TX_ICONS = { 'Manje':'utensils', 'Transpò':'car', 'Entènèt':'wifi', 'Abònman':'repeat', 'Custom':'shapes',
+  'Dlo':'droplet', 'Bwason':'cup-soda',
   'Salè':'briefcase', 'Kado':'gift', 'Biznis':'store', 'Lòt':'circle-dollar-sign' };
 
 function renderTxList(){
@@ -4546,6 +4593,14 @@ function populateTxWalletSelect(){
   const sel = document.getElementById('txWallet');
   sel.innerHTML = wallets.map(w => `<option value="${w.id}">${escapeHtml(w.name)}</option>`).join('');
 }
+// ---- Montre/kache chan siplemantè Dlo / Bwason ak animasyon (grid-template-rows) ----
+function updateTxCategoryExtras(cat){
+  const dlo = document.getElementById('txDloFields');
+  const bwason = document.getElementById('txBwasonFields');
+  dlo.classList.toggle('open', cat === 'Dlo');
+  bwason.classList.toggle('open', cat === 'Bwason');
+  if (window.lucide) lucide.createIcons();
+}
 function openTxModal(id){
   editingTxId = id || null;
   const t = id ? tx.find(x => x.id === id) : null;
@@ -4559,30 +4614,108 @@ function openTxModal(id){
   document.getElementById('txWallet').value = t?.walletId || wallets[0]?.id || '';
   document.getElementById('txDate').value = t?.date || todayISO();
   document.getElementById('deleteTxBtn').hidden = !t;
+  // Dlo / Bwason: repopile chan siplemantè yo si n ap modifye, epi montre/kache seksyon ki koresponn
+  document.getElementById('txWaterAmount').value = t?.waterAmount ?? '';
+  document.getElementById('txWaterUnit').value = t?.waterUnit || 'ml';
+  document.getElementById('txDrinkName').value = t?.drinkName || '';
+  document.getElementById('txDrinkType').value = t?.drinkType || 'sugary';
+  document.getElementById('txDrinkQty').value = t?.drinkQty ?? '';
+  document.getElementById('txDrinkUnit').value = t?.drinkUnit || 'ml';
+  updateTxCategoryExtras(document.getElementById('txCategory').value);
   document.getElementById('txModalOverlay').classList.add('open');
 }
-document.getElementById('txType').addEventListener('change', e => populateTxCategorySelect(e.target.value));
+document.getElementById('txType').addEventListener('change', e => {
+  populateTxCategorySelect(e.target.value);
+  updateTxCategoryExtras(document.getElementById('txCategory').value);
+});
+document.getElementById('txCategory').addEventListener('change', e => updateTxCategoryExtras(e.target.value));
 document.getElementById('newTxBtn').addEventListener('click', () => openTxModal(null));
 document.getElementById('closeTxModal').addEventListener('click', () => document.getElementById('txModalOverlay').classList.remove('open'));
 document.getElementById('txModalOverlay').addEventListener('click', e => { if (e.target.id === 'txModalOverlay') document.getElementById('txModalOverlay').classList.remove('open'); });
+// ---- Dlo / Bwason → efè otomatik sou Sante + mesaj AI (tranzaksyon finansye a toujou kreye separeman) ----
+function applyDloHealthEffect(waterMl){
+  const log = getHealthLog(todayISO(), true);
+  const beforeScore = computeHealthScore(log);
+  log.water = Math.round(((log.water||0) + mlToGlasses(waterMl)) * 10) / 10;
+  persistHealthLogs();
+  const afterScore = computeHealthScore(log);
+  setCategory('health', afterScore);
+  const delta = afterScore - beforeScore;
+  const trend = delta > 0 ? 'monte' : (delta < 0 ? 'bese' : 'rete menm jan');
+  const deltaTxt = delta !== 0 ? ` (${delta > 0 ? '+' : ''}${delta} pwen)` : '';
+  return `Ou ajoute ${Math.round(waterMl)} ml dlo. Nòt idratasyon ou ${trend}${deltaTxt}.`;
+}
+function applyDrinkHealthEffect(name, type, drinkMl){
+  const log = getHealthLog(todayISO(), true);
+  const beforeScore = computeHealthScore(log);
+  const hydrationFactor = DRINK_HYDRATION_FACTOR[type] || 0;
+  if (hydrationFactor > 0) log.water = Math.round(((log.water||0) + mlToGlasses(drinkMl)*hydrationFactor) * 10) / 10;
+  const penaltyWeight = DRINK_HEALTH_PENALTY[type] || 0;
+  if (penaltyWeight > 0) log.badDrinks = Math.round(((log.badDrinks||0) + penaltyWeight) * 10) / 10;
+  persistHealthLogs();
+  const afterScore = computeHealthScore(log);
+  setCategory('health', afterScore);
+  const delta = afterScore - beforeScore;
+  const typeLabel = DRINK_TYPE_LABELS[type] || 'Bwason';
+  const trend = delta > 0 ? 'monte' : (delta < 0 ? 'bese' : 'rete menm jan');
+  const deltaTxt = delta !== 0 ? ` (${delta > 0 ? '+' : ''}${delta} pwen)` : '';
+  return `Ou ajoute ${name} (${Math.round(drinkMl)}ml, ${typeLabel}). Nòt sante ou ${trend}${deltaTxt}.`;
+}
 document.getElementById('saveTxBtn').addEventListener('click', () => {
   const amount = parseFloat(document.getElementById('txAmount').value);
   if (!amount || amount <= 0){ showToast('Mete yon montan valab'); return; }
+  const category = document.getElementById('txCategory').value;
+
+  // Dlo/Bwason: valide chan siplemantè yo (fòm nan toujou kenbe Montan/Kont/Dat/elatriye ki te la deja)
+  let waterMl = null;
+  let drinkName = '', drinkType = 'sugary', drinkMl = null;
+  if (category === 'Dlo'){
+    const waterAmount = parseFloat(document.getElementById('txWaterAmount').value);
+    const waterUnit = document.getElementById('txWaterUnit').value;
+    if (!waterAmount || waterAmount <= 0){ showToast('Mete kantite dlo a'); return; }
+    waterMl = toMl(waterAmount, waterUnit);
+  }
+  if (category === 'Bwason'){
+    drinkName = document.getElementById('txDrinkName').value.trim();
+    drinkType = document.getElementById('txDrinkType').value;
+    const drinkQty = parseFloat(document.getElementById('txDrinkQty').value);
+    const drinkUnit = document.getElementById('txDrinkUnit').value;
+    if (!drinkName){ showToast('Mete non bwason an'); return; }
+    if (!drinkQty || drinkQty <= 0){ showToast('Mete kantite bwason an'); return; }
+    drinkMl = toMl(drinkQty, drinkUnit);
+  }
+
   const data = {
     type: document.getElementById('txType').value,
     amount,
     description: document.getElementById('txDesc').value.trim(),
-    category: document.getElementById('txCategory').value,
+    category,
     walletId: document.getElementById('txWallet').value,
     date: document.getElementById('txDate').value || todayISO(),
   };
+  if (category === 'Dlo'){
+    data.waterAmount = parseFloat(document.getElementById('txWaterAmount').value);
+    data.waterUnit = document.getElementById('txWaterUnit').value;
+  } else if (category === 'Bwason'){
+    data.drinkName = drinkName;
+    data.drinkType = drinkType;
+    data.drinkQty = parseFloat(document.getElementById('txDrinkQty').value);
+    data.drinkUnit = document.getElementById('txDrinkUnit').value;
+  }
+
   if (editingTxId) Object.assign(tx.find(x => x.id === editingTxId), data);
   else tx.push({ id: uid(), ...data });
   persistTx();
   bumpCategory('finance', data.type==='income' ? 2 : -1);
+
+  let aiMsg = 'Tranzaksyon anrejistre ✓';
+  if (category === 'Dlo') aiMsg = applyDloHealthEffect(waterMl);
+  else if (category === 'Bwason') aiMsg = applyDrinkHealthEffect(drinkName, drinkType, drinkMl);
+  if (category === 'Dlo' || category === 'Bwason') renderHealth();
+
   document.getElementById('txModalOverlay').classList.remove('open');
   renderFinance();
-  showToast('Tranzaksyon anrejistre ✓');
+  showToast(aiMsg);
 });
 document.getElementById('deleteTxBtn').addEventListener('click', () => {
   tx = tx.filter(t => t.id !== editingTxId);
@@ -4629,16 +4762,48 @@ document.getElementById('addWalletBtn').addEventListener('click', () => {
 });
 
 // ---- Budgets Modal ----
+// Dlo ak Bwason pa ka gen bidjè — se kategori ki konekte ak Sante, pa objektif depans.
+function budgetEligibleCats(){
+  return EXPENSE_CATS.filter(c => c !== 'Custom' && c !== 'Dlo' && c !== 'Bwason');
+}
+let budgetDraftCats = [];
+function renderBudgetsManageList(){
+  const wrap = document.getElementById('budgetsManageList');
+  wrap.innerHTML = budgetDraftCats.length ? budgetDraftCats.map(c => `
+    <div class="form-row" style="align-items:center;margin-bottom:8px;grid-template-columns:1fr 1fr auto;">
+      <label style="text-transform:none;font-size:12.5px;color:var(--text-dim);font-weight:500;margin:0;">${escapeHtml(c)}</label>
+      <input type="number" class="budget-input" data-cat="${escapeHtml(c)}" value="${budgets.limits?.[c]||''}" placeholder="Limit HTG">
+      <button type="button" class="icon-btn" data-remove-budget-cat="${escapeHtml(c)}" title="Retire bidjè"><i data-lucide="x"></i></button>
+    </div>`).join('') : '<div class="widget-empty">Poko gen bidjè ajoute — chwazi yon kategori anba a pou kòmanse.</div>';
+  const remaining = budgetEligibleCats().filter(c => !budgetDraftCats.includes(c));
+  const dataList = document.getElementById('budgetAddCatList');
+  dataList.innerHTML = remaining.map(c => `<option value="${escapeHtml(c)}"></option>`).join('');
+  wrap.querySelectorAll('[data-remove-budget-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      budgetDraftCats = budgetDraftCats.filter(c => c !== btn.dataset.removeBudgetCat);
+      renderBudgetsManageList();
+    });
+  });
+  if (window.lucide) lucide.createIcons();
+}
 function openBudgetsModal(){
   document.getElementById('budgetPeriod').value = budgets.period || 'monthly';
-  const wrap = document.getElementById('budgetsManageList');
-  wrap.innerHTML = EXPENSE_CATS.filter(c=>c!=='Custom').map(c => `
-    <div class="form-row" style="align-items:center;margin-bottom:8px;">
-      <label style="text-transform:none;font-size:12.5px;color:var(--text-dim);font-weight:500;margin:0;">${c}</label>
-      <input type="number" class="budget-input" data-cat="${c}" value="${budgets.limits?.[c]||''}" placeholder="Limit HTG">
-    </div>`).join('');
+  budgetDraftCats = Object.keys(budgets.limits || {}).filter(c => c !== 'Dlo' && c !== 'Bwason' && c !== 'Custom');
+  document.getElementById('budgetAddCatInput').value = '';
+  renderBudgetsManageList();
   document.getElementById('budgetsModalOverlay').classList.add('open');
 }
+function addBudgetDraftCat(){
+  const input = document.getElementById('budgetAddCatInput');
+  const cat = input.value.trim();
+  if (!cat || cat === 'Dlo' || cat === 'Bwason' || cat === 'Custom') { showToast('Non sa a pa disponib pou bidjè'); return; }
+  if (budgetDraftCats.includes(cat)) { showToast('Kategori sa a deja gen bidjè'); return; }
+  budgetDraftCats.push(cat);
+  input.value = '';
+  renderBudgetsManageList();
+}
+document.getElementById('budgetAddCatBtn').addEventListener('click', addBudgetDraftCat);
+document.getElementById('budgetAddCatInput').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addBudgetDraftCat(); } });
 document.getElementById('manageBudgetsBtn').addEventListener('click', openBudgetsModal);
 document.getElementById('closeBudgetsModal').addEventListener('click', () => document.getElementById('budgetsModalOverlay').classList.remove('open'));
 document.getElementById('budgetsModalOverlay').addEventListener('click', e => { if (e.target.id === 'budgetsModalOverlay') document.getElementById('budgetsModalOverlay').classList.remove('open'); });
@@ -5689,7 +5854,7 @@ document.getElementById('deleteJournalBtn').addEventListener('click', () => {
 function getHealthLog(date, createIfMissing){
   let log = healthLogs.find(l => l.date === date);
   if (!log && createIfMissing){
-    log = { date, water:0, sleep:0, exercise:0, mood:null };
+    log = { date, water:0, sleep:0, exercise:0, mood:null, badDrinks:0 };
     healthLogs.push(log);
   }
   return log;
@@ -5700,7 +5865,11 @@ function computeHealthScore(log){
   const wPct = Math.min(1, (log.water||0) / (healthGoals.water||8));
   const sPct = Math.min(1, (log.sleep||0) / (healthGoals.sleep||8));
   const ePct = Math.min(1, (log.exercise||0) / (healthGoals.exercise||30));
-  return Math.round(((wPct + sPct + ePct) / 3) * 100);
+  const base = Math.round(((wPct + sPct + ePct) / 3) * 100);
+  // Bwason sikre/enèjetik jodi a bese nòt sante a (max -20), yon fason Bwason "konekte" ak Sante
+  // diferan de Dlo, san li pa efase pwogrè lòt objektif yo.
+  const penalty = Math.min(20, Math.round((log.badDrinks||0) * 4));
+  return Math.max(0, base - penalty);
 }
 
 function computeHealthInsight(log){
