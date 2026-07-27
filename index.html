@@ -499,9 +499,22 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 .note-card .nc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;}
 .note-card .nc-title{font-size:13.5px;font-weight:700;flex:1;min-width:0;}
 .note-card .nc-pin{width:14px;height:14px;color:var(--orange);flex-shrink:0;}
+.note-card .nc-fav{width:14px;height:14px;color:var(--red);flex-shrink:0;}
 .note-card .nc-snippet{font-size:12px;color:var(--text-dim);line-height:1.5;max-height:54px;overflow:hidden;}
 .note-card .nc-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:2px;}
 .note-card .nc-date{font-size:10.5px;color:var(--text-faint);margin-left:auto;}
+.note-card .nc-actions{display:flex;align-items:center;gap:6px;margin-top:2px;position:relative;}
+.note-card .nc-act-btn{width:26px;height:26px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);display:grid;place-items:center;cursor:pointer;transition:.15s ease;flex-shrink:0;}
+.note-card .nc-act-btn:hover{background:var(--surface-2);color:var(--text);border-color:var(--blue);}
+.note-card .nc-act-btn svg{width:13px;height:13px;}
+.note-menu{position:absolute;top:38px;right:14px;min-width:172px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 16px 40px -14px rgba(0,0,0,.45);padding:6px;z-index:20;display:none;flex-direction:column;gap:1px;animation:noteMenuIn .14s ease both;}
+.note-menu.open{display:flex;}
+@keyframes noteMenuIn{from{opacity:0;transform:translateY(-4px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+.note-menu .nm-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:12px;color:var(--text-dim);cursor:pointer;transition:.12s ease;}
+.note-menu .nm-item:hover{background:var(--surface-2);color:var(--text);}
+.note-menu .nm-item svg{width:14px;height:14px;flex-shrink:0;}
+.note-menu .nm-item.danger{color:var(--red);}
+.note-menu .nm-item.danger:hover{background:var(--red-soft);}
 .tag-pill{font-size:9.5px;font-weight:700;background:var(--surface-2);color:var(--text-dim);padding:2px 7px;border-radius:99px;}
 .empty-note{grid-column:1/-1;text-align:center;padding:34px 8px;color:var(--text-faint);font-size:12.5px;border:1px dashed var(--border);border-radius:var(--radius-md);}
 
@@ -556,6 +569,13 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 .ai-insight-card .ic svg{width:16px;height:16px;}
 .ai-insight-card p{font-size:12.5px;line-height:1.6;color:var(--text-dim);}
 .ai-insight-card p b{color:var(--text);}
+.ai-summary-card{padding:16px 18px;display:flex;gap:12px;align-items:flex-start;transition:box-shadow .25s ease;}
+.ai-summary-card .as-status{width:11px;height:11px;border-radius:50%;margin-top:4px;flex-shrink:0;background:var(--text-faint);transition:background-color .3s ease;}
+.ai-summary-card .as-status.pulse{animation:asPulse 1.6s ease-in-out infinite;}
+@keyframes asPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.35);}}
+.ai-summary-card .as-body{flex:1;min-width:0;}
+.ai-summary-card .as-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;transition:color .3s ease;}
+.ai-summary-card p{font-size:12.5px;line-height:1.6;color:var(--text-dim);margin:0;}
 
 /* ---------------- COACH AI ---------------- */
 .coach-agent-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:16px;margin-bottom:22px;}
@@ -1198,6 +1218,14 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <p id="healthAiInsight">Ajoute done sante jodi a pou wè sijesyon AI.</p>
       </div>
 
+      <div class="card ai-summary-card" id="healthAiSummaryCard" style="margin-bottom:16px;">
+        <div class="as-status" id="healthAiStatusDot"></div>
+        <div class="as-body">
+          <div class="as-label" id="healthAiStatusLabel">Ap analize...</div>
+          <p id="healthAiSummaryText">Ap analize done ou yo pou bay yon rekòmandasyon an tan reyèl.</p>
+        </div>
+      </div>
+
       <div class="health-grid">
         <div class="card health-card">
           <div class="health-card-head"><div class="ic" style="background:var(--blue-soft);color:var(--blue);"><i data-lucide="glass-water"></i></div><div><b>Dlo</b><span id="waterGoalLbl">Objektif: 8 vè</span></div></div>
@@ -1751,7 +1779,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div><label>Tip</label><select id="txType">
           <option value="expense">Sòti (Depans)</option><option value="income">Antre (Revni)</option>
         </select></div>
-        <div><label>Montan (HTG)</label><input type="number" id="txAmount" placeholder="0"></div>
+        <div><label>Montan (HTG)</label><input type="number" id="txAmount" placeholder="0" step="any"></div>
       </div>
       <div><label>Deskripsyon</label><input type="text" id="txDesc" placeholder="Pw. Manje midi"></div>
       <div class="form-row">
@@ -1762,7 +1790,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       <!-- DLO: chan senplifye pou idratasyon -->
       <div class="tx-extra-fields" id="txDloFields"><div class="tx-extra-fields-inner">
         <div class="form-row">
-          <div><label>Kantite Dlo</label><input type="number" id="txWaterAmount" placeholder="Pw. 750" min="0" step="1"></div>
+          <div><label>Kantite Dlo</label><input type="number" id="txWaterAmount" placeholder="Pw. 750" min="0" step="any"></div>
           <div><label>Inite</label><select id="txWaterUnit"><option value="ml">ml</option><option value="L">L</option></select></div>
         </div>
         <div class="hint"><i data-lucide="sparkles"></i> AI ap mete l otomatikman nan Sante ak amelyore nòt idratasyon ou.</div>
@@ -1782,7 +1810,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           </select></div>
         </div>
         <div class="form-row">
-          <div><label>Kantite</label><input type="number" id="txDrinkQty" placeholder="Pw. 500" min="0" step="1"></div>
+          <div><label>Kantite</label><input type="number" id="txDrinkQty" placeholder="Pw. 500" min="0" step="any"></div>
           <div><label>Inite</label><select id="txDrinkUnit"><option value="ml">ml</option><option value="L">L</option></select></div>
         </div>
         <div class="hint"><i data-lucide="sparkles"></i> AI ap analize enpak li sou Sante selon tip bwason an.</div>
@@ -1805,7 +1833,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       <div id="walletsManageList"></div>
       <div class="form-row">
         <div><label>Non nouvo kont</label><input type="text" id="newWalletName" placeholder="Pw. Sogebank"></div>
-        <div><label>Balans depa</label><input type="number" id="newWalletBalance" placeholder="0"></div>
+        <div><label>Balans depa</label><input type="number" id="newWalletBalance" placeholder="0" step="any"></div>
       </div>
       <button class="btn btn-primary" id="addWalletBtn" style="justify-content:center;"><i data-lucide="plus"></i> Ajoute Kont</button>
     </div>
@@ -1858,7 +1886,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       </div>
       <div><label>Non Plan</label><input type="text" id="planName" placeholder="Pw. Illimix 30"></div>
       <div class="form-row three">
-        <div><label>Pri (HTG)</label><input type="number" id="planPrice" placeholder="0"></div>
+        <div><label>Pri (HTG)</label><input type="number" id="planPrice" placeholder="0" step="any"></div>
         <div><label>Dire (jou)</label><input type="number" id="planDuration" placeholder="Pw. 30"></div>
         <div><label class="chk" style="text-transform:none;margin-bottom:0;"><input type="checkbox" id="planIsUnlimited"> Se yon plan ilimite</label></div>
       </div>
@@ -2194,11 +2222,21 @@ const EVENT_TYPES = {
 };
 
 function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// Fòmate yon nonm ki ka gen desimal san fòse yon "round" agresif — prezève presizyon (max 2 chif apre pwen an, retire zewo initil)
+function fmtNum(n, maxDecimals){
+  maxDecimals = maxDecimals === undefined ? 2 : maxDecimals;
+  n = Number(n) || 0;
+  return n.toLocaleString('en-US', { minimumFractionDigits:0, maximumFractionDigits: maxDecimals });
+}
 function uid(){ return 'id'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function priorityColor(p){ return {urgent:'var(--red)',high:'var(--orange)',medium:'var(--blue)',low:'var(--green)'}[p]||'var(--text-faint)'; }
 function priorityBg(p){ return {urgent:'var(--red-soft)',high:'var(--orange-soft)',medium:'var(--blue-soft)',low:'var(--green-soft)'}[p]||'var(--surface-2)'; }
 function priorityRank(p){ return {low:1,medium:2,high:3,urgent:4}[p]||0; }
-function fmtHTG(n){ return (Math.round(n||0)).toLocaleString('en-US') + ' HTG'; }
+function fmtHTG(n){
+  n = Number(n) || 0;
+  const safe = Math.round(n * 100) / 100; // korije "bri" floating-point san efase presizyon santim nan
+  return safe.toLocaleString('en-US', { minimumFractionDigits:0, maximumFractionDigits:2 }) + ' HTG';
+}
 // ---- Performance: debounce pou evite re-rann sou chak tap klavye lè w ap filtre/chèche ----
 function debounce(fn, wait){
   let t;
@@ -4711,7 +4749,7 @@ function computeDrinkMemory(){
     });
     totalSugar += daySugar; totalCaffeine += dayCaffeine;
     totalWaterMl += (l.water||0) * ML_PER_GLASS;
-    dailyTotals.push({ date: l.date, water: l.water||0, sugar: Math.round(daySugar*10)/10, caffeine: Math.round(dayCaffeine), drinksCount: drinks.length });
+    dailyTotals.push({ date: l.date, water: l.water||0, sugar: Math.round(daySugar*100)/100, caffeine: Math.round(dayCaffeine*100)/100, drinksCount: drinks.length });
   });
   dailyTotals.sort((a,b) => a.date.localeCompare(b.date));
   const topName = Object.entries(nameCounts).sort((a,b) => b[1]-a[1])[0] || null;
@@ -4724,14 +4762,14 @@ function computeDrinkMemory(){
 function applyDloHealthEffect(waterMl){
   const log = getHealthLog(todayISO(), true);
   const beforeScore = computeHealthScore(log);
-  log.water = Math.round(((log.water||0) + mlToGlasses(waterMl)) * 10) / 10;
+  log.water = Math.round(((log.water||0) + mlToGlasses(waterMl)) * 100) / 100;
   persistHealthLogs();
   const afterScore = computeHealthScore(log);
   setCategory('health', afterScore);
   const delta = afterScore - beforeScore;
   const trend = delta > 0 ? 'monte' : (delta < 0 ? 'bese' : 'rete menm jan');
   const deltaTxt = delta !== 0 ? ` (${delta > 0 ? '+' : ''}${delta} pwen)` : '';
-  let msg = `Ou ajoute ${Math.round(waterMl)} ml dlo. Nòt idratasyon ou ${trend}${deltaTxt}.`;
+  let msg = `Ou ajoute ${fmtNum(waterMl)} ml dlo. Nòt idratasyon ou ${trend}${deltaTxt}.`;
   const weekStart = isoOffset(todayISO(), -6);
   const last7 = healthLogs.filter(l => l.date >= weekStart && l.date <= todayISO());
   const weekAvgMl = last7.length ? (last7.reduce((s,l)=>s+(l.water||0),0)/last7.length) * ML_PER_GLASS : 0;
@@ -4746,17 +4784,17 @@ function applyDrinkHealthEffect(name, type, drinkMl){
   const log = getHealthLog(todayISO(), true);
   const beforeScore = computeHealthScore(log);
   const hydrationFactor = DRINK_HYDRATION_FACTOR[type] || 0;
-  if (hydrationFactor > 0) log.water = Math.round(((log.water||0) + mlToGlasses(drinkMl)*hydrationFactor) * 10) / 10;
+  if (hydrationFactor > 0) log.water = Math.round(((log.water||0) + mlToGlasses(drinkMl)*hydrationFactor) * 100) / 100;
   const penaltyWeight = DRINK_HEALTH_PENALTY[type] || 0;
-  if (penaltyWeight > 0) log.badDrinks = Math.round(((log.badDrinks||0) + penaltyWeight) * 10) / 10;
+  if (penaltyWeight > 0) log.badDrinks = Math.round(((log.badDrinks||0) + penaltyWeight) * 100) / 100;
 
-  // Analiz sik/kafeyin pou bwason sa a, epi mete l nan mémwa AI (healthLogs.drinks)
-  const sugarG = Math.round((drinkMl/100) * (SUGAR_PER_100ML[type]||0) * 10) / 10;
-  const caffeineMg = Math.round((drinkMl/100) * (CAFFEINE_PER_100ML[type]||0));
-  log.sugar = Math.round(((log.sugar||0) + sugarG) * 10) / 10;
-  log.caffeine = Math.round((log.caffeine||0) + caffeineMg);
+  // Analiz sik/kafeyin pou bwason sa a (presizyon desimal konplè), epi mete l nan mémwa AI (healthLogs.drinks)
+  const sugarG = Math.round((drinkMl/100) * (SUGAR_PER_100ML[type]||0) * 100) / 100;
+  const caffeineMg = Math.round((drinkMl/100) * (CAFFEINE_PER_100ML[type]||0) * 100) / 100;
+  log.sugar = Math.round(((log.sugar||0) + sugarG) * 100) / 100;
+  log.caffeine = Math.round(((log.caffeine||0) + caffeineMg) * 100) / 100;
   log.drinks = log.drinks || [];
-  log.drinks.push({ name, type, ml: Math.round(drinkMl), sugar: sugarG, caffeine: caffeineMg, time: new Date().toISOString() });
+  log.drinks.push({ name, type, ml: drinkMl, sugar: sugarG, caffeine: caffeineMg, time: new Date().toISOString() });
 
   persistHealthLogs();
   const afterScore = computeHealthScore(log);
@@ -4773,21 +4811,21 @@ function applyDrinkHealthEffect(name, type, drinkMl){
 
   let baseMsg;
   if (type === 'sugary'){
-    baseMsg = `${name} gen anpil sik (~${sugarG}g). Nòt sante ou ${trend}${deltaTxt}.`;
+    baseMsg = `${name} gen anpil sik (~${fmtNum(sugarG)}g). Nòt sante ou ${trend}${deltaTxt}.`;
   } else if (type === 'energy'){
-    baseMsg = `${name} gen kafeyin (~${caffeineMg}mg). Nòt sante ou ${trend}${deltaTxt}.`;
+    baseMsg = `${name} gen kafeyin (~${fmtNum(caffeineMg)}mg). Nòt sante ou ${trend}${deltaTxt}.`;
     if ((log.caffeine||0) >= CAFFEINE_DAILY_LIMIT_MG) baseMsg += ' Evite yon lòt bwason ki gen anpil kafeyin jodi a.';
   } else if (type === 'coffee'){
-    baseMsg = `${name} ajoute ~${caffeineMg}mg kafeyin. Nòt sante ou ${trend}${deltaTxt}.`;
+    baseMsg = `${name} ajoute ~${fmtNum(caffeineMg)}mg kafeyin. Nòt sante ou ${trend}${deltaTxt}.`;
     if ((log.caffeine||0) >= CAFFEINE_DAILY_LIMIT_MG) baseMsg += ' Ou rive nan limit kafeyin rekòmande pou jodi a — evite yon lòt.';
   } else if (type === 'juice'){
-    baseMsg = `${name} (ji fwi, ~${sugarG}g sik). Nòt sante ou ${trend}${deltaTxt}.`;
+    baseMsg = `${name} (ji fwi, ~${fmtNum(sugarG)}g sik). Nòt sante ou ${trend}${deltaTxt}.`;
   } else if (type === 'milk'){
-    baseMsg = `Ou ajoute ${name} (lèt, ${Math.round(drinkMl)}ml). Nòt sante ou ${trend}${deltaTxt}.`;
+    baseMsg = `Ou ajoute ${name} (lèt, ${fmtNum(drinkMl)}ml). Nòt sante ou ${trend}${deltaTxt}.`;
   } else {
-    baseMsg = `Ou ajoute ${name} (${Math.round(drinkMl)}ml, ${typeLabel}). Nòt sante ou ${trend}${deltaTxt}.`;
+    baseMsg = `Ou ajoute ${name} (${fmtNum(drinkMl)}ml, ${typeLabel}). Nòt sante ou ${trend}${deltaTxt}.`;
   }
-  if ((log.sugar||0) >= SUGAR_DAILY_LIMIT_G && type !== 'sugary') baseMsg += ` Total sik jodi a rive ${Math.round(log.sugar)}g — fè atansyon.`;
+  if ((log.sugar||0) >= SUGAR_DAILY_LIMIT_G && type !== 'sugary') baseMsg += ` Total sik jodi a rive ${fmtNum(log.sugar)}g — fè atansyon.`;
   return baseMsg + habitTxt;
 }
 document.getElementById('saveTxBtn').addEventListener('click', () => {
@@ -4901,7 +4939,7 @@ function renderBudgetsManageList(){
   wrap.innerHTML = budgetDraftCats.length ? budgetDraftCats.map(c => `
     <div class="form-row" style="align-items:center;margin-bottom:8px;grid-template-columns:1fr 1fr auto;">
       <label style="text-transform:none;font-size:12.5px;color:var(--text-dim);font-weight:500;margin:0;">${escapeHtml(c)}</label>
-      <input type="number" class="budget-input" data-cat="${escapeHtml(c)}" value="${budgets.limits?.[c]||''}" placeholder="Limit HTG">
+      <input type="number" class="budget-input" step="any" data-cat="${escapeHtml(c)}" value="${budgets.limits?.[c]||''}" placeholder="Limit HTG">
       <button type="button" class="icon-btn" data-remove-budget-cat="${escapeHtml(c)}" title="Retire bidjè"><i data-lucide="x"></i></button>
     </div>`).join('') : '<div class="widget-empty">Poko gen bidjè ajoute — chwazi yon kategori anba a pou kòmanse.</div>';
   const remaining = budgetEligibleCats().filter(c => !budgetDraftCats.includes(c));
@@ -5630,6 +5668,31 @@ function getFilteredNotes(){
   }).sort((a,b) => (b.pinned - a.pinned) || (b.updatedAt||'').localeCompare(a.updatedAt||''));
 }
 
+function copyNoteText(n){
+  const text = (n.title ? n.title + '\n\n' : '') + stripHtml(n.bodyHtml || '');
+  const done = () => showToast('Nòt kopye ✓');
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopyText(text, done));
+  } else {
+    fallbackCopyText(text, done);
+  }
+}
+function fallbackCopyText(text, done){
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch(e){}
+  document.body.removeChild(ta);
+  done();
+}
+function closeAllNoteMenus(){
+  document.querySelectorAll('.note-menu.open').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', closeAllNoteMenus);
+
 function renderNotes(){
   renderFolderList();
   const grid = document.getElementById('notesGrid');
@@ -5647,6 +5710,7 @@ function renderNotes(){
       <div class="nc-head">
         <div class="nc-title">${escapeHtml(n.title || 'San tit')}</div>
         ${n.pinned ? '<i data-lucide="pin" class="nc-pin"></i>' : ''}
+        ${n.favorite ? '<i data-lucide="heart" class="nc-fav"></i>' : ''}
       </div>
       <div class="nc-snippet">${escapeHtml(stripHtml(n.bodyHtml)).slice(0,140) || 'Nòt vid'}</div>
       <div class="nc-meta">
@@ -5654,8 +5718,45 @@ function renderNotes(){
         ${(n.tags||[]).map(t => `<span class="tag-pill">#${escapeHtml(t)}</span>`).join('')}
         <span class="nc-date">${(n.updatedAt||'').slice(0,10)}</span>
       </div>
+      <div class="nc-actions">
+        <button class="nc-act-btn" data-act="copy" title="Kopye"><i data-lucide="copy"></i></button>
+        <button class="nc-act-btn" data-act="toggle-menu" title="Plis opsyon"><i data-lucide="more-horizontal"></i></button>
+        <div class="note-menu">
+          <div class="nm-item" data-act="copy"><i data-lucide="copy"></i> Kopye</div>
+          <div class="nm-item" data-act="edit"><i data-lucide="pencil"></i> Modifye</div>
+          <div class="nm-item" data-act="pin"><i data-lucide="pin"></i> ${n.pinned ? 'Retire Pin' : 'Pin'}</div>
+          <div class="nm-item" data-act="favorite"><i data-lucide="heart"></i> ${n.favorite ? 'Retire nan Favori' : 'Ajoute nan Favori'}</div>
+          <div class="nm-item danger" data-act="delete"><i data-lucide="trash-2"></i> Efase</div>
+        </div>
+      </div>
     `;
     el.addEventListener('click', () => openNoteModal(n.id));
+    el.querySelector('[data-act="copy"]').addEventListener('click', e => { e.stopPropagation(); copyNoteText(n); });
+    el.querySelector('[data-act="toggle-menu"]').addEventListener('click', e => {
+      e.stopPropagation();
+      const menu = el.querySelector('.note-menu');
+      const wasOpen = menu.classList.contains('open');
+      closeAllNoteMenus();
+      if (!wasOpen) menu.classList.add('open');
+    });
+    el.querySelectorAll('.note-menu .nm-item').forEach(item => {
+      item.addEventListener('click', e => {
+        e.stopPropagation();
+        closeAllNoteMenus();
+        const act = item.dataset.act;
+        if (act === 'copy') copyNoteText(n);
+        else if (act === 'edit') openNoteModal(n.id);
+        else if (act === 'pin'){ n.pinned = !n.pinned; persistNotes(); renderNotes(); showToast(n.pinned ? 'Nòt pinen ✓' : 'Pin retire'); }
+        else if (act === 'favorite'){ n.favorite = !n.favorite; persistNotes(); renderNotes(); showToast(n.favorite ? 'Ajoute nan Favori ✓' : 'Retire nan Favori'); }
+        else if (act === 'delete'){
+          if (!confirm('Efase nòt sa a?')) return;
+          notes = notes.filter(x => x.id !== n.id);
+          persistNotes();
+          renderNotes();
+          showToast('Nòt efase');
+        }
+      });
+    });
     grid.appendChild(el);
   });
   if (window.lucide) lucide.createIcons();
@@ -6008,8 +6109,8 @@ function computeHealthInsight(log){
   if ((log.water||0) < healthGoals.water) gaps.push(`bwè ${healthGoals.water-(log.water||0)} vè dlo anplis`);
   if ((log.sleep||0) < healthGoals.sleep) gaps.push(`eseye dòmi ${(healthGoals.sleep-(log.sleep||0)).toFixed(1)}h anplis`);
   if ((log.exercise||0) < healthGoals.exercise) gaps.push(`fè ${healthGoals.exercise-(log.exercise||0)} min egzèsis anplis`);
-  if ((log.sugar||0) > SUGAR_DAILY_LIMIT_G) gaps.push(`redwi bwason sikre (${Math.round(log.sugar)}g sik deja jodi a, limit se ${SUGAR_DAILY_LIMIT_G}g)`);
-  if ((log.caffeine||0) > CAFFEINE_DAILY_LIMIT_MG) gaps.push(`evite plis kafeyin (${Math.round(log.caffeine)}mg deja jodi a, limit se ${CAFFEINE_DAILY_LIMIT_MG}mg)`);
+  if ((log.sugar||0) > SUGAR_DAILY_LIMIT_G) gaps.push(`redwi bwason sikre (${fmtNum(log.sugar)}g sik deja jodi a, limit se ${SUGAR_DAILY_LIMIT_G}g)`);
+  if ((log.caffeine||0) > CAFFEINE_DAILY_LIMIT_MG) gaps.push(`evite plis kafeyin (${fmtNum(log.caffeine)}mg deja jodi a, limit se ${CAFFEINE_DAILY_LIMIT_MG}mg)`);
   const score = computeHealthScore(log);
   const mem = computeDrinkMemory();
   let habitNote = '';
@@ -6058,6 +6159,53 @@ function buildMiniBarChart(containerId, data, color, maxVal, unit){
   }).join('') + '</div>';
 }
 
+// ==========================================
+// AI RECOMMENDATIONS — analize done kounye a + istorik + abitid itilizatè a
+// (itilize pou AI Summary Card ak sijesyon an tan reyèl)
+// ==========================================
+function generateHealthRecommendations(log){
+  const recs = [];
+  if ((log.water||0) < healthGoals.water){
+    recs.push({ text: `Ou poko rive nan objektif dlo ou jodi a (${fmtNum(log.water||0)}/${healthGoals.water} vè).`, level:'yellow' });
+  }
+  if ((log.sugar||0) > SUGAR_DAILY_LIMIT_G){
+    recs.push({ text: `Ou konsome plis sik pase limit ou jodi a (${fmtNum(log.sugar)}g / ${SUGAR_DAILY_LIMIT_G}g).`, level:'red' });
+  }
+  if ((log.caffeine||0) >= CAFFEINE_DAILY_LIMIT_MG){
+    recs.push({ text: `Ou deja konsome anpil kafeyin jodi a (${fmtNum(log.caffeine)}mg).`, level:'red' });
+  } else if ((log.caffeine||0) >= CAFFEINE_DAILY_LIMIT_MG*0.7){
+    recs.push({ text: `Ou pre rive nan limit kafeyin ou jodi a (${fmtNum(log.caffeine)}mg).`, level:'yellow' });
+  }
+  const lastDrink = (log.drinks||[])[(log.drinks||[]).length-1];
+  if (lastDrink && (lastDrink.type==='sugary'||lastDrink.type==='energy'||lastDrink.type==='coffee') && (log.water||0) < healthGoals.water){
+    recs.push({ text: 'Eseye bwè dlo anvan pwochen bwason ou.', level:'yellow' });
+  }
+  const yesterday = isoOffset(todayISO(), -1);
+  const yLog = healthLogs.find(l => l.date === yesterday);
+  if (yLog && (log.water||0) > (yLog.water||0) && (log.water||0) > 0){
+    recs.push({ text: 'Bèl travay! Idratasyon ou amelyore konpare ak yè.', level:'green' });
+  }
+  if (!recs.length){
+    recs.push({ text: 'Bon abitid jodi a — kontinye konsa!', level:'green' });
+  }
+  return recs;
+}
+const AI_STATUS_LABELS = { green:'Bon Abitid', yellow:'Modere', red:'Atansyon Nesesè' };
+const AI_STATUS_COLOR_VARS = { green:'var(--green)', yellow:'var(--orange)', red:'var(--red)' };
+function renderHealthAiSummary(log){
+  const dot = document.getElementById('healthAiStatusDot');
+  if (!dot) return;
+  const recs = generateHealthRecommendations(log).sort((a,b) => ({red:0,yellow:1,green:2}[a.level]) - ({red:0,yellow:1,green:2}[b.level]));
+  const top = recs[0];
+  const color = AI_STATUS_COLOR_VARS[top.level];
+  dot.style.background = color;
+  dot.classList.toggle('pulse', top.level === 'red');
+  const labelEl = document.getElementById('healthAiStatusLabel');
+  labelEl.textContent = AI_STATUS_LABELS[top.level];
+  labelEl.style.color = color;
+  document.getElementById('healthAiSummaryText').textContent = top.text;
+}
+
 function renderHealth(){
   const today = todayISO();
   const log = getHealthLog(today, true);
@@ -6068,15 +6216,16 @@ function renderHealth(){
 
   renderWaterGlasses(log);
 
-  document.getElementById('sleepVal').textContent = (log.sleep||0) + 'h';
+  document.getElementById('sleepVal').textContent = fmtNum(log.sleep||0) + 'h';
   document.getElementById('sleepBar').style.width = Math.min(100, ((log.sleep||0)/(healthGoals.sleep||8))*100) + '%';
 
-  document.getElementById('exerciseVal').textContent = (log.exercise||0) + ' min';
+  document.getElementById('exerciseVal').textContent = fmtNum(log.exercise||0) + ' min';
   document.getElementById('exerciseBar').style.width = Math.min(100, ((log.exercise||0)/(healthGoals.exercise||30))*100) + '%';
 
   renderHealthMoodPicker(log);
 
   document.getElementById('healthAiInsight').innerHTML = computeHealthInsight(log);
+  renderHealthAiSummary(log);
 
   const last7 = [];
   for (let i=6;i>=0;i--){
@@ -6101,9 +6250,9 @@ function renderHealthStats(log){
   const mem = computeDrinkMemory();
 
   // Dashboard an tan reyèl
-  document.getElementById('hdSugarToday').textContent = Math.round(log.sugar||0) + 'g';
+  document.getElementById('hdSugarToday').textContent = fmtNum(log.sugar||0) + 'g';
   document.getElementById('hdSugarBar').style.width = Math.min(100, ((log.sugar||0)/SUGAR_DAILY_LIMIT_G)*100) + '%';
-  document.getElementById('hdCaffeineToday').textContent = Math.round(log.caffeine||0) + 'mg';
+  document.getElementById('hdCaffeineToday').textContent = fmtNum(log.caffeine||0) + 'mg';
   document.getElementById('hdCaffeineBar').style.width = Math.min(100, ((log.caffeine||0)/CAFFEINE_DAILY_LIMIT_MG)*100) + '%';
   document.getElementById('hdDrinksToday').textContent = (log.drinks||[]).length;
   document.getElementById('hdHealthScore').textContent = computeHealthScore(log) + '%';
@@ -6115,7 +6264,7 @@ function renderHealthStats(log){
   document.getElementById('hdSugarIndexBar').style.width = sugarIdx + '%';
 
   // Dlo — Jodi a / Semèn / Mwa / Ane
-  document.getElementById('wsWaterToday').textContent = Math.round((log.water||0) * ML_PER_GLASS) + ' ml';
+  document.getElementById('wsWaterToday').textContent = fmtNum((log.water||0) * ML_PER_GLASS) + ' ml';
   const weekStart = isoOffset(today, -6);
   const monthPrefix = today.slice(0,7), yearPrefix = today.slice(0,4);
   let weekMl=0, monthMl=0, yearMl=0;
@@ -6125,9 +6274,9 @@ function renderHealthStats(log){
     if (l.date.slice(0,7) === monthPrefix) monthMl += ml;
     if (l.date.slice(0,4) === yearPrefix) yearMl += ml;
   });
-  document.getElementById('wsWaterWeek').textContent = Math.round(weekMl) + ' ml';
-  document.getElementById('wsWaterMonth').textContent = Math.round(monthMl) + ' ml';
-  document.getElementById('wsWaterYear').textContent = Math.round(yearMl) + ' ml';
+  document.getElementById('wsWaterWeek').textContent = fmtNum(weekMl) + ' ml';
+  document.getElementById('wsWaterMonth').textContent = fmtNum(monthMl) + ' ml';
+  document.getElementById('wsWaterYear').textContent = fmtNum(yearMl) + ' ml';
 
   // Analiz Bwason (jenere soti nan done reyèl — AI Memory, pa mesaj fiks)
   const daWrap = document.getElementById('drinkAnalysisWrap');
@@ -6137,8 +6286,8 @@ function renderHealthStats(log){
     const typeOrder = ['sugary','energy','coffee','juice','milk','other'];
     const topDrinks = Object.entries(mem.nameCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
     daWrap.innerHTML = `
-      <div class="stat-line"><span>Total sik (istwa)</span><b>${Math.round(mem.totalSugar)}g</b></div>
-      <div class="stat-line"><span>Total kafeyin (istwa)</span><b>${Math.round(mem.totalCaffeine)}mg</b></div>
+      <div class="stat-line"><span>Total sik (istwa)</span><b>${fmtNum(mem.totalSugar)}g</b></div>
+      <div class="stat-line"><span>Total kafeyin (istwa)</span><b>${fmtNum(mem.totalCaffeine)}mg</b></div>
       <div class="legend" style="margin-top:10px;">
         ${typeOrder.filter(t=>mem.typeCounts[t]).map((t,i) => `<div class="lg-row"><span class="lg-dot" style="background:${PIE_COLORS[i%PIE_COLORS.length]}"></span>${DRINK_TYPE_LABELS[t]||t}<b>${mem.typeCounts[t]}</b></div>`).join('')}
       </div>
@@ -6160,7 +6309,7 @@ function renderHealthStats(log){
   for (let i=13;i>=0;i--){
     const d = isoOffset(today, -i);
     const l = healthLogs.find(x => x.date === d);
-    last14.push({ lbl: DAYS[new Date(d+'T00:00:00').getDay()].slice(0,2), val: Math.round(l?.sugar||0) });
+    last14.push({ lbl: DAYS[new Date(d+'T00:00:00').getDay()].slice(0,2), val: Math.round((l?.sugar||0)*10)/10 });
   }
   buildMiniBarChart('habitEvolutionChart', last14, 'var(--orange)', Math.max(SUGAR_DAILY_LIMIT_G, ...last14.map(x=>x.val)), 'g');
 }
