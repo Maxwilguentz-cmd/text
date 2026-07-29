@@ -5080,6 +5080,7 @@ document.getElementById('saveHabitBtn').addEventListener('click', () => {
   const habitId = editingHabitId || (habits[habits.length - 1] && habits[habits.length - 1].id);
   if (habitId){
     linkHabitToGoal(goalId, habitId);
+    if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(goalId);
     renderGoals();
     if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
@@ -5129,6 +5130,7 @@ function renderLinkExistingHabitSelect(){
     const habitId = sel.value;
     if (!editingGoalId || !habitId) return;
     linkHabitToGoal(editingGoalId, habitId); // itilize ID ki egziste deja — pa kreye/dupliye okenn abitid
+    if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(editingGoalId);
     renderLinkExistingHabitSelect();
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
     renderGoals();
@@ -5198,6 +5200,7 @@ function renderGoalLinkedHabitsList(){
     e.stopPropagation();
     const habitId = e.currentTarget.dataset.habitId;
     unlinkHabitFromGoal(editingGoalId, habitId);
+    if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(editingGoalId);
     renderGoalLinkedHabitsList();
     if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
     renderGoals();
@@ -5215,9 +5218,40 @@ function renderGoalLinkedHabitsList(){
   const originalToggleHabitToday = toggleHabitToday;
   toggleHabitToday = function(id){
     originalToggleHabitToday(id);
+    const h = habits.find(x => x.id === id);
+    if (h && h.goalId){
+      if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(h.goalId);
+    }
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
   };
 })();
+
+// ==========================================
+// GOAL <-> HABIT — istwa pwogrè otomatik (Pati 9/50)
+// Nouvo chan APA sou Goal la (g.habitProgressHistory) — pa touche goal.progress
+// manyèl la, ni fòm/estrikti Goal modil la. Rafrechisman entèfas la (Pati 4/8)
+// deja fèt san rechajman paj; isit la nou anrejistre chanjman an epi asire l
+// deklanche pou chak evènman ki fè pwogrè a chanje (make/demake, lye, delye).
+// ==========================================
+function recordGoalHabitProgressHistory(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return;
+  const { pct } = computeGoalHabitProgress(goalId);
+  if (pct === null) return; // pa gen abitid lye ankò — pa gen pwogrè pou anrejistre
+  if (!Array.isArray(g.habitProgressHistory)) g.habitProgressHistory = [];
+  const today = todayISO();
+  const last = g.habitProgressHistory[g.habitProgressHistory.length - 1];
+  let changed = false;
+  if (last && last.date === today){
+    if (last.pct !== pct){ last.pct = pct; changed = true; }
+  } else if (!last || last.pct !== pct){
+    g.habitProgressHistory.push({ date: today, pct });
+    changed = true;
+  }
+  if (g.habitProgressHistory.length > 180) g.habitProgressHistory = g.habitProgressHistory.slice(-180);
+  if (changed) persistGoals();
+  return changed;
+}
 
 
 
