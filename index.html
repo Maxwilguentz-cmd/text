@@ -2217,7 +2217,11 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       </div>
       <div><label>Nòt</label><textarea id="goalNotes" placeholder="Nòt adisyonèl..."></textarea></div>
       <div class="goal-links-section">
-        <label>Abitid Lye <span style="color:var(--text-faint);font-weight:400;">(ajou otomatikman)</span></label>
+        <label>Abitid Lye <span id="goalLinkedHabitsCount" style="color:var(--text-faint);font-weight:400;"></span></label>
+        <div id="goalHabitProgressRow" class="goal-progress-row" style="margin-bottom:8px;" hidden>
+          <div class="mini-progress"><span id="goalHabitProgressBar" style="width:0%;background:var(--green);"></span></div>
+          <b id="goalHabitProgressPct">0%</b>
+        </div>
         <div class="milestone-list" id="goalLinkedHabitsList"></div>
         <label style="margin-top:12px;display:block;">Lye ak Objektif la <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label>
         <div class="goal-links-grid" id="goalLinksGrid"></div>
