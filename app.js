@@ -5042,6 +5042,49 @@ document.getElementById('deleteGoalBtn').addEventListener('click', () => {
   document.getElementById(id).addEventListener('change', renderGoals);
 });
 
+// ==========================================
+// GOAL <-> HABIT — bouton "Ajoute Abitid" (Pati 2/50)
+// Pa touche openGoalModal/saveGoalBtn/openHabitModal/saveHabitBtn ki egziste deja —
+// nou jis obsève modal yo epi ajoute lyen an apre Habit modil la fin anrejistre.
+// ==========================================
+let pendingGoalIdForNewHabit = null;
+
+(function initGoalAddHabitButton(){
+  const btn = document.getElementById('goalAddHabitBtn');
+  const overlay = document.getElementById('goalModalOverlay');
+  if (!btn || !overlay) return;
+  const syncVisibility = () => { btn.hidden = !editingGoalId; };
+  new MutationObserver(syncVisibility).observe(overlay, { attributes:true, attributeFilter:['class'] });
+  syncVisibility();
+  btn.addEventListener('click', () => {
+    if (!editingGoalId) return;
+    pendingGoalIdForNewHabit = editingGoalId;
+    openHabitModal(null); // itilize fòm kreyasyon Abitid ki egziste deja — pa kreye yon lòt fòm
+  });
+})();
+
+// Si moun nan fèmen fòm Abitid la san anrejistre, anile lyen an tann lan
+document.getElementById('closeHabitModal').addEventListener('click', () => { pendingGoalIdForNewHabit = null; });
+document.getElementById('habitModalOverlay').addEventListener('click', e => {
+  if (e.target.id === 'habitModalOverlay') pendingGoalIdForNewHabit = null;
+});
+
+// Kouri APRE handler anrejistreman Abitid ki egziste deja (òdinal ajout aditif, pa yon ranplasman)
+document.getElementById('saveHabitBtn').addEventListener('click', () => {
+  if (!pendingGoalIdForNewHabit) return;
+  const name = document.getElementById('habitName').value.trim();
+  if (!name) return; // Habit modil la deja bloke anrejistreman san non — kite lyen an tann pou pwochen eseye
+  const goalId = pendingGoalIdForNewHabit;
+  pendingGoalIdForNewHabit = null;
+  // Abitid ki fenk kreye a se dènye eleman nan lis la (Habit modil la push li nan menm klik la)
+  const habitId = editingHabitId || (habits[habits.length - 1] && habits[habits.length - 1].id);
+  if (habitId){
+    linkHabitToGoal(goalId, habitId);
+    renderGoals();
+    showToast('Abitid lye ak objektif la ✓');
+  }
+});
+
 const GOAL_TYPE_LABEL = { short:'Kout tèm', medium:'Mwayen tèm', long:'Long tèm' };
 let _goalRenderSig = '';
 function renderGoals(){
