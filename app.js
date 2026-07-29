@@ -5142,26 +5142,56 @@ function renderLinkExistingHabitSelect(){
 // ==========================================
 const HABIT_FREQ_LABEL = { daily:'Chak jou', weekly:'Chak semèn', monthly:'Chak mwa' };
 
+// ==========================================
+// GOAL <-> HABIT — pwogrè Objektif ki soti nan Abitid Lye (Pati 8/50)
+// Nouvo mezi APA — pa touche goal.progress (jauge manyèl la), goalMilestoneProgress,
+// ni Habit modil la. calcStreaks() itilize yon Set sou completions, donk yon dat
+// ki repete pa janm konte de fwa nan kontribisyon an.
+// ==========================================
+function computeGoalHabitProgress(goalId){
+  const linked = getHabitsForGoal(goalId);
+  if (!linked.length) return { pct: null, perHabit: [] };
+  const perHabit = linked.map(h => {
+    const { rate } = calcStreaks(h); // chak Habit kontribye pwòp pousantaj li, apa
+    return { habitId: h.id, name: h.name, rate };
+  });
+  const pct = Math.round(perHabit.reduce((s,x) => s + x.rate, 0) / perHabit.length);
+  return { pct, perHabit };
+}
+
 function renderGoalLinkedHabitsList(){
   const wrap = document.getElementById('goalLinkedHabitsList');
+  const countLbl = document.getElementById('goalLinkedHabitsCount');
+  const progRow = document.getElementById('goalHabitProgressRow');
+  const progBar = document.getElementById('goalHabitProgressBar');
+  const progPct = document.getElementById('goalHabitProgressPct');
   if (!wrap) return;
-  if (!editingGoalId){ wrap.innerHTML = ''; return; }
-  const linked = getHabitsForGoal(editingGoalId);
+  if (!editingGoalId){ wrap.innerHTML = ''; if (countLbl) countLbl.textContent = ''; if (progRow) progRow.hidden = true; return; }
+  const linked = getHabitsForGoal(editingGoalId); // pa gen limit — chak Habit kontribye endepandamman
+  if (countLbl) countLbl.textContent = linked.length ? `(${linked.length} abitid lye · ajou otomatikman)` : '(ajou otomatikman)';
+  const { pct, perHabit } = computeGoalHabitProgress(editingGoalId);
+  if (progRow){
+    progRow.hidden = pct === null;
+    if (pct !== null){ progBar.style.width = pct + '%'; progPct.textContent = pct + '%'; }
+  }
   if (!linked.length){
     wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen abitid lye.</span>';
     return;
   }
+  const rateByHabit = Object.fromEntries(perHabit.map(x => [x.habitId, x.rate]));
   wrap.innerHTML = linked.map(h => {
     const doneToday = (h.completions||[]).includes(todayISO());
     const statusLabel = doneToday ? 'Fèt jodi a' : 'An atant';
     const statusBg = doneToday ? 'var(--green-soft)' : 'var(--surface-2)';
     const statusColor = doneToday ? 'var(--green)' : 'var(--text-dim)';
+    const contrib = rateByHabit[h.id] ?? 0;
     return `<div class="milestone-row" style="justify-content:space-between;" data-habit-id="${h.id}">
       <span><b>${escapeHtml(h.name)}</b>
         <span class="tag" style="background:var(--surface-2);color:var(--text-dim);margin-left:6px;">${HABIT_FREQ_LABEL[h.frequency]||h.frequency}</span>
         <span class="pill" style="background:${statusBg};color:${statusColor};margin-left:6px;">${statusLabel}</span>
+        <span class="tag" style="background:var(--blue-soft);color:var(--blue);margin-left:6px;" title="Kontribisyon endepandan abitid sa a nan pwogrè objektif la">${contrib}%</span>
       </span>
-      <i data-lucide="x" class="goalUnlinkHabit" data-habit-id="${h.id}" style="width:13px;height:13px;cursor:pointer;color:var(--text-faint);"></i>
+      <i data-lucide="x" class="goalUnlinkHabit" data-habit-id="${h.id}" title="Delye ${escapeHtml(h.name)} (pa efase abitid la)" aria-label="Delye abitid" role="button" style="width:13px;height:13px;cursor:pointer;color:var(--text-faint);padding:3px;"></i>
     </div>`;
   }).join('');
   wrap.querySelectorAll('.goalUnlinkHabit').forEach(ic => ic.addEventListener('click', e => {
@@ -5175,6 +5205,21 @@ function renderGoalLinkedHabitsList(){
   }));
   if (window.lucide) lucide.createIcons();
 }
+
+// Lè yon abitid make fèt/pa fèt jodi a, kontribisyon ak pwogrè a ka chanje —
+// nou anvlope fonksyon Habit modil la (san chanje konpòtman orijinal li; nou jis
+// ajoute yon rafrechisman apre) paske klik la rele toggleHabitToday() dirèkteman
+// e li rele e.stopPropagation(), sa ki anpeche yon "delegated listener" mache.
+(function hookHabitToggleForGoalProgress(){
+  if (typeof toggleHabitToday !== 'function') return;
+  const originalToggleHabitToday = toggleHabitToday;
+  toggleHabitToday = function(id){
+    originalToggleHabitToday(id);
+    if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
+  };
+})();
+
+
 
 (function initGoalLinkedHabitsList(){
   const overlay = document.getElementById('goalModalOverlay');
