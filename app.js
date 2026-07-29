@@ -5082,8 +5082,18 @@ document.getElementById('saveHabitBtn').addEventListener('click', () => {
     linkHabitToGoal(goalId, habitId);
     renderGoals();
     if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
+    if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
     showToast('Abitid lye ak objektif la ✓');
   }
+});
+
+// Habit modil la ka modifye/efase yon abitid ki lye — rafrechi lis la pou rete ajou
+document.getElementById('saveHabitBtn').addEventListener('click', () => {
+  if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
+});
+document.getElementById('deleteHabitBtn').addEventListener('click', () => {
+  if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
+  if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
 });
 
 // ==========================================
@@ -5120,9 +5130,57 @@ function renderLinkExistingHabitSelect(){
     if (!editingGoalId || !habitId) return;
     linkHabitToGoal(editingGoalId, habitId); // itilize ID ki egziste deja — pa kreye/dupliye okenn abitid
     renderLinkExistingHabitSelect();
+    if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
     renderGoals();
     showToast('Abitid lye ak objektif la ✓');
   });
+})();
+
+// ==========================================
+// GOAL <-> HABIT — afiche Abitid Lye yo (Pati 4/50)
+// Lòt kouch obsèvasyon apa — pa touche Goal/Habit modil yo, ni kod Pati 1/2/3 la.
+// ==========================================
+const HABIT_FREQ_LABEL = { daily:'Chak jou', weekly:'Chak semèn', monthly:'Chak mwa' };
+
+function renderGoalLinkedHabitsList(){
+  const wrap = document.getElementById('goalLinkedHabitsList');
+  if (!wrap) return;
+  if (!editingGoalId){ wrap.innerHTML = ''; return; }
+  const linked = getHabitsForGoal(editingGoalId);
+  if (!linked.length){
+    wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen abitid lye.</span>';
+    return;
+  }
+  wrap.innerHTML = linked.map(h => {
+    const doneToday = (h.completions||[]).includes(todayISO());
+    const statusLabel = doneToday ? 'Fèt jodi a' : 'An atant';
+    const statusBg = doneToday ? 'var(--green-soft)' : 'var(--surface-2)';
+    const statusColor = doneToday ? 'var(--green)' : 'var(--text-dim)';
+    return `<div class="milestone-row" style="justify-content:space-between;" data-habit-id="${h.id}">
+      <span><b>${escapeHtml(h.name)}</b>
+        <span class="tag" style="background:var(--surface-2);color:var(--text-dim);margin-left:6px;">${HABIT_FREQ_LABEL[h.frequency]||h.frequency}</span>
+        <span class="pill" style="background:${statusBg};color:${statusColor};margin-left:6px;">${statusLabel}</span>
+      </span>
+      <i data-lucide="x" class="goalUnlinkHabit" data-habit-id="${h.id}" style="width:13px;height:13px;cursor:pointer;color:var(--text-faint);"></i>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('.goalUnlinkHabit').forEach(ic => ic.addEventListener('click', e => {
+    e.stopPropagation();
+    const habitId = e.currentTarget.dataset.habitId;
+    unlinkHabitFromGoal(editingGoalId, habitId);
+    renderGoalLinkedHabitsList();
+    if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
+    renderGoals();
+    showToast('Abitid delye ✓');
+  }));
+  if (window.lucide) lucide.createIcons();
+}
+
+(function initGoalLinkedHabitsList(){
+  const overlay = document.getElementById('goalModalOverlay');
+  if (!overlay) return;
+  new MutationObserver(renderGoalLinkedHabitsList).observe(overlay, { attributes:true, attributeFilter:['class'] });
+  renderGoalLinkedHabitsList();
 })();
 
 const GOAL_TYPE_LABEL = { short:'Kout tèm', medium:'Mwayen tèm', long:'Long tèm' };
