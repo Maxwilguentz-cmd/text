@@ -400,6 +400,50 @@ let missionsState = loadLS(LS.missions, { date:'', claimed:[], goalsReviewed:fal
 let missionsHistory = loadLS(LS.missionsHistory, []);
 let unlockedAchievements = loadLS(LS.achievements, []);
 
+// ==========================================
+// GOAL <-> HABIT — sistèm koneksyon debaz (Pati 1/50)
+// Pa modifye modil Goal ak Habit yo — jis konekte yo.
+// - Goal.linkedHabitIds : lis ID Habit ki lye ak objektif la
+// - Habit.goalId        : ID Goal ke abitid la fè pati (oswa null)
+// Migrasyon san danje: ajoute chan yo sèlman si yo pa egziste deja,
+// pou done ki te la anvan rete konpatib.
+// ==========================================
+goals.forEach(g => { if (!Array.isArray(g.linkedHabitIds)) g.linkedHabitIds = []; });
+habits.forEach(h => { if (h.goalId === undefined) h.goalId = null; });
+
+function linkHabitToGoal(goalId, habitId){
+  const g = goals.find(x => x.id === goalId);
+  const h = habits.find(x => x.id === habitId);
+  if (!g || !h) return false;
+  if (!Array.isArray(g.linkedHabitIds)) g.linkedHabitIds = [];
+  if (h.goalId && h.goalId !== goalId) unlinkHabitFromGoal(h.goalId, habitId);
+  if (!g.linkedHabitIds.includes(habitId)) g.linkedHabitIds.push(habitId);
+  h.goalId = goalId;
+  persistGoals();
+  persistHabits();
+  return true;
+}
+
+function unlinkHabitFromGoal(goalId, habitId){
+  const g = goals.find(x => x.id === goalId);
+  const h = habits.find(x => x.id === habitId);
+  if (g && Array.isArray(g.linkedHabitIds)) g.linkedHabitIds = g.linkedHabitIds.filter(id => id !== habitId);
+  if (h && h.goalId === goalId) h.goalId = null;
+  persistGoals();
+  persistHabits();
+  return true;
+}
+
+function getHabitsForGoal(goalId){
+  return habits.filter(h => h.goalId === goalId);
+}
+
+function getGoalForHabit(habitId){
+  const h = habits.find(x => x.id === habitId);
+  if (!h || !h.goalId) return null;
+  return goals.find(g => g.id === h.goalId) || null;
+}
+
 function persistTasks(){ saveLS(LS.tasks, tasks); refreshDashboardTaskWidget(); lifeEngineRefresh(); }
 function persistEvents(){ saveLS(LS.events, events); lifeEngineRefresh(); }
 function persistTemplates(){ saveLS(LS.templates, templates); }
