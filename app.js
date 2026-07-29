@@ -5183,6 +5183,62 @@ function renderGoalLinkedHabitsList(){
   renderGoalLinkedHabitsList();
 })();
 
+// ==========================================
+// GOAL <-> HABIT — entegrite done pèsistan (Pati 5/50)
+// Lyen an deja anrejistre pèmanan depi Pati 1 (linkedHabitIds/goalId ap viv sou
+// menm objè goals/habits ki pase nan persistGoals()/persistHabits() -> localStorage,
+// epi migrasyon nan chajman restore yo apre reload). Isit la nou ranfòse
+// fyabilite: elimine duplikasyon ak lyen kase, san touche Goal/Habit modil yo.
+// ==========================================
+function pruneBrokenGoalHabitLinks(){
+  let changed = false;
+  const goalIds = new Set(goals.map(g => g.id));
+  const habitIds = new Set(habits.map(h => h.id));
+
+  // 1) Chak goal.linkedHabitIds: retire duplikata ak ID abitid ki pa egziste ankò
+  goals.forEach(g => {
+    if (!Array.isArray(g.linkedHabitIds)){ g.linkedHabitIds = []; changed = true; return; }
+    const cleaned = [...new Set(g.linkedHabitIds)].filter(id => habitIds.has(id));
+    if (cleaned.length !== g.linkedHabitIds.length || cleaned.some((id,i) => id !== g.linkedHabitIds[i])){
+      g.linkedHabitIds = cleaned;
+      changed = true;
+    }
+  });
+
+  // 2) Chak habit.goalId: retire referans si Objektif la pa egziste ankò
+  habits.forEach(h => {
+    if (h.goalId && !goalIds.has(h.goalId)){ h.goalId = null; changed = true; }
+  });
+
+  // 3) Senkronize de sans yo: yon habitId dwe parèt SÈLMAN nan linkedHabitIds Goal ke habit.goalId a pwente sou li
+  habits.forEach(h => {
+    goals.forEach(g => {
+      const idx = (g.linkedHabitIds||[]).indexOf(h.id);
+      if (idx !== -1 && g.id !== h.goalId){ g.linkedHabitIds.splice(idx, 1); changed = true; }
+    });
+    if (h.goalId){
+      const g = goals.find(x => x.id === h.goalId);
+      if (g && !g.linkedHabitIds.includes(h.id)){ g.linkedHabitIds.push(h.id); changed = true; }
+    }
+  });
+
+  if (changed){ persistGoals(); persistHabits(); }
+  return changed;
+}
+
+// Repare/valide entegrite done a chak fwa aplikasyon an chaje (apre reload)
+pruneBrokenGoalHabitLinks();
+
+// Chak fwa yon Habit oswa yon Goal efase, netwaye lyen kase yo otomatikman
+document.getElementById('deleteHabitBtn').addEventListener('click', () => {
+  pruneBrokenGoalHabitLinks();
+  if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
+  if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
+});
+document.getElementById('deleteGoalBtn').addEventListener('click', () => {
+  pruneBrokenGoalHabitLinks();
+});
+
 const GOAL_TYPE_LABEL = { short:'Kout tèm', medium:'Mwayen tèm', long:'Long tèm' };
 let _goalRenderSig = '';
 function renderGoals(){
