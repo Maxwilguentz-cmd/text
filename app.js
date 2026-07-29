@@ -5081,9 +5081,49 @@ document.getElementById('saveHabitBtn').addEventListener('click', () => {
   if (habitId){
     linkHabitToGoal(goalId, habitId);
     renderGoals();
+    if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
     showToast('Abitid lye ak objektif la ✓');
   }
 });
+
+// ==========================================
+// GOAL <-> HABIT — "Lye Abitid ki Egziste" (Pati 3/50)
+// Lòt kouch obsèvasyon apa — pa touche kod Pati 1/2 la, ni Goal/Habit modil yo.
+// ==========================================
+function renderLinkExistingHabitSelect(){
+  const sel = document.getElementById('goalLinkExistingHabitSelect');
+  const wrap = document.getElementById('goalLinkExistingHabitWrap');
+  if (!sel || !wrap) return;
+  if (!editingGoalId){ wrap.hidden = true; return; }
+  wrap.hidden = false;
+  // Sèlman abitid ki PA deja lye ak Objektif aktyèl la (pa dupliye done — reyalize sou id ki egziste deja)
+  const available = habits.filter(h => h.goalId !== editingGoalId);
+  if (!available.length){
+    sel.innerHTML = '<option value="">Pa gen abitid disponib</option>';
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">Chwazi yon abitid...</option>' +
+      available.map(h => `<option value="${h.id}">${escapeHtml(h.name)}${h.goalId ? ' (deja lye ak yon lòt objektif)' : ''}</option>`).join('');
+  }
+}
+
+(function initGoalLinkExistingHabit(){
+  const overlay = document.getElementById('goalModalOverlay');
+  const btn = document.getElementById('goalLinkExistingHabitBtn');
+  const sel = document.getElementById('goalLinkExistingHabitSelect');
+  if (!overlay || !btn || !sel) return;
+  new MutationObserver(renderLinkExistingHabitSelect).observe(overlay, { attributes:true, attributeFilter:['class'] });
+  renderLinkExistingHabitSelect();
+  btn.addEventListener('click', () => {
+    const habitId = sel.value;
+    if (!editingGoalId || !habitId) return;
+    linkHabitToGoal(editingGoalId, habitId); // itilize ID ki egziste deja — pa kreye/dupliye okenn abitid
+    renderLinkExistingHabitSelect();
+    renderGoals();
+    showToast('Abitid lye ak objektif la ✓');
+  });
+})();
 
 const GOAL_TYPE_LABEL = { short:'Kout tèm', medium:'Mwayen tèm', long:'Long tèm' };
 let _goalRenderSig = '';
