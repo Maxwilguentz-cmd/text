@@ -5080,10 +5080,11 @@ document.getElementById('saveHabitBtn').addEventListener('click', () => {
   const habitId = editingHabitId || (habits[habits.length - 1] && habits[habits.length - 1].id);
   if (habitId){
     linkHabitToGoal(goalId, habitId);
-    if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(goalId);
+    if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(goalId, habitId, 'habit-linked');
     renderGoals();
     if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
+    if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
     showToast('Abitid lye ak objektif la ✓');
   }
 });
@@ -5130,9 +5131,10 @@ function renderLinkExistingHabitSelect(){
     const habitId = sel.value;
     if (!editingGoalId || !habitId) return;
     linkHabitToGoal(editingGoalId, habitId); // itilize ID ki egziste deja — pa kreye/dupliye okenn abitid
-    if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(editingGoalId);
+    if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(editingGoalId, habitId, 'habit-linked');
     renderLinkExistingHabitSelect();
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
+    if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
     renderGoals();
     showToast('Abitid lye ak objektif la ✓');
   });
@@ -5200,8 +5202,9 @@ function renderGoalLinkedHabitsList(){
     e.stopPropagation();
     const habitId = e.currentTarget.dataset.habitId;
     unlinkHabitFromGoal(editingGoalId, habitId);
-    if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(editingGoalId);
+    if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(editingGoalId, habitId, 'habit-unlinked');
     renderGoalLinkedHabitsList();
+    if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
     if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
     renderGoals();
     showToast('Abitid delye ✓');
@@ -5220,9 +5223,12 @@ function renderGoalLinkedHabitsList(){
     originalToggleHabitToday(id);
     const h = habits.find(x => x.id === id);
     if (h && h.goalId){
-      if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(h.goalId);
+      const doneNow = Array.isArray(h.completions) && h.completions.includes(todayISO());
+      const actionSource = doneNow ? 'habit-completed' : 'habit-uncompleted';
+      if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(h.goalId, id, actionSource);
     }
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
+    if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
   };
 })();
 
@@ -5232,34 +5238,123 @@ function renderGoalLinkedHabitsList(){
 // manyèl la, ni fòm/estrikti Goal modil la. Rafrechisman entèfas la (Pati 4/8)
 // deja fèt san rechajman paj; isit la nou anrejistre chanjman an epi asire l
 // deklanche pou chak evènman ki fè pwogrè a chanje (make/demake, lye, delye).
+//
+// GOAL — istwa pwogrè detaye (Pati 10/50)
+// Amelyorasyon SOU MENM chan g.habitProgressHistory a (pa gen nouvo sistèm
+// paralèl) — chak anrejistreman kounye a kenbe: dat, Abitid sous ki lakòz
+// chanjman an (id + non, si li disponib), ak kantite ogmantasyon pwogrè a
+// (delta), anplis pousantaj final la (pct, pou konpatiblite ak Pati 9).
+// Chak chanjman reyèl kounye a vin yon anrejistreman apa (pa gen ekrazman
+// menm jou a ankò), men n'ap toujou anpeche doublon idantik yo.
+//
+// GOAL — rezon pwogrè (Pati 11/50)
+// Amelyorasyon SOU MENM chan g.habitProgressHistory a toujou (pa gen nouvo
+// sistèm paralèl) — chak anrejistreman kounye a ajoute tou: `goalId` (eksplisit
+// sou chak rekò, pou pi fasil ekstraksyon/rapò pita), `source` (kòd machin ki
+// idantifye kalite aksyon an: 'habit-completed','habit-uncompleted',
+// 'habit-linked','habit-unlinked','manual') ak `reason` (fraz lizib an Kreyòl
+// ki eksplike pou kisa pwogrè a chanje, pa egzanp: "Pwogrè ogmante paske
+// Abitid 'Sere 25 goud' te fèt."). `reason` afiche dirèkteman nan detay
+// Objektif la pa renderGoalProgressHistory().
 // ==========================================
-function recordGoalHabitProgressHistory(goalId){
-  const g = goals.find(x => x.id === goalId);
-  if (!g) return;
-  const { pct } = computeGoalHabitProgress(goalId);
-  if (pct === null) return; // pa gen abitid lye ankò — pa gen pwogrè pou anrejistre
-  if (!Array.isArray(g.habitProgressHistory)) g.habitProgressHistory = [];
-  const today = todayISO();
-  const last = g.habitProgressHistory[g.habitProgressHistory.length - 1];
-  let changed = false;
-  if (last && last.date === today){
-    if (last.pct !== pct){ last.pct = pct; changed = true; }
-  } else if (!last || last.pct !== pct){
-    g.habitProgressHistory.push({ date: today, pct });
-    changed = true;
+function buildGoalProgressReason(actionSource, habitName, delta){
+  const deltaTxt = (delta > 0 ? '+' : '') + delta + '%';
+  const name = habitName ? `"${habitName}"` : 'yon abitid lye';
+  const direction = delta > 0 ? 'ogmante' : (delta < 0 ? 'bese' : 'chanje');
+  switch (actionSource){
+    case 'habit-completed':
+      return `Pwogrè ${direction} (${deltaTxt}) paske Abitid: ${name} te fin fèt.`;
+    case 'habit-uncompleted':
+      return `Pwogrè ${direction} (${deltaTxt}) paske Abitid: ${name} pa t make fèt ankò.`;
+    case 'habit-linked':
+      return `Pwogrè ${direction} (${deltaTxt}) paske Abitid: ${name} te lye ak Objektif la.`;
+    case 'habit-unlinked':
+      return `Pwogrè ${direction} (${deltaTxt}) paske Abitid: ${name} te delye ak Objektif la.`;
+    default:
+      return `Pwogrè ${direction} (${deltaTxt}).`;
   }
-  if (g.habitProgressHistory.length > 180) g.habitProgressHistory = g.habitProgressHistory.slice(-180);
-  if (changed) persistGoals();
-  return changed;
 }
 
+function recordGoalHabitProgressHistory(goalId, sourceHabitId, actionSource){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return false;
+  const { pct } = computeGoalHabitProgress(goalId);
+  if (pct === null) return false; // pa gen abitid lye ankò — pa gen pwogrè pou anrejistre
+  if (!Array.isArray(g.habitProgressHistory)) g.habitProgressHistory = [];
+  const history = g.habitProgressHistory;
+  const last = history[history.length - 1];
+  const prevPct = last ? last.pct : 0;
 
+  // Pa gen okenn chanjman reyèl nan pwogrè a — pa anrejistre (anpeche doublon)
+  if (last && last.pct === pct) return false;
+
+  const habitId = sourceHabitId || null;
+  const habit = habitId ? habits.find(h => h.id === habitId) : null;
+  const source = actionSource || 'manual';
+  const delta = Math.round((pct - prevPct) * 10) / 10; // kantite ogmantasyon (ka negatif si pwogrè bese)
+  const now = new Date();
+  const record = {
+    goalId,                  // Objektif konsène a (eksplisit sou chak rekò)
+    date: todayISO(),        // dat chanjman an (YYYY-MM-DD)
+    time: now.toISOString(), // maren egzat pou triye/distenge plizyè chanjman menm jou a
+    habitId: habitId,        // Abitid sous ki lakòz chanjman an (null si se yon aksyon jeneral)
+    habitName: habit ? habit.name : null,
+    source,                  // kòd machin pou kalite aksyon an ('habit-completed', 'habit-linked', ...)
+    delta,                   // kantite chanjman (ka negatif si pwogrè bese)
+    pct,                     // pousantaj total pwogrè Objektif la apre chanjman an
+    reason: buildGoalProgressReason(source, habit ? habit.name : null, delta) // fraz lizib pou detay Objektif la
+  };
+
+  // Gad siplemantè kont doublon: menm dat + menm Abitid sous + menm pct kòm dènye antre a
+  if (last && last.date === record.date && last.habitId === record.habitId && last.pct === record.pct) return false;
+
+  history.push(record);
+  if (history.length > 180) g.habitProgressHistory = history.slice(-180);
+  persistGoals();
+  return true;
+}
+
+// Bay aksè fasil ak istwa pwogrè yon Objektif, triye pi resan an premye
+// (itilize pa renderGoalProgressHistory anba a, ak disponib pou lòt modil kap vini)
+function getGoalProgressHistory(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !Array.isArray(g.habitProgressHistory)) return [];
+  return g.habitProgressHistory.slice().reverse();
+}
+
+// Afiche istwa evolisyon pwogrè Objektif la nan modal la (li sèlman — pa
+// touche okenn lòt eleman/fonksyon ki egziste deja). Pati 11/50: chak liy
+// kounye a montre fraz `reason` an lekti dirèk anndan detay Objektif la.
+function renderGoalProgressHistory(){
+  const wrap = document.getElementById('goalProgressHistoryList');
+  if (!wrap) return;
+  if (!editingGoalId){ wrap.innerHTML = ''; return; }
+  const entries = getGoalProgressHistory(editingGoalId).slice(0, 20);
+  if (!entries.length){
+    wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen istwa pwogrè.</span>';
+    return;
+  }
+  wrap.innerHTML = entries.map(r => {
+    const deltaSign = r.delta > 0 ? '+' : '';
+    const deltaColor = r.delta > 0 ? 'var(--green)' : (r.delta < 0 ? 'var(--red, #e5484d)' : 'var(--text-dim)');
+    const reasonText = r.reason ? escapeHtml(r.reason) : (r.habitName ? escapeHtml(r.habitName) : 'Chanjman jeneral');
+    return `<div class="milestone-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+      <span style="font-size:12px;line-height:1.4;">${reasonText}</span>
+      <span style="display:flex;align-items:center;gap:6px;">
+        <span class="tag" style="background:var(--surface-2);color:var(--text-dim);">${escapeHtml(r.date)}</span>
+        <span class="tag" style="color:${deltaColor};">${deltaSign}${r.delta}%</span>
+        <span class="pill" style="background:var(--blue-soft);color:var(--blue);">${r.pct}%</span>
+      </span>
+    </div>`;
+  }).join('');
+}
 
 (function initGoalLinkedHabitsList(){
   const overlay = document.getElementById('goalModalOverlay');
   if (!overlay) return;
-  new MutationObserver(renderGoalLinkedHabitsList).observe(overlay, { attributes:true, attributeFilter:['class'] });
-  renderGoalLinkedHabitsList();
+  const refreshAll = () => { renderGoalLinkedHabitsList(); renderGoalProgressHistory(); };
+  new MutationObserver(refreshAll).observe(overlay, { attributes:true, attributeFilter:['class'] });
+  refreshAll();
 })();
 
 // ==========================================
