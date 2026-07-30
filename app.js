@@ -1988,6 +1988,195 @@ function buildAiContext(){
   };
 }
 
+// ==========================================
+// KONTÈKS AI PA OBJEKTIF (Pati 43/50)
+// Prepare yon objè JSON estriktire pou YON SÈL Goal, pou itilizasyon fiti pa
+// AI Coach. PA jenere repons AI, PA gen rekòmandasyon fikse — tout valè yo
+// kalkile an dirèk apati done ki egziste deja (goalMilestoneProgress,
+// computeGoalFinancialProgressPct, computeGoalLearningProgress,
+// getHabitsForGoal, elt.). Pa touche buildAiContext() ni okenn lòt pati nan
+// achitekti Coach AI a — se yon fonksyon separe, pa gen okenn wiring nan
+// coachCallBackend oswa nan lòt kote.
+// ==========================================
+function buildGoalAIContext(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return null;
+
+  const progressPct = goalMilestoneProgress(g);
+
+  // ---- Abitid Konekte ----
+  const connectedHabits = getHabitsForGoal(g.id).map(h => ({
+    id: h.id,
+    name: h.name,
+    frequency: h.frequency,
+    completionsTotal: (h.completions || []).length
+  }));
+
+  // ---- Pwogrè Finansye (sèlman si se yon Objektif Finansye) ----
+  const financial = g.isFinancial ? {
+    estimatedValue: Number(g.estimatedValue) || 0,
+    currentSavings: Number(g.currentSavings) || 0,
+    remaining: computeGoalFinancialRemaining(g),
+    progressPct: computeGoalFinancialProgressPct(g)
+  } : null;
+
+  // ---- Pwogrè Aprantisaj (sèlman si gen Kou lye) ----
+  let learningCtx = null;
+  if (Array.isArray(g.linkedLearningCourses) && g.linkedLearningCourses.length){
+    const validKeys = g.linkedLearningCourses.filter(k => LEARNING_COURSES[k]);
+    const courses = validKeys.map(k => {
+      const course = LEARNING_COURSES[k];
+      const prog = courseProgress(k);
+      const flat = lcAllLessons(k);
+      const nextLesson = flat.find(l => !learning.completed.includes(lcLessonKey(k, l.id)));
+      return {
+        courseKey: k,
+        courseTitle: course.title,
+        progressPct: prog.pct,
+        lessonsDone: prog.done,
+        lessonsTotal: prog.total,
+        nextLessonTitle: nextLesson ? nextLesson.title : null
+      };
+    });
+    if (courses.length){
+      learningCtx = { courses, overallProgressPct: computeGoalLearningProgress(g.id) };
+    }
+  }
+
+  // ---- Estati Pwojè (lyen envès p.goalId, Pati 32/50) ----
+  const linkedProject = projects.find(p => p.goalId === g.id);
+  const projectCtx = linkedProject ? {
+    id: linkedProject.id,
+    name: linkedProject.name,
+    status: linkedProject.status,
+    tasksDone: (linkedProject.tasks || []).filter(t => t.done).length,
+    tasksTotal: (linkedProject.tasks || []).length
+  } : null;
+
+  // ---- Pwochen Aksyon: DERIVE apati done reyèl, pa yon tèks fikse ----
+  let nextAction = null;
+  const nextOpenMilestone = (g.milestones || []).find(m => !m.done);
+  if (nextOpenMilestone){
+    nextAction = nextOpenMilestone.text;
+  } else if (learningCtx){
+    const courseWithNext = learningCtx.courses.find(c => c.nextLessonTitle);
+    if (courseWithNext) nextAction = courseWithNext.nextLessonTitle;
+  } else if (financial && financial.remaining > 0){
+    nextAction = `Sere ${financial.remaining} ${financial.remaining === financial.estimatedValue ? '' : 'ankò'}`.trim();
+  }
+
+  return {
+    goalId: g.id,
+    goalName: g.title,
+    category: g.category || null,
+    categoryLabel: GOAL_CATEGORY[g.category] || g.category || null,
+    status: g.status,
+    progressPct,
+    targetDate: g.deadline || null,
+    connectedHabits,
+    financial,
+    learning: learningCtx,
+    project: projectCtx,
+    nextAction
+  };
+}
+
+// ==========================================
+// ESTATISTIK PA OBJEKTIF (Pati 44/50)
+// Prepare done estatistik pou Goals — pa gen nouvo grafik, pa touche
+// computeStats()/renderStatisticsView() ni okenn lòt pati nan modil
+// Estatistik ki egziste a. Sèvi ak fonksyon/chan ki deja egziste sèlman
+// (goalMilestoneProgress, getHabitsForGoal, computeGoalFinancialProgressPct,
+// computeGoalLearningProgress, computeGoalDeadlineTracking,
+// g.habitProgressHistory).
+// ==========================================
+
+// ---- Estatistik pou YON SÈL Objektif (fòma egzanp: Pwogrè/Sere/Kontribisyon Abitid/Tan Ki Rete) ----
+function buildGoalStatisticsFor(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return null;
+
+  const progressPct = goalMilestoneProgress(g);
+
+  // Kontribisyon Abitid: total konplesyon TOUT Abitid ki lye ak Objektif la
+  const linkedHabits = getHabitsForGoal(g.id);
+  const habitContributionCount = linkedHabits.reduce((s, h) => s + (h.completions || []).length, 0);
+
+  // Lajan sere (sèlman si se yon Objektif Finansye)
+  const moneySaved = g.isFinancial ? (Number(g.currentSavings) || 0) : null;
+
+  // Kontribisyon Aprantisaj (null si pa gen Kou lye)
+  const learningProgressPct = computeGoalLearningProgress(g.id);
+
+  // Tan ki rete (reyitilize menm lojik ak computeGoalDeadlineTracking, Pati 36)
+  const deadlineInfo = g.deadline ? computeGoalDeadlineTracking(g) : null;
+
+  return {
+    goalId: g.id,
+    goalName: g.title,
+    status: g.status,
+    progressPct,
+    moneySaved,
+    habitContributionCount,
+    learningProgressPct,
+    daysRemaining: deadlineInfo ? deadlineInfo.daysRemaining : null
+  };
+}
+
+// ---- Rezime estatistik sou TOUT Objektif yo ----
+function buildGoalStatistics(){
+  const total = goals.length;
+  const completed = goals.filter(g => g.status === 'completed');
+  const failed = goals.filter(g => g.status === 'failed');
+  const archived = goals.filter(g => g.status === 'archived' || g.status === 'paused');
+  const active = goals.filter(g => !completed.includes(g) && !failed.includes(g) && !archived.includes(g));
+
+  // Tan mwayèn pou konplete: pou chak Objektif konplete, chèche premye antre
+  // nan g.habitProgressHistory kote pct >= 100 (premye moman li te reyèlman
+  // rive 100%). Si pa gen antre konsa (pwogrè te fikse manyèlman san pase
+  // nan sistèm swiv la), Objektif sa a pa antre nan mwayèn nan — pa gen
+  // estimasyon envante.
+  const completionDurations = [];
+  completed.forEach(g => {
+    if (!g.createdAt) return;
+    const history = Array.isArray(g.habitProgressHistory) ? g.habitProgressHistory : [];
+    const firstAt100 = history.find(r => r.pct >= 100);
+    if (!firstAt100) return;
+    const start = new Date(g.createdAt);
+    const end = new Date(firstAt100.time || (firstAt100.date + 'T00:00:00'));
+    const days = Math.round((end - start) / 86400000);
+    if (days >= 0) completionDurations.push(days);
+  });
+  const avgCompletionDays = completionDurations.length
+    ? Math.round(completionDurations.reduce((a,b) => a+b, 0) / completionDurations.length)
+    : null;
+
+  // Evolisyon pwogrè: mwayèn pwogrè tout Objektif yo pa dat, apati
+  // g.habitProgressHistory (sous done ki deja egziste, pa nouvo sistèm)
+  const byDate = {};
+  goals.forEach(g => {
+    (g.habitProgressHistory || []).forEach(r => {
+      if (!byDate[r.date]) byDate[r.date] = [];
+      byDate[r.date].push(r.pct);
+    });
+  });
+  const progressEvolution = Object.keys(byDate).sort().map(date => ({
+    date,
+    avgProgressPct: Math.round(byDate[date].reduce((a,b) => a+b, 0) / byDate[date].length)
+  }));
+
+  return {
+    totalGoals: total,
+    completedGoals: completed.length,
+    activeGoals: active.length,
+    failedGoals: failed.length,
+    avgCompletionDays,               // null si pa gen ase done swiv pou kalkile l
+    completionDurationsSampleSize: completionDurations.length,
+    progressEvolution,               // [{date, avgProgressPct}]
+    perGoal: goals.map(g => buildGoalStatisticsFor(g.id))
+  };
+}
+
 // ---- AKSYON: fonksyon ki egzekite règ*/persist* ki deja egziste yo apre konfimasyon itilizatè a ----
 function coachRefreshView(viewName){
   const el = document.getElementById('view-' + viewName);
