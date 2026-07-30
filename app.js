@@ -1973,9 +1973,20 @@ function buildAiContext(){
       tasksDone:(p.tasks||[]).filter(t=>t.done).length, tasksTotal:(p.tasks||[]).length
     })),
     healthLogsRecent: healthLogs.filter(h => h.date >= cutoffISO),
-    goals: goals.map(g => ({
-      id:g.id, title:g.title, type:g.type, priority:g.priority, deadline:g.deadline, progress: goalMilestoneProgress(g)
-    })),
+    goals: goals.map(g => {
+      const rich = typeof buildGoalAIContext === 'function' ? buildGoalAIContext(g.id) : null;
+      return {
+        id:g.id, title:g.title, type:g.type, priority:g.priority, deadline:g.deadline, progress: goalMilestoneProgress(g),
+        // Pati 50/50 — Goal la bay AI Coach la kontèks konplè li (Habits lye,
+        // Finans, Aprantisaj, Pwojè, pwochen aksyon) chak fwa `buildAiContext()`
+        // rele, san okenn chanjman sou fòma ansyen chan yo pi wo a.
+        connectedHabits: rich ? rich.connectedHabits : [],
+        financial: rich ? rich.financial : null,
+        learning: rich ? rich.learning : null,
+        project: rich ? rich.project : null,
+        nextAction: rich ? rich.nextAction : null
+      };
+    }),
     learning: { xp:learning.xp||0, streak:learning.streak||0, completedCount:(learning.completed||[]).length },
     dataUsage: (() => {
       const active = getActivePlan();
