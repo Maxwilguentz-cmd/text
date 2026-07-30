@@ -501,6 +501,146 @@ document.getElementById('goalIsFinancial').addEventListener('change', updateGoal
   document.getElementById(id).addEventListener('input', renderGoalFinancialRemaining);
 });
 
+// ==========================================
+// GOAL <-> FINANCE — estati sinkwonizasyon (Pati 28/50)
+// Yon seksyon LIT SÈLMAN nan detay Objektif la — OKENN nouvo done pa
+// estoke; chak chan KALKILE an dirèk apati done ki egziste deja:
+// g.walletId / g.habitContributions (Pati 12/18), `tx` ki gen goalId
+// (Pati 26), ak g.currentSavings (deja senkwonize otomatik pa Pati 21).
+// Kòm se yon lekti pi, li otomatikman "ajou" chak fwa li rele — pa gen
+// risk doublon paske nou pa kreye/modifye okenn dosye isit la.
+// ==========================================
+function computeGoalFinanceSyncStatus(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !g.isFinancial) return null;
+  const linkedHabits = getHabitsForGoal(goalId).filter(h =>
+    g.habitContributions && g.habitContributions[h.id] && Number(g.habitContributions[h.id].amount) > 0
+  );
+  const habitNames = linkedHabits.map(h => h.name).filter(Boolean);
+  const walletIds = new Set();
+  linkedHabits.forEach(h => {
+    const cfg = g.habitContributions[h.id];
+    if (cfg && cfg.walletId) walletIds.add(cfg.walletId);
+  });
+  if (g.walletId) walletIds.add(g.walletId);
+  const walletNames = Array.from(walletIds).map(id => {
+    const w = wallets.find(x => x.id === id);
+    return w ? w.name : null;
+  }).filter(Boolean);
+  const goalTx = tx.filter(t => t.goalId === goalId)
+    .slice()
+    .sort((a,b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||'')));
+  const lastTx = goalTx.length ? goalTx[goalTx.length - 1] : null;
+  return {
+    walletNames,
+    habitNames,
+    totalSaved: Number(g.currentSavings) || 0,
+    lastTransactionDate: lastTx ? lastTx.date : null,
+    remaining: computeGoalFinancialRemaining(g),
+  };
+}
+
+function renderGoalFinanceSyncStatus(){
+  const box = document.getElementById('goalFinanceSyncStatus');
+  if (!box) return;
+  if (!editingGoalId){ box.hidden = true; return; }
+  const status = computeGoalFinanceSyncStatus(editingGoalId);
+  if (!status){ box.hidden = true; return; }
+  box.hidden = false;
+  document.getElementById('goalSyncWallet').textContent = status.walletNames.length ? status.walletNames.join(', ') : '— Pa gen —';
+  document.getElementById('goalSyncHabit').textContent = status.habitNames.length ? status.habitNames.join(', ') : '— Pa gen —';
+  document.getElementById('goalSyncSaved').textContent = fmtNum(status.totalSaved);
+  document.getElementById('goalSyncLastTx').textContent = status.lastTransactionDate || '— Poko gen —';
+  document.getElementById('goalSyncRemaining').textContent = fmtNum(status.remaining);
+}
+
+// ==========================================
+// GOAL <-> CALENDAR — koneksyon otomatik (Pati 29/50)
+// Lè yon Objektif gen yon Dat Limit (g.deadline), nou kreye/mete ajou 2
+// Evènman nan `events` (menm modil Kalandriye orijinal la, `persistEvents()`
+// deja egziste — pa gen nouvo achitekti): 1) Dat Limit Objektif la (ak yon
+// rezime Etap/Milestones nan deskripsyon an paske Etap yo pa gen pwòp dat
+// pa yo nan modèl done a), 2) yon Rapèl Pwogrè kèk jou anvan Dat Limit la.
+// Chak Evènman make ak `goalId` + `goalEventType` pou nou ka idantifye l
+// san ekivok pita — sa garanti nou SÈLMAN touche Evènman ki soti nan
+// Objektif sa a, nou pa janm modifye okenn lòt Evènman itilizatè a te
+// kreye manyèlman. Si Dat Limit la retire, Evènman korespondan an retire
+// tou (pa rete "zonbi"). Rele fonksyon sa a chak fwa yon Objektif sove
+// (kreye/modifye) — sa kouvri tou chanjman nan Etap yo, paske yo sove nan
+// menm moman an.
+// ==========================================
+function offsetDateBefore(dateStr, days){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0,10);
+}
+
+function findGoalCalendarEvent(goalId, eventType){
+  return events.find(e => e.goalId === goalId && e.goalEventType === eventType);
+}
+
+const GOAL_CALENDAR_REMINDER_DAYS_BEFORE = 3;
+
+function syncGoalCalendarEvents(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return;
+  const hasDeadline = !!g.deadline;
+  const doneCount = (g.milestones||[]).filter(m => m.done).length;
+  const totalCount = (g.milestones||[]).length;
+  const milestonesLine = totalCount ? `Etap: ${doneCount}/${totalCount} konplete.` : '';
+  let changed = false;
+
+  // ---- Dat Limit (deadline) ----
+  const deadlineEvt = findGoalCalendarEvent(goalId, 'deadline');
+  if (hasDeadline){
+    if (deadlineEvt){
+      deadlineEvt.title = `🎯 Dat Limit Objektif: ${g.title}`;
+      deadlineEvt.date = g.deadline;
+      deadlineEvt.description = milestonesLine;
+    } else {
+      events.push({
+        id: uid(), title: `🎯 Dat Limit Objektif: ${g.title}`, description: milestonesLine,
+        date: g.deadline, time: '09:00', location: '', category: 'deadline',
+        reminder: { enabled: true }, recurrence: 'none', goalId, goalEventType: 'deadline',
+      });
+    }
+    changed = true;
+  } else if (deadlineEvt){
+    events = events.filter(e => e !== deadlineEvt);
+    changed = true;
+  }
+
+  // ---- Rapèl Pwogrè (reminder), sèlman si gen ase tan anvan Dat Limit la ----
+  const reminderEvt = findGoalCalendarEvent(goalId, 'reminder');
+  const reminderDate = hasDeadline ? offsetDateBefore(g.deadline, GOAL_CALENDAR_REMINDER_DAYS_BEFORE) : null;
+  const showReminder = !!(hasDeadline && reminderDate && reminderDate >= todayISO());
+  if (showReminder){
+    if (reminderEvt){
+      reminderEvt.title = `⏰ Rapèl Pwogrè: ${g.title}`;
+      reminderEvt.date = reminderDate;
+      reminderEvt.description = milestonesLine;
+    } else {
+      events.push({
+        id: uid(), title: `⏰ Rapèl Pwogrè: ${g.title}`, description: milestonesLine,
+        date: reminderDate, time: '09:00', location: '', category: 'event',
+        reminder: { enabled: true }, recurrence: 'none', goalId, goalEventType: 'reminder',
+      });
+    }
+    changed = true;
+  } else if (reminderEvt){
+    events = events.filter(e => e !== reminderEvt);
+    changed = true;
+  }
+
+  if (changed) persistEvents();
+}
+
+function removeGoalCalendarEvents(goalId){
+  const before = events.length;
+  events = events.filter(e => e.goalId !== goalId); // sèlman Evènman ki soti nan Objektif sa a
+  if (events.length !== before) persistEvents();
+}
+
 function unlinkHabitFromGoal(goalId, habitId){
   const g = goals.find(x => x.id === goalId);
   const h = habits.find(x => x.id === habitId);
@@ -5069,6 +5209,7 @@ function openGoalModal(id){
   renderGoalSourceWalletOptions(g ? g.walletId : null);
   updateGoalFinancialFieldsVisibility();
   renderGoalFinancialRemaining();
+  if (typeof renderGoalFinanceSyncStatus === 'function') renderGoalFinanceSyncStatus();
   document.getElementById('goalNotes').value = g ? (g.notes || '') : '';
   goalMilestoneDraft = g ? JSON.parse(JSON.stringify(g.milestones || [])) : [];
   goalLinksDraft = g && g.links ? JSON.parse(JSON.stringify(g.links)) : { habitIds:[], financeIds:[], calendarIds:[], learningIds:[], projectIds:[] };
@@ -5111,11 +5252,14 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
     renderActivity([{ icon:'target', color:'var(--blue)', text:`Ou kreye objektif <b>"${escapeHtml(title)}"</b>`, time:'kounye a' }]);
   }
   persistGoals();
+  const _savedGoal = editingGoalId ? goals.find(x => x.id === editingGoalId) : goals[goals.length - 1];
+  if (_savedGoal && typeof syncGoalCalendarEvents === 'function') syncGoalCalendarEvents(_savedGoal.id);
   document.getElementById('goalModalOverlay').classList.remove('open');
   renderGoals();
   showToast('Objektif anrejistre ✓');
 });
 document.getElementById('deleteGoalBtn').addEventListener('click', () => {
+  if (typeof removeGoalCalendarEvents === 'function') removeGoalCalendarEvents(editingGoalId);
   goals = goals.filter(x => x.id !== editingGoalId);
   persistGoals();
   document.getElementById('goalModalOverlay').classList.remove('open');
@@ -5628,6 +5772,7 @@ function renderGoalLinkedHabitsList(){
   if (window.lucide) lucide.createIcons();
   if (typeof renderGoalContributionSummary === 'function') renderGoalContributionSummary();
   if (typeof renderGoalHabitWhyLinked === 'function') renderGoalHabitWhyLinked();
+  if (typeof renderGoalFinanceSyncStatus === 'function') renderGoalFinanceSyncStatus();
 }
 
 // Lè yon abitid make fèt/pa fèt jodi a, kontribisyon ak pwogrè a ka chanje —
@@ -5651,7 +5796,10 @@ function renderGoalLinkedHabitsList(){
         if (g && g.isFinancial && cfg && Number(cfg.amount) > 0){
           recordGoalFinancialContributionHistory(h.goalId, id, Number(cfg.amount), cfg.unit);
           if (typeof createPendingGoalFinancialAction === 'function' && cfg.walletId){
-            createPendingGoalFinancialAction(h.goalId, id, cfg.walletId, Number(cfg.amount));
+            const _createdAction = createPendingGoalFinancialAction(h.goalId, id, cfg.walletId, Number(cfg.amount));
+            if (_createdAction && typeof validateGoalFinancialAction === 'function' && validateGoalFinancialAction(_createdAction)){
+              if (typeof executeGoalFinancialAction === 'function') executeGoalFinancialAction(_createdAction);
+            }
           }
         }
       }
@@ -5831,6 +5979,140 @@ function createPendingGoalFinancialAction(goalId, habitId, walletId, amount, dat
 
 function getPendingGoalFinancialActions(goalId){
   return goalId ? pendingGoalFinancialActions.filter(a => a.goalId === goalId) : pendingGoalFinancialActions.slice();
+}
+
+// ==========================================
+// GOAL <-> FINANCE — validasyon aksyon annatant (Pati 25/50)
+// Aktive VALIDASYON aksyon annatant Pati 24 yo kreye — TOUJOU pa gen okenn
+// egzekisyon reyèl isit la: pa touche balans Wallet, pa kreye okenn
+// tranzaksyon Finance, pa modifye achitekti Finance/Goal/Habit.
+// Nou sèlman verifye done aksyon an valid (Objektif egziste, Abitid egziste,
+// Wallet egziste, montan valid, e aksyon an poko trete), epi si tout bon nou
+// make l `status:'ready'` — sa vle di li PARE pou yon pwochen Pati egzekite
+// transfè reyèl la. Objektif finansye a (g.currentSavings) deja senkwonize
+// nan Pati 21 (syncGoalSavingsFromHabits, rele nan refreshGoalHabitContributionTotals),
+// donk nou pa touche l isit la. Istwa kontribisyon an (Pati 22/23) deja
+// prepare tou pa recordGoalFinancialContributionHistory.
+// ==========================================
+function validateGoalFinancialAction(action){
+  if (!action) return false;
+  if (action.status !== 'pending') return false; // deja trete (oswa deja validé) — pa retrete l
+  const g = goals.find(x => x.id === action.goalId);
+  if (!g) return false; // Objektif pa egziste
+  const h = habits.find(x => x.id === action.habitId);
+  if (!h) return false; // Abitid pa egziste
+  const w = wallets.find(x => x.id === action.walletId);
+  if (!w) return false; // referans Wallet pa egziste
+  const amount = Number(action.amount);
+  if (!amount || isNaN(amount) || amount <= 0) return false; // montan envalid
+  action.status = 'ready'; // pare pou transfè — okenn balans/tranzaksyon pa chanje isit la
+  action.validatedAt = new Date().toISOString();
+  persistPendingGoalFinancialActions();
+  return true;
+}
+
+function validateGoalFinancialActionById(actionId){
+  const action = pendingGoalFinancialActions.find(a => a.id === actionId);
+  return validateGoalFinancialAction(action);
+}
+
+function getReadyGoalFinancialActions(goalId){
+  const list = goalId ? pendingGoalFinancialActions.filter(a => a.goalId === goalId) : pendingGoalFinancialActions.slice();
+  return list.filter(a => a.status === 'ready');
+}
+
+// ==========================================
+// GOAL <-> FINANCE — egzekisyon transfè reyèl (Pati 26/50)
+// Premye fwa lajan an DEPLASE toutbon: nou kreye YON tranzaksyon Depans nan
+// `tx` (menm estrikti Finance ki egziste deja — Pati orijinal la) sou Wallet
+// aksyon an vize a. `walletBalance()` deja kalkile balans lan apati `tx`
+// (Pati Finance orijinal), donk ajoute tranzaksyon sa a otomatikman diminye
+// balans Wallet la — nou pa touche `w.balance` dirèkteman, nou pa modifye
+// achitekti Finance a. Sere Objektif la (g.currentSavings) ak pwogrè a deja
+// otomatikman ajou pa Pati 21 (syncGoalSavingsFromHabits) — nou pa double
+// kalkil la isit la. Aksyon an SÈLMAN egzekite si li 'ready' (validé pa Pati
+// 25); imedyatman apre nou make l 'done' AVAN nenpòt lòt bagay pou anpeche
+// yon 2yèm tranzaksyon pou menm aksyon an — lajan an deplase YON SÈL fwa.
+// ==========================================
+// ==========================================
+// GOAL <-> FINANCE — pwoteksyon tranzaksyon otomatik (Pati 27/50)
+// Anvan nou kite executeGoalFinancialAction kreye yon tranzaksyon, nou
+// REVERIFYE 4 kondisyon kritik yo (sitiyasyon an ka chanje ant moman Pati 25
+// te validé aksyon an ak moman egzekisyon an reyèl): Abitid la reyèlman
+// fèt pou dat aksyon an, Objektif la toujou aktif (pa Achive/Sispann/
+// Konplete), Wallet la egziste e gen ase balans, e montan an valid. Si YONN
+// nan yo echwe, aksyon an ANILE (status:'failed') — OKENN lòt done pa
+// chanje: pa gen tranzaksyon Finance ki kreye, pa gen balans Wallet ki
+// touche, pa gen Sere Objektif ki modifye.
+// ==========================================
+function canExecuteGoalFinancialAction(action){
+  if (!action) return { ok:false, reason:'no-action' };
+  const g = goals.find(x => x.id === action.goalId);
+  const h = habits.find(x => x.id === action.habitId);
+  const w = wallets.find(x => x.id === action.walletId);
+  if (!h || !Array.isArray(h.completions) || !h.completions.includes(action.date)){
+    return { ok:false, reason:'habit-not-completed' }; // Abitid pa reyèlman make fèt pou dat aksyon an
+  }
+  if (!g){
+    return { ok:false, reason:'goal-missing' };
+  }
+  if (g.status === 'archived' || g.status === 'paused' || g.status === 'completed'){
+    return { ok:false, reason:'goal-not-active' }; // Objektif la pa ap aktif ankò — pa kontinye sere ladan l
+  }
+  if (!w){
+    return { ok:false, reason:'wallet-missing' };
+  }
+  const amount = Number(action.amount);
+  if (!amount || isNaN(amount) || amount <= 0){
+    return { ok:false, reason:'invalid-amount' };
+  }
+  if (walletBalance(w) < amount){
+    return { ok:false, reason:'insufficient-balance' }; // pa ase lajan sou Wallet la — pa kite balans lan vin negatif
+  }
+  return { ok:true };
+}
+
+function cancelGoalFinancialAction(action, reason){
+  if (!action) return;
+  action.status = 'failed'; // aksyon anile — okenn tranzaksyon, okenn chanjman Wallet/Objektif
+  action.failedAt = new Date().toISOString();
+  action.failReason = reason || 'validation-failed';
+  persistPendingGoalFinancialActions();
+}
+
+function executeGoalFinancialAction(action){
+  if (!action || action.status !== 'ready') return null; // pa validé ankò, oswa deja trete — pa fè anyen (pa gen chanjman)
+  const check = canExecuteGoalFinancialAction(action);
+  if (!check.ok){
+    cancelGoalFinancialAction(action, check.reason);
+    return null;
+  }
+  const g = goals.find(x => x.id === action.goalId);
+  const h = habits.find(x => x.id === action.habitId);
+  const w = wallets.find(x => x.id === action.walletId);
+  const amount = Number(action.amount);
+  // Make aksyon an 'done' AVAN push la, pou anpeche apèl doub kreye 2 tranzaksyon
+  action.status = 'done';
+  action.executedAt = new Date().toISOString();
+  const reason = `Sere ${amount}${walletCurrency(w) ? ' ' + walletCurrency(w) : ''} pou Objektif "${g.title || 'San tit'}" apati Abitid "${h.name || 'San non'}"`;
+  const txRecord = {
+    id: uid(),
+    type: 'expense',
+    amount,
+    description: reason,
+    category: 'Custom',
+    walletId: action.walletId,
+    date: action.date || todayISO(),
+    time: new Date().toTimeString().slice(0,5),
+    goalId: action.goalId,
+    habitId: action.habitId,
+    reason,
+  };
+  tx.push(txRecord);
+  persistTx();
+  action.transactionId = txRecord.id;
+  persistPendingGoalFinancialActions();
+  return txRecord;
 }
 
 // ==========================================
