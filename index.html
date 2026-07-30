@@ -427,7 +427,44 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 .goal-history-body{display:flex;flex-direction:column;gap:2px;}
 .goal-history-body .txt{font-size:12px;color:var(--text);line-height:1.4;}
 .goal-history-body .meta{font-size:10.5px;color:var(--text-faint);}
+.goal-history-row{transition:background-color .15s ease;border-radius:8px;}
+.goal-history-row:hover{background:var(--surface-2);}
 
+/* ---- Goal Details View (Pati 3/3: aksyon anba paj la + animasyon ak polish final) ---- */
+@keyframes goalDetailsOverlayIn{ from{opacity:0;} to{opacity:1;} }
+@keyframes goalDetailsOverlayOut{ from{opacity:1;} to{opacity:0;} }
+@keyframes goalDetailsModalIn{ from{opacity:0; transform:translateY(14px) scale(.98);} to{opacity:1; transform:translateY(0) scale(1);} }
+@keyframes goalDetailsModalOut{ from{opacity:1; transform:translateY(0) scale(1);} to{opacity:0; transform:translateY(10px) scale(.98);} }
+#goalDetailsModalOverlay.open{animation:goalDetailsOverlayIn .18s ease both;}
+#goalDetailsModalOverlay.closing{animation:goalDetailsOverlayOut .16s ease both;}
+#goalDetailsModalOverlay .goal-details-modal{animation:goalDetailsModalIn .22s cubic-bezier(.2,.8,.3,1) both;}
+#goalDetailsModalOverlay.closing .goal-details-modal{animation:goalDetailsModalOut .16s ease both;}
+@media (prefers-reduced-motion:reduce){
+  #goalDetailsModalOverlay.open,#goalDetailsModalOverlay.closing,
+  #goalDetailsModalOverlay .goal-details-modal{animation:none!important;}
+}
+
+/* Kat (Objektif nan lis la / Modil Konekte) — ti "lift" dous lè sourit la sou li */
+.goal-card,.goal-module-card{transition:border-color .15s ease,transform .15s ease,box-shadow .15s ease;}
+.goal-card:hover,.goal-module-card:hover{transform:translateY(-2px);box-shadow:0 10px 22px -14px rgba(0,0,0,.45);}
+.goal-card:active,.goal-module-card:active{transform:translateY(0);}
+
+/* Bouton — ti "press" lejè lè klike, pou tout bouton nan Detay Objektif la */
+.goal-details-modal .btn,.goal-details-modal .icon-btn{transition:transform .12s ease,filter .15s ease,border-color .15s ease,color .15s ease,background-color .15s ease;}
+.goal-details-modal .btn:active,.goal-details-modal .icon-btn:active{transform:scale(.96);}
+
+/* Rejè aksyon anba Detay Objektif la */
+.goal-details-foot-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;}
+.btn-danger-ghost{color:var(--red);border-color:var(--border);}
+.btn-danger-ghost:hover{border-color:var(--red);background:var(--red-soft);color:var(--red);}
+.btn-danger-ghost.btn-primary{background:var(--red);color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(239,68,68,.5);}
+.btn-danger-ghost.btn-primary:hover{filter:brightness(1.06);}
+@media (max-width:520px){
+  #goalDetailsModalOverlay .modal-foot{flex-direction:column-reverse;align-items:stretch;}
+  .goal-details-foot-actions{margin-left:0;width:100%;}
+  .goal-details-foot-actions .btn{flex:1;justify-content:center;}
+  #closeGoalDetailsModalBtn{width:100%;justify-content:center;}
+}
 
 /* ---- Pati 48/50: klate koneksyon + eksplikasyon pwogrè + apèsi aktivite ---- */
 .goal-progress-row .mini-progress span{transition:width .5s cubic-bezier(.4,0,.2,1);}
@@ -2266,8 +2303,8 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 
 <!-- ============ GOAL MODAL ============ -->
 <div class="modal-overlay" id="goalDetailsModalOverlay">
-  <div class="modal">
-    <div class="modal-head"><h3>Detay Objektif</h3><button class="icon-btn" id="closeGoalDetailsModal"><i data-lucide="x"></i></button></div>
+  <div class="modal goal-details-modal">
+    <div class="modal-head"><h3>Detay Objektif</h3><button class="icon-btn" id="closeGoalDetailsModal" aria-label="Fèmen"><i data-lucide="x"></i></button></div>
     <div class="modal-body">
       <div class="goal-details-summary">
         <div class="goal-details-summary-top">
@@ -2328,8 +2365,12 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       <div class="goal-details-notes" id="goalDetailsNotes">—</div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-ghost" id="closeGoalDetailsModalBtn">Fèmen</button>
-      <button class="btn btn-primary" id="goalDetailsEditBtn" style="margin-left:auto;"><i data-lucide="pencil"></i> Modifye Objektif</button>
+      <button class="btn btn-ghost" id="closeGoalDetailsModalBtn"><i data-lucide="x"></i> Fèmen</button>
+      <div class="goal-details-foot-actions">
+        <button class="btn btn-ghost btn-danger-ghost" id="goalDetailsDeleteBtn"><i data-lucide="trash-2"></i> Efase</button>
+        <button class="btn btn-ghost" id="goalDetailsArchiveBtn"><i data-lucide="archive"></i> <span id="goalDetailsArchiveBtnLbl">Achive</span></button>
+        <button class="btn btn-primary" id="goalDetailsEditBtn"><i data-lucide="pencil"></i> Modifye Objektif</button>
+      </div>
     </div>
   </div>
 </div>
