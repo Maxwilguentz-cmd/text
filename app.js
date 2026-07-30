@@ -1,6 +1,4 @@
-// ==========================================
-// CONSTANTS
-// ==========================================
+
 const MONTHS = ["Janvye","Fevriye","Mas","Avril","Me","Jen","Jiyè","Out","Septanm","Oktòb","Novanm","Desanm"];
 const DAYS = ["Dimanch","Lendi","Madi","Mèkredi","Jedi","Vandredi","Samdi"];
 const DAYS_SHORT = ["Dim","Len","Mad","Mèk","Jed","Van","Sam"];
@@ -13,14 +11,8 @@ const STATUSES = [
   {key:'archived', label:'Achive'},
 ];
 const PRIORITY = {low:'Ba', medium:'Mwayen', high:'Wo', urgent:'Ijan'};
-// Pati 1/4: Redesign Kategori Objektif — chak Objektif dwe gen YON SÈL
-// "Kategori Prensipal" (pa gen plizyè kategori posib, e Kategori
-// Pèsonalize/Custom retire nèt). 6 kategori fiks yo se sa yo.
 const GOAL_CATEGORY = {personal:'Pèsonèl', finance:'Finans', learning:'Aprantisaj', health:'Sante', career:'Karyè', business:'Biznis'};
-// Pati 41/50: 3 nouvo estati otomatik ajoute (almost-complete, delayed, failed).
-// 'paused' ak 'archived' rete la kòm chwa MANYÈL sèlman (otomatik la pa janm chwazi yo).
 const GOAL_STATUS = {'not-started':'Poko kòmanse', 'in-progress':'An kou', 'almost-complete':'Prèske Fini', completed:'Konplete', delayed:'An Reta', failed:'Echwe', paused:'Sispann', archived:'Achive'};
-// Pati 41/50: koulè pou chak estati (sitou pou distenge 'delayed'/'failed' vizyèlman)
 const GOAL_STATUS_STYLE = {
   'not-started': { bg:'var(--surface-2)', fg:'var(--text-dim)' },
   'in-progress': { bg:'var(--blue-soft, rgba(59,130,246,.14))', fg:'var(--blue)' },
@@ -72,11 +64,10 @@ function fmtHTG(n){
 // ---- Sipò multi-diviz pou Finance (Kat Debi an USD) — pa touche fmtHTG, jis ajoute yon fòma parapò ----
 function fmtUSD(n){
   n = Number(n) || 0;
-  const safe = Math.round(n * 100) / 100; // menm teknik pwoteksyon floating-point ke fmtHTG, san pèdi santim
+  const safe = Math.round(n * 100) / 100; 
   return '$' + safe.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
 }
 function fmtMoney(n, currency){ return currency === 'USD' ? fmtUSD(n) : fmtHTG(n); }
-// ---- Performance: debounce pou evite re-rann sou chak tap klavye lè w ap filtre/chèche ----
 function debounce(fn, wait){
   let t;
   return function(...args){ clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
