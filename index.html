@@ -2216,7 +2216,16 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div><label>Kategori</label><select id="goalCategory"></select></div>
-        <div><label>Estati</label><select id="goalStatus"></select></div>
+        <div>
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Estati</span>
+            <span id="goalAutoStatusBadge" class="pill" style="background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);font-weight:400;font-size:10px;" hidden>Otomatik</span>
+          </label>
+          <select id="goalStatus"></select>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin-top:6px;font-size:12.5px;color:var(--text-faint);">
+            <input type="checkbox" id="goalAutoStatus" style="width:auto;" checked> Estati otomatik (baze sou pwogrè reyèl)
+          </label>
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div><label>Dat Limit <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="date" id="goalDeadline"></div>
@@ -2273,6 +2282,24 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         </div>
       </div>
       <div><label>Nòt</label><textarea id="goalNotes" placeholder="Nòt adisyonèl..."></textarea></div>
+      <!-- Pati 39/50: GOAL <-> GOAL — Depandans ant Objektif (kouch apa, opsyonèl) -->
+      <div class="goal-links-section">
+        <label>Depandans <span style="color:var(--text-faint);font-weight:400;">(Objektif ki dwe fèt anvan sa a — opsyonèl)</span></label>
+        <div id="goalDependenciesList" class="milestone-list"></div>
+        <div id="goalDependencyProgressRow" class="goal-progress-row" style="margin:8px 0;" hidden>
+          <div class="mini-progress"><span id="goalDependencyProgressBar" style="width:0%;background:var(--orange);"></span></div>
+          <b id="goalDependencyProgressPct">0/0 konplete</b>
+          <span id="goalDependencyBlockedBadge" class="pill" style="background:var(--orange-soft);color:var(--orange);margin-left:6px;" hidden><i data-lucide="lock" style="width:10px;height:10px;vertical-align:-1px;"></i> Bloke</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <select class="field" id="goalDependencySelect" style="flex:1;"></select>
+          <button class="btn btn-ghost" id="goalDependencyAddBtn" type="button"><i data-lucide="link-2"></i> Ajoute</button>
+        </div>
+        <div id="goalDependentsSection" style="margin-top:12px;" hidden>
+          <label style="display:block;">Objektif ki Depann de Sa a <span style="color:var(--text-faint);font-weight:400;">(lekti sèl)</span></label>
+          <div id="goalDependentsList" class="milestone-list"></div>
+        </div>
+      </div>
       <div class="goal-links-section">
         <label>Abitid Lye <span id="goalLinkedHabitsCount" style="color:var(--text-faint);font-weight:400;"></span></label>
         <div id="goalHabitProgressRow" class="goal-progress-row" style="margin-bottom:8px;" hidden>
