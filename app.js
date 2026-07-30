@@ -2357,6 +2357,141 @@ function emitGoalSync(goalId, sourceModule){
   return update;
 }
 
+// ==========================================
+// PWOTEKSYON ENTEGRITE DONE GOAL (Pati 47/50)
+// Kouch VALIDASYON: fonksyon PUR (san efè bò kote, pa modifye/pa efase
+// okenn done) ki detekte doublon ak koneksyon kase AVAN yon chanjman sove.
+// - PA CHANJE okenn modil ki egziste deja (recordGoalHabitProgressHistory,
+//   recordGoalFinancialContributionHistory, syncGoalAutoStatus, elt. rete
+//   egzakteman jan yo te ye a) — fonksyon anba yo se GADFEN adisyonèl, pare
+//   pou rele AVAN yon "save", pa yon ranplasman.
+// - PA EFASE okenn done itilizatè: yo sèlman DETEKTE e RAPÒTE pwoblèm
+//   (issues[]), yo pa janm touche `goals`/`habits`/`tx`/`events`.
+// ==========================================
+
+// ---- 1) Doublon Pwogrè Goal ----
+// Mirè menm règ ki deja egziste nan recordGoalHabitProgressHistory (menm
+// dat + menm pct = doublon), men ekspoze kòm yon chèk REYITILIZAB pou
+// nenpòt kalite mizajou pwogrè (pa sèlman sa ki soti nan Abitid).
+function isDuplicateGoalProgressUpdate(goalId, newPct){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return { duplicate:false, reason:'goal-not-found' };
+  const history = Array.isArray(g.habitProgressHistory) ? g.habitProgressHistory : [];
+  const last = history[history.length - 1];
+  if (last && last.date === todayISO() && last.pct === newPct){
+    return { duplicate:true, reason:'menm pwogrè deja anrejistre jodi a', lastEntry:last };
+  }
+  return { duplicate:false };
+}
+
+// ---- 2) Doublon Kontribisyon Abitid ----
+// Reyitilize menm sous verite ak g.habitContributions[habitId].processedDates
+// (Pati 20/50) — pa gen nouvo chan, pa gen nouvo dosye.
+function isDuplicateHabitContribution(goalId, habitId, date){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !g.habitContributions || !g.habitContributions[habitId]){
+    return { duplicate:false };
+  }
+  const processedDates = g.habitContributions[habitId].processedDates || [];
+  const d = date || todayISO();
+  return processedDates.includes(d)
+    ? { duplicate:true, reason:`Abitid sa a deja trete pou dat ${d}` }
+    : { duplicate:false };
+}
+
+// ---- 3) Doublon Aksyon Finansye ----
+// Mirè menm gad kont doublon ki deja nan recordGoalFinancialContributionHistory
+// (menm goalId + menm habitId + menm dat).
+function isDuplicateFinancialContribution(goalId, habitId, date){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return { duplicate:false };
+  const history = Array.isArray(g.habitProgressHistory) ? g.habitProgressHistory : [];
+  const d = date || todayISO();
+  const found = history.some(r =>
+    r.source === 'saving-habit-completed' && r.goalId === goalId && r.habitId === habitId && r.date === d
+  );
+  return found ? { duplicate:true, reason:'kontribisyon finansye sa a deja anrejistre jodi a pou menm Abitid la' } : { duplicate:false };
+}
+
+// ---- 4) Koneksyon Modil Kase (referans ki pwente sou done ki pa egziste ankò) ----
+// Sèlman DETEKTE — pa efase, pa "netwaye" otomatikman (kontrèman ak
+// cleanDanglingGoalDependencies ki deja egziste pou dependsOn sèlman).
+function findBrokenGoalConnections(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return { goalId, issues:[{ type:'goal-not-found' }] };
+  const issues = [];
+
+  (g.linkedHabitIds || []).forEach(habitId => {
+    if (!habits.some(h => h.id === habitId)) issues.push({ type:'dangling-habit-link', habitId });
+  });
+
+  if (g.links){
+    Object.keys(g.links).forEach(linkType => {
+      (g.links[linkType] || []).forEach(id => {
+        const exists =
+          (linkType === 'habitIds' && habits.some(h => h.id === id)) ||
+          (linkType === 'financeIds' && tx.some(t => t.id === id)) ||
+          (linkType === 'calendarIds' && events.some(e => e.id === id)) ||
+          (linkType === 'learningIds' && !!id) || // referans jeneriks, pa gen lis santralize pou valide kont
+          (linkType === 'projectIds' && projects.some(p => p.id === id));
+        if (!exists) issues.push({ type:'dangling-link', linkType, id });
+      });
+    });
+  }
+
+  (g.linkedLearningCourses || []).forEach(courseKey => {
+    if (!LEARNING_COURSES[courseKey]) issues.push({ type:'dangling-learning-course', courseKey });
+  });
+
+  if (g.walletId && !wallets.some(w => w.id === g.walletId)){
+    issues.push({ type:'dangling-wallet-ref', walletId: g.walletId });
+  }
+
+  (g.dependsOn || []).forEach(depId => {
+    if (!goals.some(x => x.id === depId)) issues.push({ type:'dangling-dependency', depId });
+  });
+
+  if (g.habitContributions){
+    Object.keys(g.habitContributions).forEach(habitId => {
+      if (!habits.some(h => h.id === habitId)) issues.push({ type:'orphan-habit-contribution', habitId });
+    });
+  }
+
+  return { goalId, issues };
+}
+
+// ---- 5) Chanjman Estati Envalid ----
+// Sèvi ak menm sous verite ak computeAutoGoalStatus (Pati 41/50): yon
+// Objektif pa dwe vin 'completed' si pwogrè reyèl li poko rive 100%.
+function isValidGoalStatusChange(goalId, newStatus){
+  if (!GOAL_STATUS[newStatus]) return { valid:false, reason:`estati "${newStatus}" pa egziste` };
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return { valid:false, reason:'goal-not-found' };
+  const realPct = goalRealProgressForStatus(g);
+  if (newStatus === 'completed' && realPct < 100){
+    return { valid:false, reason:`pa ka make 'completed' — pwogrè reyèl la se ${realPct}%, pa 100%` };
+  }
+  if ((g.status === 'archived') && newStatus !== 'archived' && !g.autoStatus){
+    // Soti nan Achive se yon aksyon eksplisit — nou pa bloke l, nou jis
+    // siyale l pou konfimasyon (pa yon efas, jis yon mak "atansyon")
+    return { valid:true, warning:'Objektif la t ap Achive — konfime w vle re-aktive l' };
+  }
+  return { valid:true };
+}
+
+// ---- 6) Rapò Entegrite Konplè pou YON Objektif ----
+// Kombine tout chèk anwo yo (san mizajou pwogrè/kontribisyon espesifik pou
+// teste, sa yo rele apa lè yon aksyon presi ap prepare).
+function runGoalIntegrityCheck(goalId){
+  const connections = findBrokenGoalConnections(goalId);
+  return {
+    goalId,
+    checkedAt: new Date().toISOString(),
+    brokenConnections: connections.issues,
+    safe: connections.issues.length === 0
+  };
+}
+
 // ---- AKSYON: fonksyon ki egzekite règ*/persist* ki deja egziste yo apre konfimasyon itilizatè a ----
 function coachRefreshView(viewName){
   const el = document.getElementById('view-' + viewName);
