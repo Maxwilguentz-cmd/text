@@ -392,6 +392,7 @@ function normalizeGoals(arr){
     if (g.notes === undefined) g.notes = '';
     if (!g.links) g.links = { habitIds:[], financeIds:[], calendarIds:[], learningIds:[], projectIds:[] };
     else GOAL_LINK_TYPES.forEach(t => { if (!Array.isArray(g.links[t.key])) g.links[t.key] = []; });
+    if (!Array.isArray(g.linkedLearningCourses)) g.linkedLearningCourses = [];
     return g;
   });
 }
@@ -640,6 +641,126 @@ function removeGoalCalendarEvents(goalId){
   events = events.filter(e => e.goalId !== goalId); // sèlman Evènman ki soti nan Objektif sa a
   if (events.length !== before) persistEvents();
 }
+
+// ==========================================
+// GOAL <-> LEARNING — koneksyon ak modil Aprantisaj (Pati 30/50)
+// Yon Objektif ka lye ak youn oswa plizyè Kou nan LEARNING_COURSES
+// (g.linkedLearningCourses — nouvo chan, jis yon lis courseKey, pa gen
+// dupliyata done Kou/Leson). Pwogrè a JANM antre alamen pou yon Objektif
+// konsa — li KALKILE dirèkteman apati `learning.completed` (sèl sous verite
+// modil Aprantisaj la — Pati sa a pa touche fason yon leson konplete, sa
+// rete responsablite modil Learning la, ki viv nan learning.html/course.html
+// e senkwonize nan `syncLearningState()` ki egziste deja). Nou sèlman LI
+// `courseProgress()` (deja egziste, Pati Learning orijinal la) epi kopye
+// rezilta a sou g.progress lè gen Kou lye — sa anpeche nenpòt "validasyon
+// manyèl fo" pou Objektif Aprantisaj yo.
+// ==========================================
+function computeGoalLearningProgress(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !Array.isArray(g.linkedLearningCourses) || !g.linkedLearningCourses.length) return null;
+  const valid = g.linkedLearningCourses.filter(k => LEARNING_COURSES[k]);
+  if (!valid.length) return null;
+  const total = valid.reduce((s,k) => s + courseProgress(k).pct, 0);
+  return Math.round(total / valid.length);
+}
+
+// Aplike pwogrè kalkile a sou g.progress — sèlman lè gen Kou lye (menm lojik
+// pwoteksyon ak syncGoalSavingsFromHabits Pati 21: pa kraze yon valè manyèl
+// pou yon Objektif ki pa itilize Aprantisaj ditou).
+function syncGoalLearningProgress(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return false;
+  const pct = computeGoalLearningProgress(goalId);
+  if (pct === null) return false;
+  if (g.progress !== pct){
+    g.progress = pct;
+    if (pct >= 100 && g.status !== 'archived' && g.status !== 'paused') g.status = 'completed';
+    persistGoals();
+  }
+  return true;
+}
+
+// Rele apati syncLearningState() (Pati Learning orijinal la, ki deja rele
+// otomatikman lè paj la chaje/reprann fokis) — sa fè Pwogrè Objektif la
+// "konfime pa Learning" san nou pa janm bezwen kreye yon nouvo hook nan
+// modil Aprantisaj la.
+function syncAllGoalsLearningProgress(){
+  goals.forEach(g => {
+    if (Array.isArray(g.linkedLearningCourses) && g.linkedLearningCourses.length){
+      syncGoalLearningProgress(g.id);
+    }
+  });
+}
+
+let goalLearningDraft = [];
+
+function renderGoalLearningLinksList(){
+  const wrap = document.getElementById('goalLearningLinksList');
+  if (!wrap) return;
+  const keys = typeof LEARNING_COURSE_KEYS !== 'undefined' ? LEARNING_COURSE_KEYS : Object.keys(LEARNING_COURSES);
+  wrap.innerHTML = keys.map(key => {
+    const course = LEARNING_COURSES[key];
+    const checked = goalLearningDraft.includes(key);
+    const pct = courseProgress(key).pct;
+    return `<label class="milestone-row" style="cursor:pointer;">
+      <input type="checkbox" class="goalLearningCourseChk" data-key="${key}" ${checked?'checked':''}>
+      <span><b>${escapeHtml(course.title)}</b> <span style="color:var(--text-faint);font-size:11px;">(${pct}% konplete)</span></span>
+    </label>`;
+  }).join('');
+  wrap.querySelectorAll('.goalLearningCourseChk').forEach(cb => cb.addEventListener('change', e => {
+    const key = e.target.dataset.key;
+    if (e.target.checked){ if (!goalLearningDraft.includes(key)) goalLearningDraft.push(key); }
+    else { goalLearningDraft = goalLearningDraft.filter(k => k !== key); }
+    renderGoalLearningLinksList();
+    renderGoalLearningProgressPreview();
+  }));
+  const createBtn = document.getElementById('goalCreateLearningHabitsBtn');
+  if (createBtn) createBtn.hidden = !goalLearningDraft.length;
+  const progressInput = document.getElementById('goalProgress');
+  if (progressInput) progressInput.disabled = goalLearningDraft.length > 0;
+  renderGoalLearningProgressPreview();
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderGoalLearningProgressPreview(){
+  const row = document.getElementById('goalLearningProgressRow');
+  if (!row) return;
+  if (!goalLearningDraft.length){ row.hidden = true; return; }
+  const total = goalLearningDraft.reduce((s,k) => s + (LEARNING_COURSES[k] ? courseProgress(k).pct : 0), 0);
+  const pct = Math.round(total / goalLearningDraft.length);
+  row.hidden = false;
+  document.getElementById('goalLearningProgressBar').style.width = pct + '%';
+  document.getElementById('goalLearningProgressPct').textContent = pct + '%';
+}
+
+// "Kreye Abitid Aprantisaj apati Objektif la" — kreye YON Abitid pou chak
+// Kou lye ki poko gen Abitid (evite dupliyata: verifye `learningCourseKey`
+// + `goalId` anvan kreyasyon), lye l ak Objektif la (h.goalId, menm chan ak
+// lyen Abitid orijinal la, Pati 8/50) pou l parèt nan lis Abitid Lye a.
+document.getElementById('goalCreateLearningHabitsBtn')?.addEventListener('click', () => {
+  if (!editingGoalId || !goalLearningDraft.length) return;
+  let createdCount = 0;
+  goalLearningDraft.forEach(key => {
+    const course = LEARNING_COURSES[key];
+    if (!course) return;
+    const alreadyExists = habits.some(h => h.goalId === editingGoalId && h.learningCourseKey === key);
+    if (alreadyExists) return;
+    habits.push({
+      id: uid(), name: `Etidye ${course.title}`, description: `Abitid otomatik kreye apati Objektif la pou Kou "${course.title}"`,
+      frequency: 'daily', reminder: true, category: 'Aprantisaj', goal: '',
+      completions: [], createdAt: new Date().toISOString(),
+      goalId: editingGoalId, learningCourseKey: key,
+    });
+    createdCount++;
+  });
+  if (createdCount){
+    persistHabits();
+    if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
+    showToast(`${createdCount} Abitid Aprantisaj kreye ✓`);
+  } else {
+    showToast('Abitid yo deja egziste pou Kou sa yo');
+  }
+});
 
 function unlinkHabitFromGoal(goalId, habitId){
   const g = goals.find(x => x.id === goalId);
@@ -5213,8 +5334,10 @@ function openGoalModal(id){
   document.getElementById('goalNotes').value = g ? (g.notes || '') : '';
   goalMilestoneDraft = g ? JSON.parse(JSON.stringify(g.milestones || [])) : [];
   goalLinksDraft = g && g.links ? JSON.parse(JSON.stringify(g.links)) : { habitIds:[], financeIds:[], calendarIds:[], learningIds:[], projectIds:[] };
+  goalLearningDraft = g && Array.isArray(g.linkedLearningCourses) ? g.linkedLearningCourses.slice() : [];
   renderMilestoneDraft();
   renderGoalLinksGrid();
+  if (typeof renderGoalLearningLinksList === 'function') renderGoalLearningLinksList();
   document.getElementById('deleteGoalBtn').hidden = !g;
   document.getElementById('goalModalOverlay').classList.add('open');
   if (window.lucide) lucide.createIcons();
@@ -5242,7 +5365,18 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
     walletId: document.getElementById('goalSourceWallet').value || null,
     notes: document.getElementById('goalNotes').value.trim(),
     links: goalLinksDraft,
+    linkedLearningCourses: goalLearningDraft.slice(),
   };
+  // Si Objektif la lye ak Kou Aprantisaj, pwogrè a SÈLMAN ka soti nan leson
+  // konplete (courseProgress) — nou ranplase nenpòt valè manyèl moun nan
+  // antre nan chan "Pwogrè (%)" a pou anpeche yon "validasyon fo".
+  if (payload.linkedLearningCourses.length){
+    const validCourses = payload.linkedLearningCourses.filter(k => LEARNING_COURSES[k]);
+    if (validCourses.length){
+      const total = validCourses.reduce((s,k) => s + courseProgress(k).pct, 0);
+      payload.progress = Math.round(total / validCourses.length);
+    }
+  }
   if (editingGoalId){
     const g = goals.find(x => x.id === editingGoalId);
     Object.assign(g, payload);
@@ -6570,6 +6704,7 @@ function syncLearningState(){
   const overallPct = totalLessons ? Math.round((learning.completed.length/totalLessons)*100) : 0;
   setCategory('learning', overallPct);
   persistLearning();
+  if (typeof syncAllGoalsLearningProgress === 'function') syncAllGoalsLearningProgress();
 }
 
 // ==========================================
