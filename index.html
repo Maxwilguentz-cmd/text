@@ -2272,6 +2272,13 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <select class="field" id="goalLinkExistingHabitSelect" style="flex:1;"></select>
           <button class="btn btn-ghost" id="goalLinkExistingHabitBtn" type="button"><i data-lucide="link-2"></i> Lye</button>
         </div>
+        <label style="margin-top:12px;display:block;">Aprantisaj Lye <span style="color:var(--text-faint);font-weight:400;">(pwogrè soti dirèkteman nan leson konplete)</span></label>
+        <div class="milestone-list" id="goalLearningLinksList"></div>
+        <div id="goalLearningProgressRow" class="goal-progress-row" style="margin:8px 0;" hidden>
+          <div class="mini-progress"><span id="goalLearningProgressBar" style="width:0%;background:var(--blue);"></span></div>
+          <b id="goalLearningProgressPct">0%</b>
+        </div>
+        <button class="btn btn-ghost" id="goalCreateLearningHabitsBtn" style="margin-top:4px;" hidden><i data-lucide="graduation-cap"></i> Kreye Abitid Aprantisaj</button>
       </div>
     </div>
     <div class="modal-foot">
