@@ -1885,7 +1885,12 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       </div>
       <div><label>Deskripsyon</label><input type="text" id="txDesc" placeholder="Pw. Manje midi"></div>
       <div class="form-row">
-        <div><label id="txCategoryLabel">Kategori</label><select id="txCategory"></select></div>
+        <div><label id="txCategoryLabel">Kategori</label><select id="txCategory"></select>
+          <div id="txNewCategoryWrap" style="display:flex;gap:6px;margin-top:6px;" hidden>
+            <input type="text" id="txNewCategoryInput" placeholder="Pw. Bay Lajan / Prete..." style="flex:1;">
+            <button class="btn btn-ghost" id="txAddNewCategoryBtn" type="button"><i data-lucide="check"></i></button>
+          </div>
+        </div>
         <div><label>Kont</label><select id="txWallet"></select></div>
       </div>
 
