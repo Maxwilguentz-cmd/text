@@ -562,12 +562,12 @@ function renderGoalSourceWalletOptions(selectedId){
 function renderGoalFinancialRemaining(){
   const costInput = document.getElementById('goalEstimatedValue');
   const savedInput = document.getElementById('goalCurrentSavings');
-  document.getElementById('goalCostDisplay').value = costInput.value || '';
   const draft = {
     estimatedValue: parseFloat(costInput.value) || 0,
     currentSavings: parseFloat(savedInput.value) || 0
   };
   const remaining = computeGoalFinancialRemaining(draft);
+  document.getElementById('goalCostDisplay').value = costInput.value ? remaining : '';
   const pct = computeGoalFinancialProgressPct(draft);
   document.getElementById('goalFinancialRemaining').textContent = remaining;
   document.getElementById('goalFinancialSaved').textContent = draft.currentSavings;
@@ -3966,7 +3966,7 @@ function renderBudgetGoalConnections(){
     return `<div class="milestone-row" style="flex-direction:column;align-items:stretch;gap:2px;">
       <span><b>${escapeHtml(g.name)}</b></span>
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:2px;">
-        <span style="color:var(--text-faint);">Plan Kontribisyon: <b style="color:var(--text);">${plan!=null ? fmtHTG(plan)+'/mwa' : '—'}</b></span>
+        <span style="color:var(--text-faint);">Bidjè pa Mwa: <b style="color:var(--text);">${plan!=null ? fmtHTG(plan)+'/mwa' : '—'}</b></span>
         <span style="color:var(--text-faint);">Sere Deja: <b style="color:var(--text);">${fmtHTG(saved)}</b></span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:12px;">
