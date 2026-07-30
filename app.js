@@ -8500,6 +8500,67 @@ function runGoalSyncScenarioTests(){
 
       results.push({ key:'scenario3', title:'Objektif Konplete → Estati Pwojè → Achievement', steps, pass: steps.every(s => s.pass) });
     })();
+
+    // ---- SENARYO 4 : Egzanp konplè Pati 50/50 — "Vin Devlopè Web" ----
+    // Aprantisaj konplete → Abitid Etid lye → Kalandriye ajou → Estatistik
+    // anrejistre → Achievement pare → Coach AI resevwa kontèks ajou.
+    // Sa a se sèl senaryo ki verifye wiring `buildAiContext()` →
+    // `buildGoalAIContext()` (Pati 50/50) — okenn lòt senaryo pa teste sa.
+    (function scenario4(){
+      const steps = [];
+      const goalId = 'test-goal-4', habitId = 'test-habit-4';
+      const courseKey = Object.keys(LEARNING_COURSES)[0];
+      const futureDeadline = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0,10); })();
+      const g = {
+        id: goalId, title:'Vin Devlopè Web', type:'personal', category:'personal', priority:'high',
+        status:'in-progress', autoStatus:true, progress:0, milestones:[], deadline: futureDeadline,
+        links:{habitIds:[],financeIds:[],calendarIds:[],learningIds:[],projectIds:[]},
+        linkedHabitIds:[habitId], linkedLearningCourses:[courseKey], dependsOn:[], dependencyCompletedSnapshot:{},
+        isFinancial:false, estimatedValue:null, currentSavings:null, walletId:null, notes:'',
+        createdAt:new Date().toISOString(), habitProgressHistory:[]
+      };
+      goals = [g];
+      habits = [{ id: habitId, name:'Orè Etid Validé', goalId, completions:[todayISO()], frequency:'daily' }];
+      projects = [];
+      events = [];
+      const allKeys = (typeof lcAllLessons === 'function' ? lcAllLessons(courseKey) : []).map(l => lcLessonKey(courseKey, l.id));
+      learning = Object.assign({}, realLearning, { completed: [] });
+
+      steps.push({ label:'Kondisyon inisyal (0% pwogrè, pa gen evènman kalandriye)', pass: goalMilestoneProgress(g) === 0 && events.length === 0 });
+
+      // ---- Kalandriye : kreye evènman Dat Limit ----
+      if (typeof syncGoalCalendarEvents === 'function') syncGoalCalendarEvents(goalId);
+      steps.push({ label:'Kalandriye kreye evènman Dat Limit lye ak Objektif la', pass: events.some(e => e.goalId === goalId && e.goalEventType === 'deadline') });
+
+      // ---- Aprantisaj : konplete tout leson Kou a ----
+      learning = Object.assign({}, learning, { completed: allKeys });
+      if (typeof syncAllGoalsLearningProgress === 'function') syncAllGoalsLearningProgress();
+      steps.push({ label:'Pwogrè Aprantisaj kalkile (100%) e Objektif otomatikman Konplete', pass: computeGoalLearningProgress(goalId) === 100 && g.status === 'completed' });
+
+      // ---- Abitid : Orè Etid rete lye ak Objektif la ----
+      steps.push({ label:'Abitid Etid rete lye ak Objektif la', pass: getHabitsForGoal(goalId).some(h => h.id === habitId) });
+
+      // ---- Estatistik : pwogrè anrejistre pou Objektif la ----
+      const stats = typeof buildGoalStatisticsFor === 'function' ? buildGoalStatisticsFor(goalId) : null;
+      steps.push({ label:'Estatistik anrejistre pwogrè Objektif la (100%, konplete)', pass: !!stats && stats.progressPct === 100 && stats.status === 'completed' });
+
+      // ---- Achievement : pare pou deblokaj (Abitid lye + Aprantisaj konplete) ----
+      const achData = typeof buildGoalAchievementData === 'function' ? buildGoalAchievementData() : [];
+      const habitAch = achData.find(a => a.id === 'ga2');
+      const learningAch = achData.find(a => a.id === 'ga5');
+      steps.push({ label:'Achievement "Abitid Lye" + "Aprantisaj Konplete" pare pou deblokaj', pass: !!habitAch && habitAch.progress >= 1 && !!learningAch && learningAch.progress >= 1 });
+
+      // ---- Coach AI : resevwa kontèks konplè Objektif la (Pati 50/50) ----
+      const aiCtx = typeof buildAiContext === 'function' ? buildAiContext() : null;
+      const goalCtx = aiCtx ? aiCtx.goals.find(x => x.id === goalId) : null;
+      steps.push({
+        label:'Coach AI resevwa kontèks konplè Objektif la (Abitid, Aprantisaj, pwochen aksyon)',
+        pass: !!goalCtx && Array.isArray(goalCtx.connectedHabits) && goalCtx.connectedHabits.some(h => h.id === habitId)
+          && !!goalCtx.learning && goalCtx.learning.overallProgressPct === 100
+      });
+
+      results.push({ key:'scenario4', title:'Aprantisaj → Abitid → Kalandriye → Estatistik → Achievement → Coach AI', steps, pass: steps.every(s => s.pass) });
+    })();
   } catch(e) {
     results.push({ key:'error', title:'Erè pandan tès la', steps:[{ label:String((e && e.message) || e), pass:false }], pass:false });
   } finally {
@@ -8523,7 +8584,7 @@ function buildGoalSyncReviewReport(){
   lines.push('═══ ODIT KONEKSYON OBJEKTIF (done reyèl) ═══');
   lines.push(audit.fixCount ? audit.fixes.map(f => '✓ ' + f).join('\n') : '✓ Pa gen referans kase jwenn — tout koneksyon anfòm.');
   lines.push('');
-  lines.push('═══ TÈS 3 SENARYO EGZANP (sandbox — done reyèl pa touche) ═══');
+  lines.push(`═══ TÈS ${scenarios.length} SENARYO EGZANP (sandbox — done reyèl pa touche) ═══`);
   scenarios.forEach(sc => {
     lines.push(`${sc.pass ? '✅' : '❌'} Senaryo: ${sc.title}`);
     sc.steps.forEach(s => lines.push(`   ${s.pass ? '✓' : '✗'} ${s.label}`));
@@ -8531,7 +8592,7 @@ function buildGoalSyncReviewReport(){
   const allPass = scenarios.every(sc => sc.pass);
   lines.push('');
   lines.push(allPass
-    ? '🎉 Tout 3 senaryo yo pase — sinkwonizasyon Objektif ap fonksyone kòrèkteman.'
+    ? `🎉 Tout ${scenarios.length} senaryo yo pase — sinkwonizasyon Objektif ap fonksyone kòrèkteman.`
     : '⚠️ Gen omwen yon senaryo ki echwe — verifye detay anwo a.');
   return lines.join('\n');
 }
