@@ -2420,13 +2420,14 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <div><label>Valè Estime <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="number" id="goalEstimatedValue" placeholder="Pw. 50000"></div>
           <div><label>Kou Final <span style="color:var(--text-faint);font-weight:400;">(Valè Estime − Sere Deja)</span></label><input type="number" id="goalCostDisplay" disabled placeholder="0"></div>
           <div><label>Sere Deja (Saved)</label><input type="number" id="goalCurrentSavings" placeholder="Pw. 3000"></div>
-          <div><label>Budjè pa Mwa <span style="color:var(--text-faint);font-weight:400;">(opsyonèl — kreye Bidjè nan Finans)</span></label><input type="number" id="goalMonthlySavingPlan" placeholder="Pw. 1000"></div>
+          <div><label>Bidjè <span style="color:var(--text-faint);font-weight:400;">(opsyonèl — kreye Bidjè nan Finans)</span></label><input type="number" id="goalMonthlySavingPlan" placeholder="Pw. 1000"></div>
         </div>
         <div id="goalSourceWalletRow" style="margin-top:8px;" hidden>
-          <label>Sous Kòb (Source Wallet) <span style="color:var(--text-faint);font-weight:400;">(referans sèlman — pa deplase lajan)</span></label>
+          <label>Wallet de Depa <span style="color:var(--text-faint);font-weight:400;">(kote kòb la soti)</span></label>
           <select class="field" id="goalSourceWallet">
             <option value="">— Pa chwazi —</option>
           </select>
+          <button type="button" class="btn btn-ghost" id="goalQuickAddHabitBtn" style="width:100%;margin-top:6px;">+ Ajoute yon Abitid</button>
         </div>
         <div id="goalFinancialRemainingRow" style="margin-top:8px;" hidden>
           <label style="display:block;margin-bottom:6px;">Pwogrè Finansye <span style="color:var(--text-faint);font-weight:400;">(otomatik)</span></label>
@@ -2533,6 +2534,19 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
     <div class="modal-foot">
       <button class="btn btn-ghost" id="deleteGoalBtn" hidden>Efase</button>
       <button class="btn btn-primary" id="saveGoalBtn" style="margin-left:auto;">Anrejistre Objektif</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GOAL QUICK-ADD HABIT (Bidjè) MODAL ============ -->
+<div class="modal-overlay" id="goalQuickAddHabitModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Ajoute yon Abitid</h3><button class="icon-btn" id="closeGoalQuickAddHabitModal" aria-label="Fèmen"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Konbyen Kòb Abitid la Ye</label><input type="number" id="goalQuickAddHabitAmount" placeholder="Pw. 100" step="any"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="saveGoalQuickAddHabitBtn" style="margin-left:auto;">Anrejistre</button>
     </div>
   </div>
 </div>
