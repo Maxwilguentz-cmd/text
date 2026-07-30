@@ -381,6 +381,15 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 .milestone-row input[type=checkbox]{width:auto;}
 .milestone-row.done span{text-decoration:line-through;color:var(--text-faint);}
 .milestone-list{display:flex;flex-direction:column;gap:6px;margin-top:2px;}
+.milestone-card{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--border-soft,var(--border));border-radius:10px;background:var(--surface-2);}
+.milestone-card .ms-top{display:flex;align-items:center;gap:8px;}
+.milestone-card .ms-top input[type=checkbox]{width:auto;flex-shrink:0;}
+.milestone-card .ms-title{flex:1;font-size:13px;font-weight:700;color:var(--text);line-height:1.4;}
+.milestone-card.done .ms-title{text-decoration:line-through;color:var(--text-faint);}
+.milestone-card .msRemove{flex-shrink:0;cursor:pointer;color:var(--text-faint);width:13px;height:13px;}
+.milestone-card .ms-weight{display:inline-flex;align-self:flex-start;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--blue-soft,rgba(59,130,246,.14));color:var(--blue);}
+.milestone-card .ms-desc{font-size:11.5px;color:var(--text-faint);line-height:1.5;}
+.milestone-card .ms-date{font-size:10.5px;color:var(--text-faint);display:flex;align-items:center;gap:4px;}
 
 /* ---- Pati 48/50: klate koneksyon + eksplikasyon pwogrè + apèsi aktivite ---- */
 .goal-progress-row .mini-progress span{transition:width .5s cubic-bezier(.4,0,.2,1);}
@@ -2242,12 +2251,13 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div>
           <label style="display:flex;align-items:center;justify-content:space-between;">
             <span>Estati</span>
-            <span id="goalAutoStatusBadge" class="pill" style="background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);font-weight:400;font-size:10px;" hidden>Otomatik</span>
+            <span class="pill" style="background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);font-weight:400;font-size:10px;">Otomatik</span>
           </label>
-          <select id="goalStatus"></select>
-          <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin-top:6px;font-size:12.5px;color:var(--text-faint);">
-            <input type="checkbox" id="goalAutoStatus" style="width:auto;" checked> Estati otomatik (baze sou pwogrè reyèl)
-          </label>
+          <div id="goalStatusDisplay" class="pill" style="width:100%;box-sizing:border-box;padding:9px 10px;font-size:12.5px;font-weight:700;border-radius:10px;display:flex;align-items:center;justify-content:center;">—</div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <button type="button" class="btn btn-ghost" id="goalPauseToggleBtn" style="flex:1;font-size:11px;padding:6px 4px;">Sispann</button>
+            <button type="button" class="btn btn-ghost" id="goalArchiveToggleBtn" style="flex:1;font-size:11px;padding:6px 4px;">Achive</button>
+          </div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -2290,7 +2300,17 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           </div>
         </div>
       </div>
-      <div><label>Pwogrè (%)</label><input type="number" id="goalProgress" min="0" max="100" value="0"></div>
+      <div>
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Pwogrè</span>
+          <span class="pill" style="background:var(--green-soft);color:var(--green);font-weight:400;font-size:10px;">Otomatik</span>
+        </label>
+        <div class="goal-progress-row">
+          <div class="mini-progress"><span id="goalProgressBar" style="width:0%;background:var(--green);"></span></div>
+          <b id="goalProgressPct" style="font-family:var(--font-mono);">0%</b>
+        </div>
+        <div style="font-size:10.5px;color:var(--text-faint);margin-top:4px;" id="goalProgressSourceLbl"></div>
+      </div>
       <div>
         <label>Etap (Milestones)</label>
         <div class="milestone-list" id="goalMilestoneList"></div>
