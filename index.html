@@ -1949,6 +1949,11 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div><label>Kategori</label><input type="text" id="habitCategory" placeholder="Pw. Sante"></div>
         <div><label>Objektif</label><input type="text" id="habitGoal" placeholder="Pw. 30 jou"></div>
       </div>
+      <div id="habitGoalSavingsWrap" hidden>
+        <label>Epay pou Objektif la</label>
+        <input type="number" id="habitGoalSavingsAmount" placeholder="Pw. 50" min="0" step="any">
+        <div class="hint"><i data-lucide="sparkles"></i> Chak fwa abitid la fèt, kòb sa a ap ajoute nan objektif finansye a otomatikman.</div>
+      </div>
       <label class="chk"><input type="checkbox" id="habitReminder"> Aktive rapèl</label>
     </div>
     <div class="modal-foot">
