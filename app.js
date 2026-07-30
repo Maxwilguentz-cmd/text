@@ -3948,6 +3948,24 @@ function renderBudgetSummary(){
 // tranzaksyon otomatik kreye. computeGoalFinancialRemaining() reyitilize
 // (deja egziste, Pati 16/50).
 // ==========================================
+// ==========================================
+// GOAL <-> BUDGET — senkwonizasyon 2-sans (Pati 4/4)
+// Lè yon Objektif Finansye gen yon "Budjè pa Mwa" (g.monthlySavingPlan),
+// nou kreye/mete ajou yon antre nan budgets.limits (menm kle ak g.title)
+// pou l parèt nan Finans > Bidjè tankou nenpòt lòt kategori. Si moun nan
+// modifye/retire l la nan Finans (saveBudgetsBtn), nou senkwonize l
+// tounen sou g.monthlySavingPlan.
+// ==========================================
+function syncGoalMonthlyBudgetToFinance(g, prevTitle){
+  if (!g) return;
+  if (!budgets.limits) budgets.limits = {};
+  if (prevTitle && prevTitle !== g.title && budgets.limits[prevTitle] != null) delete budgets.limits[prevTitle];
+  const plan = g.isFinancial ? (Number(g.monthlySavingPlan) || 0) : 0;
+  if (plan > 0) budgets.limits[g.title] = plan;
+  else if (budgets.limits[g.title] != null) delete budgets.limits[g.title];
+  persistBudgets();
+  if (typeof renderBudgetSummary === 'function') renderBudgetSummary();
+}
 function financialGoalsForBudgetDisplay(){
   return goals.filter(g => g.isFinancial);
 }
@@ -3964,7 +3982,7 @@ function renderBudgetGoalConnections(){
     const saved = g.currentSavings || 0;
     const pct = computeGoalFinancialProgressPct(g);
     return `<div class="milestone-row" style="flex-direction:column;align-items:stretch;gap:2px;">
-      <span><b>${escapeHtml(g.name)}</b></span>
+      <span><b>${escapeHtml(g.title)}</b></span>
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:2px;">
         <span style="color:var(--text-faint);">Bidjè pa Mwa: <b style="color:var(--text);">${plan!=null ? fmtHTG(plan)+'/mwa' : '—'}</b></span>
         <span style="color:var(--text-faint);">Sere Deja: <b style="color:var(--text);">${fmtHTG(saved)}</b></span>
@@ -3987,7 +4005,7 @@ function renderBudgetsManageGoalList(){
     const saved = g.currentSavings || 0;
     const pct = computeGoalFinancialProgressPct(g);
     return `<div class="milestone-row" style="justify-content:space-between;">
-      <span>${escapeHtml(g.name)} <span style="color:var(--text-faint);">(${plan!=null ? fmtHTG(plan)+'/mwa' : 'pa gen plan'} · Sere ${fmtHTG(saved)})</span></span>
+      <span>${escapeHtml(g.title)} <span style="color:var(--text-faint);">(${plan!=null ? fmtHTG(plan)+'/mwa' : 'pa gen plan'} · Sere ${fmtHTG(saved)})</span></span>
       <span class="pill" style="background:var(--blue-soft);color:var(--blue);">Rete ${fmtHTG(remaining)} · ${pct}%</span>
     </div>`;
   }).join('');
@@ -4560,8 +4578,25 @@ document.getElementById('saveBudgetsBtn').addEventListener('click', () => {
     const v = parseFloat(inp.value);
     if (v > 0) limits[inp.dataset.cat] = v;
   });
+  // Pati 4/4: si yon liy bidjè ki gen menm non ak yon Objektif Finansye
+  // chanje (oswa retire) isit la, senkwonize l tounen sou g.monthlySavingPlan.
+  const prevLimits = budgets.limits || {};
+  let goalsChanged = false;
+  goals.forEach(g => {
+    if (!g.isFinancial) return;
+    if (Object.prototype.hasOwnProperty.call(limits, g.title)){
+      if (g.monthlySavingPlan !== limits[g.title]){ g.monthlySavingPlan = limits[g.title]; goalsChanged = true; }
+    } else if (Object.prototype.hasOwnProperty.call(prevLimits, g.title) && g.monthlySavingPlan != null){
+      g.monthlySavingPlan = null; goalsChanged = true;
+    }
+  });
   budgets = { period: document.getElementById('budgetPeriod').value, limits };
   persistBudgets();
+  if (goalsChanged){
+    persistGoals();
+    renderGoals();
+    if (goalDetailsId && typeof renderGoalDetailsModal === 'function') renderGoalDetailsModal();
+  }
   document.getElementById('budgetsModalOverlay').classList.remove('open');
   renderFinance();
   showToast('Bidjè anrejistre ✓');
@@ -7192,6 +7227,7 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
   const title = document.getElementById('goalTitle').value.trim();
   if (!title){ showToast('Mete yon tit pou objektif la'); return; }
   const oldMilestones = editingGoalId ? JSON.parse(JSON.stringify((goals.find(x=>x.id===editingGoalId)||{}).milestones || [])) : [];
+  const prevTitle = editingGoalId ? (goals.find(x=>x.id===editingGoalId)||{}).title : null;
   const payload = {
     title,
     desc: document.getElementById('goalDesc').value.trim(),
@@ -7243,6 +7279,7 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
   }
   persistGoals();
   const _savedGoal = editingGoalId ? goals.find(x => x.id === editingGoalId) : goals[goals.length - 1];
+  if (_savedGoal && typeof syncGoalMonthlyBudgetToFinance === 'function') syncGoalMonthlyBudgetToFinance(_savedGoal, prevTitle);
   if (_savedGoal && typeof syncGoalCalendarEvents === 'function') syncGoalCalendarEvents(_savedGoal.id);
   if (_savedGoal){
     let historyChanged = false;
@@ -7268,6 +7305,8 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
 document.getElementById('deleteGoalBtn').addEventListener('click', () => {
   if (typeof removeGoalCalendarEvents === 'function') removeGoalCalendarEvents(editingGoalId);
   if (typeof removeGoalFromAllDependencies === 'function') removeGoalFromAllDependencies(editingGoalId);
+  const _delGoal = goals.find(x => x.id === editingGoalId);
+  if (_delGoal && budgets.limits && budgets.limits[_delGoal.title] != null){ delete budgets.limits[_delGoal.title]; persistBudgets(); }
   goals = goals.filter(x => x.id !== editingGoalId);
   persistGoals();
   document.getElementById('goalModalOverlay').classList.remove('open');
