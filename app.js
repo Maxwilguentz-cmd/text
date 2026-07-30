@@ -945,7 +945,12 @@ function syncProjectStatusFromGoal(p){
   if (!p || !p.goalId) return false;
   const g = goals.find(x => x.id === p.goalId);
   if (!g) return false;
-  const pct = g.progress || 0;
+  // Pati 49/50 fix: `g.progress` sèl se yon chan manyèl ki pa toujou ajou (pw. Objektif
+  // ki swiv pa Milestones/Finans/Aprantisaj kite `g.progress` a 0 pandan pwogrè REYÈL la
+  // (goalMilestoneProgress, sous verite ki itilize toupatou nan rès sistèm nan — Goal List,
+  // Dashboard, Statistics, Auto-Status) rive 100%). Sa te fè Project rete "idea"/"in-progress"
+  // menm lè Objektif la reyèlman fini. Nou itilize goalMilestoneProgress(g) pou rete konsistan.
+  const pct = goalMilestoneProgress(g);
   const newStatus = pct >= 100 ? 'completed' : pct >= 51 ? 'testing' : pct >= 1 ? 'in-progress' : 'idea';
   if (p.status !== newStatus){ p.status = newStatus; return true; }
   return false;
@@ -6146,7 +6151,17 @@ function addGoalTimelineNote(goalId, text){
 }
 
 function goalMilestoneProgress(g){
-  if (!g.milestones || !g.milestones.length) return g.progress || 0;
+  if (!g.milestones || !g.milestones.length){
+    // Pati 49/50 fix: pou yon Objektif Finansye ki PA itilize Milestones, `g.progress`
+    // (chan manyèl) pa janm ajou otomatikman lè Sere Deja (g.currentSavings) chanje —
+    // ni lè moun nan modifye l alamen, ni lè syncGoalSavingsFromHabits senkwonize l apati
+    // Abitid (Pati 21/50). Sa te vle di lis Objektif/Dashboard/Statistics/Project-sync yo
+    // (ki tout LI goalMilestoneProgress kòm sèl sous verite) pa janm wè pwogrè Sere a. Nou
+    // sèvi ak pousantaj Finansye a (deja kalkile an dirèk, Pati 17/50) kòm pwogrè reyèl la
+    // nan ka sa a — san kraze anyen pou Objektif ki pa Finansye (yo kontinye itilize g.progress).
+    if (g.isFinancial && Number(g.estimatedValue) > 0) return computeGoalFinancialProgressPct(g);
+    return g.progress || 0;
+  }
   const hasContrib = g.milestones.some(m => m.contribution != null && m.contribution > 0);
   if (hasContrib){
     const totalDefined = g.milestones.reduce((s,m) => s + (m.contribution != null ? Number(m.contribution)||0 : 0), 0);
@@ -8215,17 +8230,27 @@ const ACHIEVEMENT_DEFS = [
     progress:() => currentPerfectStreak(), target:14 },
 ];
 
+// Pati 49/50: koneksyon final Goal <-> Achievement. GOAL_ACHIEVEMENT_DEFS (Pati 45/50)
+// te deja egziste ak menm fòma a (id/cat/label/desc/icon/color/progress()/target) + yon
+// chan siplemantè `relatedGoal()` ki ignore san danje pa checkAchievements()/
+// renderAchievementsView() (yo sèvi ak sèlman chan estanda yo). Nou SÈLMAN konbine 2 lis
+// yo — pa gen okenn lòt chanjman nan ACHIEVEMENT_DEFS oswa GOAL_ACHIEVEMENT_DEFS.
+const ALL_ACHIEVEMENT_DEFS = ACHIEVEMENT_DEFS.concat(GOAL_ACHIEVEMENT_DEFS);
+
 const ACH_CATEGORY_LABELS = {
   productivity: { label:'Pwodiktivite', icon:'check-square' },
   learning: { label:'Aprantisaj', icon:'graduation-cap' },
   finance: { label:'Finans', icon:'wallet' },
   habits: { label:'Abitid', icon:'flame' },
   consistency: { label:'Konsistans', icon:'calendar-check' },
+  // Pati 49/50: kategori 'goals' pou GOAL_ACHIEVEMENT_DEFS (Pati 45/50), ki te deja
+  // pare men ki pa t janm wire nan checkAchievements()/renderAchievementsView().
+  goals: { label:'Objektif', icon:'target' },
 };
 
 function checkAchievements(){
   const newlyUnlocked = [];
-  ACHIEVEMENT_DEFS.forEach(a => {
+  ALL_ACHIEVEMENT_DEFS.forEach(a => {
     if (unlockedAchievements.includes(a.id)) return;
     if (a.progress() >= a.target){
       unlockedAchievements.push(a.id);
@@ -8247,9 +8272,9 @@ function renderAchievementsView(){
   const wrap = document.getElementById('achievementsWrap');
   if (!wrap) return;
   wrap.innerHTML = '';
-  document.getElementById('achCountLbl').textContent = `${unlockedAchievements.length}/${ACHIEVEMENT_DEFS.length} debloke`;
+  document.getElementById('achCountLbl').textContent = `${unlockedAchievements.length}/${ALL_ACHIEVEMENT_DEFS.length} debloke`;
   Object.keys(ACH_CATEGORY_LABELS).forEach(catKey => {
-    const defs = ACHIEVEMENT_DEFS.filter(a => a.cat === catKey);
+    const defs = ALL_ACHIEVEMENT_DEFS.filter(a => a.cat === catKey);
     if (!defs.length) return;
     const catInfo = ACH_CATEGORY_LABELS[catKey];
     const unlockedInCat = defs.filter(a => unlockedAchievements.includes(a.id)).length;
@@ -8281,6 +8306,239 @@ function renderAchievementsView(){
   });
   if (window.lucide) lucide.createIcons();
 }
+
+// ==========================================
+// PATI 49/50 — REVIZYON FINAL SENKWONIZASYON OBJEKTIF (GOAL)
+// De fonksyon apa, tou de san danje pou done REYÈL itilizatè a:
+// 1) auditAndRepairGoalConnections() — chèche referans KASE (dangling) nan
+//    TOUT koneksyon Goal yo (Habits, Wallets, Calendar, Learning, Projects,
+//    Aksyon Finansye annatant, Depandans) sou done REYÈL la, e repare SÈLMAN
+//    referans kase yo — okenn valè valid pa touche.
+// 2) runGoalSyncScenarioTests() — rejwe egzakteman 3 senaryo egzanp Pati 49 a
+//    (Abitid Sere → Pwogrè Objektif → Aksyon Finansye ; Leson → Pwogrè
+//    Aprantisaj → Pwogrè Objektif ; Objektif Konplete → Estati Pwojè →
+//    Achievement) sou done SANDBOX tanporè. `goals`/`habits`/`wallets`/`tx`/
+//    `projects`/`events`/`learning`/`pendingGoalFinancialActions` ak fonksyon
+//    `saveLS`/`secureSave`/`lifeEngineRefresh` yo TOUJOU restore egzakteman
+//    jan yo te ye a nan yon blòk `finally` — menm si yon tès leve yon erè,
+//    okenn done pèsonèl pa janm modifye ni sove sou disk pandan tès la.
+// ==========================================
+function auditAndRepairGoalConnections(){
+  const fixes = [];
+
+  // 1) Habit <-> Goal — reyitilize netwayaj ki deja egziste (Pati 5/50)
+  if (typeof pruneBrokenGoalHabitLinks === 'function' && pruneBrokenGoalHabitLinks()){
+    fixes.push('Lyen Abitid ↔ Objektif kase yo netwaye.');
+  }
+
+  const goalIds = new Set(goals.map(g => g.id));
+
+  // 2) Project -> Goal : retire referans si Objektif la pa egziste ankò (kenbe Pwojè a antye)
+  let projectsChanged = false;
+  projects.forEach(p => {
+    if (p.goalId && !goalIds.has(p.goalId)){ p.goalId = null; projectsChanged = true; }
+  });
+  if (projectsChanged){ persistProjects(); fixes.push('Referans Pwojè ↔ Objektif kase yo retire.'); }
+
+  // 3) Calendar -> Goal : retire Evènman òfelen (Objektif ki lakòz yo pa egziste ankò)
+  const beforeEvents = events.length;
+  events = events.filter(e => !e.goalId || goalIds.has(e.goalId));
+  if (events.length !== beforeEvents){ persistEvents(); fixes.push(`${beforeEvents - events.length} Evènman Kalandriye òfelen retire.`); }
+
+  // 4) Chan Objektif yo menm : Kou Aprantisaj envalid, Wallet ki pa egziste, Depandans kase
+  const walletIds = new Set(wallets.map(w => w.id));
+  let goalsChanged = false;
+  goals.forEach(g => {
+    if (Array.isArray(g.linkedLearningCourses)){
+      const cleaned = g.linkedLearningCourses.filter(k => LEARNING_COURSES[k]);
+      if (cleaned.length !== g.linkedLearningCourses.length){ g.linkedLearningCourses = cleaned; goalsChanged = true; }
+    }
+    if (g.walletId && !walletIds.has(g.walletId)){ g.walletId = null; goalsChanged = true; }
+    if (Array.isArray(g.dependsOn)){
+      const cleanedDeps = g.dependsOn.filter(id => goalIds.has(id) && id !== g.id);
+      if (cleanedDeps.length !== g.dependsOn.length){ g.dependsOn = cleanedDeps; goalsChanged = true; }
+    }
+  });
+  if (goalsChanged){ persistGoals(); fixes.push('Chan Objektif envalid (Kou Aprantisaj, Wallet, oswa Depandans) netwaye.'); }
+
+  // 5) Aksyon Finansye annatant/pare ki pwente sou Objektif/Abitid/Wallet ki pa egziste ankò
+  const habitIds = new Set(habits.map(h => h.id));
+  let actionsChanged = false;
+  pendingGoalFinancialActions.forEach(a => {
+    if ((a.status === 'pending' || a.status === 'ready') &&
+        (!goalIds.has(a.goalId) || !habitIds.has(a.habitId) || !walletIds.has(a.walletId))){
+      a.status = 'failed'; a.failedAt = new Date().toISOString(); a.failReason = 'orphaned-reference';
+      actionsChanged = true;
+    }
+  });
+  if (actionsChanged){ persistPendingGoalFinancialActions(); fixes.push('Aksyon Finansye annatant ki pwente sou done efase make anile.'); }
+
+  return { fixCount: fixes.length, fixes };
+}
+
+function runGoalSyncScenarioTests(){
+  // Snapshot done REYÈL yo ak fonksyon efè-bò-kote yo, pou nou ka restore yo
+  // egzakteman apre, kèlkeswa sa k pase pandan senaryo yo.
+  const realGoals = goals, realHabits = habits, realWallets = wallets, realTx = tx,
+        realProjects = projects, realEvents = events, realLearning = learning,
+        realPendingActions = pendingGoalFinancialActions;
+  const realSaveLS = saveLS, realSecureSave = secureSave, realLifeEngineRefresh = lifeEngineRefresh;
+
+  // Izole tout efè bò kote pandan tès la: pa gen ekriti disk, pa gen
+  // rafrechisman lajè (Achievements/Mission/Notifikasyon/etc.) ki deklanche
+  // pandan senaryo sandbox yo ap jwe.
+  saveLS = function(){ return true; };
+  secureSave = async function(){ return true; };
+  lifeEngineRefresh = function(){};
+
+  const results = [];
+  try {
+    // ---- SENARYO 1 : Abitid Sere konplete → Pwogrè Objektif ajou → Aksyon Finansye kreye ----
+    (function scenario1(){
+      const steps = [];
+      const walletId = 'test-wallet-1', goalId = 'test-goal-1', habitId = 'test-habit-1';
+      wallets = [{ id: walletId, name:'Test Wallet', type:'cash', currency:'HTG', balance:5000 }];
+      tx = [];
+      const g = {
+        id: goalId, title:'Test — Objektif Sere', type:'personal', category:'personal', priority:'medium',
+        status:'in-progress', autoStatus:true, progress:0, milestones:[],
+        links:{habitIds:[],financeIds:[],calendarIds:[],learningIds:[],projectIds:[]},
+        linkedHabitIds:[habitId], linkedLearningCourses:[], dependsOn:[], dependencyCompletedSnapshot:{},
+        isFinancial:true, estimatedValue:1000, currentSavings:0, walletId:null, notes:'',
+        habitContributions:{ [habitId]: { amount:100, unit:'HTG', walletId, processedDates:[] } },
+        createdAt:new Date().toISOString(), habitProgressHistory:[]
+      };
+      goals = [g];
+      habits = [{ id: habitId, name:'Test Abitid Sere', goalId, completions:[todayISO()], frequency:'daily' }];
+
+      steps.push({ label:'Kondisyon inisyal (0% pwogrè, 0 sere)', pass: goalMilestoneProgress(g) === 0 });
+
+      if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(goalId, habitId, 'habit-completed');
+      if (typeof refreshGoalHabitContributionTotals === 'function') refreshGoalHabitContributionTotals(goalId);
+      const cfg = g.habitContributions[habitId];
+      if (typeof recordGoalFinancialContributionHistory === 'function') recordGoalFinancialContributionHistory(goalId, habitId, Number(cfg.amount), cfg.unit);
+      const action = typeof createPendingGoalFinancialAction === 'function' ? createPendingGoalFinancialAction(goalId, habitId, cfg.walletId, Number(cfg.amount)) : null;
+      let txCreated = null;
+      if (action && typeof validateGoalFinancialAction === 'function' && validateGoalFinancialAction(action)){
+        txCreated = typeof executeGoalFinancialAction === 'function' ? executeGoalFinancialAction(action) : null;
+      }
+
+      steps.push({ label:'Sere Deja Objektif ajou (100 HTG)', pass: g.currentSavings === 100 });
+      steps.push({ label:'Pwogrè Objektif reflete Sere a (10%)', pass: goalMilestoneProgress(g) === 10 });
+      steps.push({ label:'Tranzaksyon Finance kreye e lye ak Objektif la', pass: !!txCreated && tx.length === 1 && tx[0].goalId === goalId });
+
+      results.push({ key:'scenario1', title:'Abitid Sere → Pwogrè Objektif → Aksyon Finansye', steps, pass: steps.every(s => s.pass) });
+    })();
+
+    // ---- SENARYO 2 : Leson Aprantisaj konplete → Pwogrè Aprantisaj ajou → Pwogrè Objektif ajou ----
+    (function scenario2(){
+      const steps = [];
+      const goalId = 'test-goal-2';
+      const courseKey = Object.keys(LEARNING_COURSES)[0];
+      const g = {
+        id: goalId, title:'Test — Objektif Aprantisaj', type:'personal', category:'personal', priority:'medium',
+        status:'in-progress', autoStatus:true, progress:0, milestones:[],
+        links:{habitIds:[],financeIds:[],calendarIds:[],learningIds:[],projectIds:[]},
+        linkedHabitIds:[], linkedLearningCourses:[courseKey], dependsOn:[], dependencyCompletedSnapshot:{},
+        isFinancial:false, estimatedValue:null, currentSavings:null, walletId:null, notes:'',
+        createdAt:new Date().toISOString(), habitProgressHistory:[]
+      };
+      goals = [g];
+      const allKeys = (typeof lcAllLessons === 'function' ? lcAllLessons(courseKey) : []).map(l => lcLessonKey(courseKey, l.id));
+      learning = Object.assign({}, realLearning, { completed: allKeys });
+
+      steps.push({ label:'Kondisyon inisyal (0% pwogrè)', pass: goalMilestoneProgress(g) === 0 });
+
+      if (typeof syncAllGoalsLearningProgress === 'function') syncAllGoalsLearningProgress();
+
+      steps.push({ label:'Pwogrè Aprantisaj kalkile (100%)', pass: computeGoalLearningProgress(goalId) === 100 });
+      steps.push({ label:'Pwogrè Objektif ajou otomatikman e make Konplete', pass: goalMilestoneProgress(g) === 100 && g.status === 'completed' });
+
+      results.push({ key:'scenario2', title:'Leson Konplete → Pwogrè Aprantisaj → Pwogrè Objektif', steps, pass: steps.every(s => s.pass) });
+    })();
+
+    // ---- SENARYO 3 : Objektif konplete → Estati Pwojè ajou → Achievement pare pou deblokaj ----
+    (function scenario3(){
+      const steps = [];
+      const goalId = 'test-goal-3', projectId = 'test-project-3';
+      const g = {
+        id: goalId, title:'Test — Objektif Pwojè', type:'personal', category:'personal', priority:'medium',
+        status:'in-progress', autoStatus:false, progress:0,
+        milestones:[{ id:'m1', text:'Etap 1', done:false, contribution:null }],
+        links:{habitIds:[],financeIds:[],calendarIds:[],learningIds:[],projectIds:[]},
+        linkedHabitIds:[], linkedLearningCourses:[], dependsOn:[], dependencyCompletedSnapshot:{},
+        isFinancial:false, estimatedValue:null, currentSavings:null, walletId:null, notes:'',
+        createdAt:new Date().toISOString(), habitProgressHistory:[]
+      };
+      goals = [g];
+      const p = { id: projectId, name:'Test Pwojè', status:'idea', goalId };
+      projects = [p];
+
+      steps.push({ label:'Kondisyon inisyal (Pwojè "idea")', pass: p.status === 'idea' });
+
+      g.milestones[0].done = true;
+      steps.push({ label:'Objektif rive 100% (Etap konplete)', pass: goalMilestoneProgress(g) === 100 });
+
+      g.status = 'completed';
+      const projectChanged = typeof syncProjectStatusFromGoal === 'function' ? syncProjectStatusFromGoal(p) : false;
+      steps.push({ label:'Estati Pwojè ajou otomatikman (completed)', pass: projectChanged && p.status === 'completed' });
+
+      const achData = typeof buildGoalAchievementData === 'function' ? buildGoalAchievementData() : [];
+      const projectAch = achData.find(a => a.id === 'ga6');
+      steps.push({ label:'Achievement "Objektif + Pwojè" pare pou deblokaj', pass: !!projectAch && projectAch.progress >= 1 });
+
+      results.push({ key:'scenario3', title:'Objektif Konplete → Estati Pwojè → Achievement', steps, pass: steps.every(s => s.pass) });
+    })();
+  } catch(e) {
+    results.push({ key:'error', title:'Erè pandan tès la', steps:[{ label:String((e && e.message) || e), pass:false }], pass:false });
+  } finally {
+    // Restore ABSOLIMAN tout eta a jan l te ye a AVAN tès la, kèlkeswa rezilta a.
+    goals = realGoals; habits = realHabits; wallets = realWallets; tx = realTx;
+    projects = realProjects; events = realEvents; learning = realLearning;
+    pendingGoalFinancialActions = realPendingActions;
+    saveLS = realSaveLS; secureSave = realSecureSave; lifeEngineRefresh = realLifeEngineRefresh;
+    // Yon sèl rafrechisman REYÈL (ak done reyèl yo restore) pou asire enèfas
+    // la pa gen okenn ranyon vizyèl tanporè ki soti nan sandbox tès la.
+    lifeEngineRefresh();
+  }
+  return results;
+}
+
+// ---- Rapò tèks lizib ki konbine odit + tès senaryo yo (itilize pa bouton "Verifye Sinkwonizasyon" nan Paramèt) ----
+function buildGoalSyncReviewReport(){
+  const audit = auditAndRepairGoalConnections();
+  const scenarios = runGoalSyncScenarioTests();
+  const lines = [];
+  lines.push('═══ ODIT KONEKSYON OBJEKTIF (done reyèl) ═══');
+  lines.push(audit.fixCount ? audit.fixes.map(f => '✓ ' + f).join('\n') : '✓ Pa gen referans kase jwenn — tout koneksyon anfòm.');
+  lines.push('');
+  lines.push('═══ TÈS 3 SENARYO EGZANP (sandbox — done reyèl pa touche) ═══');
+  scenarios.forEach(sc => {
+    lines.push(`${sc.pass ? '✅' : '❌'} Senaryo: ${sc.title}`);
+    sc.steps.forEach(s => lines.push(`   ${s.pass ? '✓' : '✗'} ${s.label}`));
+  });
+  const allPass = scenarios.every(sc => sc.pass);
+  lines.push('');
+  lines.push(allPass
+    ? '🎉 Tout 3 senaryo yo pase — sinkwonizasyon Objektif ap fonksyone kòrèkteman.'
+    : '⚠️ Gen omwen yon senaryo ki echwe — verifye detay anwo a.');
+  return lines.join('\n');
+}
+
+document.getElementById('runGoalSyncReviewBtn')?.addEventListener('click', () => {
+  const box = document.getElementById('goalSyncReviewResult');
+  if (!box) return;
+  box.hidden = false;
+  box.textContent = 'Ap verifye...';
+  setTimeout(() => {
+    try {
+      box.textContent = buildGoalSyncReviewReport();
+      showToast('Verifikasyon Sinkwonizasyon Objektif fini ✓');
+    } catch(e){
+      box.textContent = 'Erè pandan verifikasyon an: ' + ((e && e.message) || e);
+    }
+  }, 30);
+});
 
 // ==========================================
 // SECURITY & OFFLINE SYSTEM — App Lock, Auto-Lock, Recovery, Backup
