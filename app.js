@@ -733,6 +733,53 @@ function renderGoalLearningProgressPreview(){
   document.getElementById('goalLearningProgressPct').textContent = pct + '%';
 }
 
+// ==========================================
+// GOAL <-> LEARNING — kontribisyon konfime (Pati 31/50)
+// Lekti sèl. Sous verite se learning.completed/courseProgress() (Pati 8/50),
+// pa gen okenn nouvo chan sou Learning, pa gen mòd manyèl pou modifye pwogrè.
+// "Tan Etid Estime" itilize menm konvansyon ki deja egziste nan kòd la
+// (lessonLog.length * konstant, wè lign ~2926 ak ~5247) — se yon estimasyon
+// derive dirèkteman soti nan kantite leson KONFIME konplete, pa yon envansyon.
+// ==========================================
+function renderGoalLearningContribution(){
+  const wrap = document.getElementById('goalLearningContributionList');
+  if (!wrap) return;
+  if (!editingGoalId){ wrap.innerHTML = ''; return; }
+  const g = goals.find(x => x.id === editingGoalId);
+  const keys = g && Array.isArray(g.linkedLearningCourses) ? g.linkedLearningCourses.filter(k => LEARNING_COURSES[k]) : [];
+  if (!g || !keys.length){
+    wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen Kou Aprantisaj lye ak Objektif sa a.</span>';
+    return;
+  }
+  const MIN_PER_LESSON = 5; // estimasyon, menm lojik ak konvansyon egzistan an
+  let totalDone = 0, totalLessons = 0;
+  const rows = keys.map(key => {
+    const course = LEARNING_COURSES[key];
+    const p = courseProgress(key);
+    totalDone += p.done; totalLessons += p.total;
+    return `<div class="milestone-row" style="justify-content:space-between;">
+      <span><b>${escapeHtml(course.title)}</b></span>
+      <span class="pill" style="background:var(--blue-soft);color:var(--blue);">${p.done}/${p.total} leson · ${p.pct}%</span>
+    </div>`;
+  }).join('');
+  const studyDays = (learning.studyDates || []).length;
+  const estMinutes = totalDone * MIN_PER_LESSON;
+  const contributionPct = keys.length ? Math.round(keys.reduce((s,k) => s + courseProgress(k).pct, 0) / keys.length) : 0;
+  wrap.innerHTML = rows + `
+    <div class="milestone-row" style="justify-content:space-between;">
+      <span>Jou Etid (tout Aprantisaj)</span>
+      <span class="pill" style="background:var(--surface-2);color:var(--text-dim);">${studyDays}</span>
+    </div>
+    <div class="milestone-row" style="justify-content:space-between;">
+      <span>Tan Etid Estime</span>
+      <span class="pill" style="background:var(--surface-2);color:var(--text-dim);">${estMinutes} min</span>
+    </div>
+    <div class="milestone-row" style="justify-content:space-between;border-top:1px solid var(--border);margin-top:4px;padding-top:8px;">
+      <b>Kontribisyon nan Objektif</b>
+      <b style="color:var(--blue);">${contributionPct}%</b>
+    </div>`;
+}
+
 // "Kreye Abitid Aprantisaj apati Objektif la" — kreye YON Abitid pou chak
 // Kou lye ki poko gen Abitid (evite dupliyata: verifye `learningCourseKey`
 // + `goalId` anvan kreyasyon), lye l ak Objektif la (h.goalId, menm chan ak
@@ -857,6 +904,28 @@ function persistPlans(){ secureSave(LS.plans, plans); refreshDashboardInternetWi
 function persistDataUsageLogs(){ saveLS(LS.dataUsageLogs, dataUsageLogs); }
 function persistDataUsageApps(){ saveLS(LS.dataUsageApps, dataUsageApps); }
 function persistProjects(){ saveLS(LS.projects, projects); }
+
+// ==========================================
+// GOAL <-> PROJECT — konneksyon lyen envès (Pati 32/50)
+// Yon Project ka lye ak YON SÈL Goal (p.goalId). g.links.projectIds pa
+// touche (se yon lòt sistèm, lyen jeneral). Sous verite pwogrè se
+// g.progress; p.status swiv li otomatikman — pa gen mòd manyèl pou
+// bat sync la pandan p.goalId aktif.
+// ==========================================
+function syncProjectStatusFromGoal(p){
+  if (!p || !p.goalId) return false;
+  const g = goals.find(x => x.id === p.goalId);
+  if (!g) return false;
+  const pct = g.progress || 0;
+  const newStatus = pct >= 100 ? 'completed' : pct >= 51 ? 'testing' : pct >= 1 ? 'in-progress' : 'idea';
+  if (p.status !== newStatus){ p.status = newStatus; return true; }
+  return false;
+}
+function syncAllProjectStatusesFromGoals(){
+  let changed = false;
+  projects.forEach(p => { if (syncProjectStatusFromGoal(p)) changed = true; });
+  if (changed) persistProjects();
+}
 function persistNoteFolders(){ secureSave(LS.noteFolders, noteFolders); }
 function persistNotes(){ secureSave(LS.notes, notes); }
 function persistJournal(){ secureSave(LS.journal, journal); refreshDashboardJournalWidget(); }
@@ -4267,6 +4336,7 @@ function buildProjectCard(p){
   const progress = computeProjectProgress(p);
   const doneCount = (p.tasks||[]).filter(t=>t.done).length;
   const overdue = p.deadline && new Date(p.deadline) < new Date() && p.status !== 'completed';
+  const linkedGoal = p.goalId ? goals.find(g => g.id === p.goalId) : null;
   el.innerHTML = `
     <div class="tc-title">${escapeHtml(p.name)}</div>
     ${p.description ? `<div class="tc-sub">${escapeHtml(p.description).slice(0,70)}</div>` : ''}
@@ -4275,6 +4345,7 @@ function buildProjectCard(p){
       ${(p.tasks||[]).length ? `<span class="pill" style="background:var(--surface);color:var(--text-dim);"><i data-lucide="list-checks" style="width:10px;height:10px;"></i> ${doneCount}/${p.tasks.length}</span>` : ''}
       ${p.deadline ? `<span class="pill" style="background:${overdue?'var(--red-soft)':'var(--surface)'};color:${overdue?'var(--red)':'var(--text-dim)'};">${p.deadline}</span>` : ''}
       ${(p.files||[]).length ? `<span class="tc-files"><i data-lucide="paperclip" style="width:11px;height:11px;"></i>${p.files.length}</span>` : ''}
+      ${linkedGoal ? `<span class="pill" style="background:var(--blue-soft);color:var(--blue);"><i data-lucide="target" style="width:10px;height:10px;"></i> ${escapeHtml(linkedGoal.name)} · ${linkedGoal.progress||0}%</span>` : ''}
     </div>
   `;
   el.addEventListener('click', () => openProjectModal(p.id));
@@ -4283,6 +4354,7 @@ function buildProjectCard(p){
 }
 
 function renderProjects(){
+  syncAllProjectStatusesFromGoals();
   const board = document.getElementById('projectBoard');
   board.innerHTML = '';
   const list = getFilteredSortedProjects();
@@ -4376,12 +4448,20 @@ document.getElementById('projectFileInput').addEventListener('change', e => {
 function openProjectModal(id){
   editingProjectId = id || null;
   const p = id ? projects.find(x => x.id === id) : null;
+  if (p) syncProjectStatusFromGoal(p);
   document.getElementById('projectModalTitle').textContent = p ? 'Modifye Pwojè' : 'Nouvo Pwojè';
   document.getElementById('projectName').value = p?.name || '';
   document.getElementById('projectDesc').value = p?.description || '';
   document.getElementById('projectStatus').value = p?.status || 'idea';
   document.getElementById('projectDeadline').value = p?.deadline || '';
   document.getElementById('projectNotes').value = p?.notes || '';
+  const goalSelect = document.getElementById('projectGoalSelect');
+  if (goalSelect){
+    goalSelect.innerHTML = '<option value="">Okenn Objektif</option>' +
+      goals.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    goalSelect.value = p?.goalId || '';
+  }
+  renderProjectLinkedGoalInfo(p);
   document.getElementById('deleteProjectBtn').hidden = !p;
   projectTaskDraft = p?.tasks ? p.tasks.map(t => ({...t})) : [];
   projectFileDraft = p?.files ? p.files.map(f => ({...f})) : [];
@@ -4389,11 +4469,38 @@ function openProjectModal(id){
   renderProjectFileDraft();
   document.getElementById('projectModalOverlay').classList.add('open');
 }
+
+// Afiche Goal konekte a: pwogrè, estati kouran, eta konpletman (Pati 32/50).
+// Lekti sèl — statistik yo soti dirèkteman nan Goal la, pa gen chan doub.
+function renderProjectLinkedGoalInfo(p){
+  const wrap = document.getElementById('projectLinkedGoalInfo');
+  if (!wrap) return;
+  const goalId = document.getElementById('projectGoalSelect')?.value || (p?.goalId || '');
+  const g = goalId ? goals.find(x => x.id === goalId) : null;
+  if (!g){ wrap.hidden = true; wrap.innerHTML = ''; return; }
+  const pct = g.progress || 0;
+  wrap.hidden = false;
+  wrap.innerHTML = `
+    <div class="milestone-row" style="justify-content:space-between;">
+      <span>Objektif Konekte</span><b>${escapeHtml(g.name)}</b>
+    </div>
+    <div class="milestone-row" style="justify-content:space-between;">
+      <span>Pwogrè Objektif</span><b style="color:var(--blue);">${pct}%</b>
+    </div>
+    <div class="milestone-row" style="justify-content:space-between;">
+      <span>Estati Objektif</span><span class="pill" style="background:var(--surface-2);color:var(--text-dim);">${GOAL_STATUS[g.status]||g.status||''}</span>
+    </div>
+    <div class="milestone-row" style="justify-content:space-between;">
+      <span>Eta Konpletman</span><span class="pill" style="background:${pct>=100?'var(--green-soft)':'var(--surface-2)'};color:${pct>=100?'var(--green)':'var(--text-dim)'};">${pct>=100?'Konplete':'An Kou'}</span>
+    </div>`;
+}
+document.getElementById('projectGoalSelect')?.addEventListener('change', () => renderProjectLinkedGoalInfo(editingProjectId ? projects.find(x=>x.id===editingProjectId) : null));
 function closeProjectModal(){ document.getElementById('projectModalOverlay').classList.remove('open'); editingProjectId = null; }
 
 document.getElementById('saveProjectBtn').addEventListener('click', () => {
   const name = document.getElementById('projectName').value.trim();
   if (!name){ showToast('Mete yon non pou pwojè a'); return; }
+  const goalId = document.getElementById('projectGoalSelect')?.value || null;
   const data = {
     name,
     description: document.getElementById('projectDesc').value.trim(),
@@ -4402,13 +4509,18 @@ document.getElementById('saveProjectBtn').addEventListener('click', () => {
     notes: document.getElementById('projectNotes').value.trim(),
     tasks: projectTaskDraft.filter(t => t.text.trim()),
     files: projectFileDraft,
+    goalId,
   };
+  let savedProject;
   if (editingProjectId){
     const p = projects.find(x => x.id === editingProjectId);
     Object.assign(p, data);
+    savedProject = p;
   } else {
-    projects.push({ id: uid(), createdAt: new Date().toISOString(), ...data });
+    savedProject = { id: uid(), createdAt: new Date().toISOString(), ...data };
+    projects.push(savedProject);
   }
+  syncProjectStatusFromGoal(savedProject);
   persistProjects();
   closeProjectModal();
   renderProjects();
@@ -5338,6 +5450,7 @@ function openGoalModal(id){
   renderMilestoneDraft();
   renderGoalLinksGrid();
   if (typeof renderGoalLearningLinksList === 'function') renderGoalLearningLinksList();
+  if (typeof renderGoalLearningContribution === 'function') renderGoalLearningContribution();
   document.getElementById('deleteGoalBtn').hidden = !g;
   document.getElementById('goalModalOverlay').classList.add('open');
   if (window.lucide) lucide.createIcons();
