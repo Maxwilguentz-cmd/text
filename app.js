@@ -13,8 +13,10 @@ const STATUSES = [
   {key:'archived', label:'Achive'},
 ];
 const PRIORITY = {low:'Ba', medium:'Mwayen', high:'Wo', urgent:'Ijan'};
-// Modilè — ajoute yon kle isit si ou bezwen nouvo kategori/estati Goal
-const GOAL_CATEGORY = {personal:'Pèsonèl', finance:'Finans', learning:'Aprantisaj', health:'Sante', career:'Karyè', projects:'Pwojè', custom:'Pèsonalize'};
+// Pati 1/4: Redesign Kategori Objektif — chak Objektif dwe gen YON SÈL
+// "Kategori Prensipal" (pa gen plizyè kategori posib, e Kategori
+// Pèsonalize/Custom retire nèt). 6 kategori fiks yo se sa yo.
+const GOAL_CATEGORY = {personal:'Pèsonèl', finance:'Finans', learning:'Aprantisaj', health:'Sante', career:'Karyè', business:'Biznis'};
 // Pati 41/50: 3 nouvo estati otomatik ajoute (almost-complete, delayed, failed).
 // 'paused' ak 'archived' rete la kòm chwa MANYÈL sèlman (otomatik la pa janm chwazi yo).
 const GOAL_STATUS = {'not-started':'Poko kòmanse', 'in-progress':'An kou', 'almost-complete':'Prèske Fini', completed:'Konplete', delayed:'An Reta', failed:'Echwe', paused:'Sispann', archived:'Achive'};
@@ -394,6 +396,11 @@ if (!loadLS(LS.waterMigratedV2, false)){
 function normalizeGoals(arr){
   return (arr||[]).map(g => {
     if (!g.category) g.category = 'personal';
+    // Pati 1/4: kategori 'projects' ak 'custom' retire (yo pa nan lis fiks
+    // la ankò) — nou migre ansyen Objektif ki te gen valè sa yo (done ki
+    // deja sove yo rete konpatib, nou jis mete yo nan pi bon kategori fiks
+    // ki disponib kounye a, san touche okenn lòt chan/kalkil).
+    if (!GOAL_CATEGORY[g.category]) g.category = (g.category === 'projects') ? 'business' : 'personal';
     if (!g.status){
       const pct = goalMilestoneProgress ? goalMilestoneProgress(g) : (g.progress||0);
       g.status = pct >= 100 ? 'completed' : (pct > 0 ? 'in-progress' : 'not-started');
