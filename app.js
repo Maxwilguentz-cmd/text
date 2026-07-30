@@ -745,9 +745,9 @@ function renderGoalLearningLinksList(){
   }));
   const createBtn = document.getElementById('goalCreateLearningHabitsBtn');
   if (createBtn) createBtn.hidden = !goalLearningDraft.length;
-  const progressInput = document.getElementById('goalProgress');
-  if (progressInput) progressInput.disabled = goalLearningDraft.length > 0;
   renderGoalLearningProgressPreview();
+  if (typeof renderGoalProgressPreview === 'function') renderGoalProgressPreview();
+  if (typeof renderGoalAutoStatusPreview === 'function') renderGoalAutoStatusPreview();
   if (window.lucide) lucide.createIcons();
 }
 
@@ -6389,10 +6389,13 @@ let goalLinksDraft = { habitIds:[], financeIds:[], calendarIds:[], learningIds:[
 
 (function initGoalSelects(){
   const catSel = document.getElementById('goalCategory');
-  const statSel = document.getElementById('goalStatus');
   catSel.innerHTML = Object.entries(GOAL_CATEGORY).map(([k,v]) => `<option value="${k}">${v}</option>`).join('');
-  statSel.innerHTML = Object.entries(GOAL_STATUS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('');
 })();
+
+// Estati Objektif la (nan modal la) se otomatik san mank kounye a — pa gen
+// select manyèl ankò. Sèl 2 chwa manyèl ki rete se "Sispann" ak "Achive",
+// kontwole pa goalStatusOverride (null = otomatik).
+let goalStatusOverride = null;
 
 function renderGoalLinksGrid(){
   const grid = document.getElementById('goalLinksGrid');
@@ -6421,20 +6424,17 @@ function renderMilestoneDraft(){
   }
   goalMilestoneDraft.forEach((m, idx) => {
     const row = document.createElement('div');
-    row.className = 'milestone-row' + (m.done ? ' done' : '');
-    row.style.flexDirection = 'column';
-    row.style.alignItems = 'stretch';
-    row.style.gap = '4px';
+    row.className = 'milestone-card' + (m.done ? ' done' : '');
+    // Lòd afichaj mande: Tit anvan → Pèz (%) anba l → Deskripsyon menm jan → Dat menm jan.
     row.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;">
+      <div class="ms-top">
         <input type="checkbox" ${m.done?'checked':''} data-idx="${idx}" class="msDone">
-        <span style="flex:1;">${escapeHtml(m.text)}</span>
-        ${m.contribution != null ? `<span class="pill" style="background:var(--blue-soft);color:var(--blue);font-size:11px;">${m.contribution}%</span>` : ''}
-        <i data-lucide="x" class="msRemove" data-idx="${idx}" style="width:13px;height:13px;cursor:pointer;color:var(--text-faint);"></i>
+        <span class="ms-title">${escapeHtml(m.text)}</span>
+        <i data-lucide="x" class="msRemove" data-idx="${idx}"></i>
       </div>
-      ${(m.description || m.targetDate) ? `<div style="font-size:11px;color:var(--text-faint);padding-left:22px;">
-        ${m.description ? escapeHtml(m.description) : ''}${m.description && m.targetDate ? ' · ' : ''}${m.targetDate ? 'Dat Sib: ' + m.targetDate : ''}
-      </div>` : ''}
+      ${m.contribution != null ? `<span class="ms-weight">Pèz: ${m.contribution}%</span>` : ''}
+      ${m.description ? `<div class="ms-desc">${escapeHtml(m.description)}</div>` : ''}
+      ${m.targetDate ? `<div class="ms-date"><i data-lucide="calendar" style="width:11px;height:11px;"></i> Dat Sib: ${m.targetDate}</div>` : ''}
     `;
     wrap.appendChild(row);
   });
@@ -6488,12 +6488,35 @@ function computeGoalDeadlineTracking(g){
   else status = 'Deyè';
   return { start, target, daysRemaining, timePct, progressPct, status };
 }
+// Sèl sous verite pou Pwogrè fòm nan (modal Objektif) — pa gen chan manyèl
+// ankò, valè a kalkile otomatikman apati (an lòd priyorite): Kou Aprantisaj
+// lye > Milestones (pèz) > Objektif Finansye (Sere/Kou) > valè ki deja
+// anrejistre pou Objektif la (pw. mete ajou pa Abitid lye — Pati 21/50).
+function computeGoalDraftProgress(){
+  if (goalLearningDraft && goalLearningDraft.length){
+    const validCourses = goalLearningDraft.filter(k => LEARNING_COURSES[k]);
+    if (validCourses.length){
+      const total = validCourses.reduce((s,k) => s + courseProgress(k).pct, 0);
+      return Math.round(total / validCourses.length);
+    }
+  }
+  const existing = editingGoalId ? goals.find(x => x.id === editingGoalId) : null;
+  const draft = {
+    milestones: goalMilestoneDraft,
+    isFinancial: document.getElementById('goalIsFinancial').checked,
+    estimatedValue: document.getElementById('goalEstimatedValue').value ? parseFloat(document.getElementById('goalEstimatedValue').value) : null,
+    currentSavings: document.getElementById('goalCurrentSavings').value ? parseFloat(document.getElementById('goalCurrentSavings').value) : null,
+    progress: existing ? (existing.progress || 0) : 0,
+  };
+  return goalMilestoneProgress(draft);
+}
+
 function renderGoalDeadlineTracking(){
   const row = document.getElementById('goalDeadlineTrackingRow');
   if (!row) return;
   const g = editingGoalId ? goals.find(x => x.id === editingGoalId) : null;
   const deadlineVal = document.getElementById('goalDeadline').value;
-  const draft = g ? { ...g, deadline: deadlineVal } : { createdAt: todayISO(), deadline: deadlineVal, progress: parseInt(document.getElementById('goalProgress').value)||0 };
+  const draft = g ? { ...g, deadline: deadlineVal } : { createdAt: todayISO(), deadline: deadlineVal, progress: computeGoalDraftProgress() };
   const info = computeGoalDeadlineTracking(draft);
   if (!info){ row.hidden = true; row.innerHTML = ''; return; }
   row.hidden = false;
@@ -6513,7 +6536,6 @@ function renderGoalDeadlineTracking(){
     </div>`;
 }
 document.getElementById('goalDeadline').addEventListener('change', renderGoalDeadlineTracking);
-document.getElementById('goalProgress').addEventListener('input', renderGoalDeadlineTracking);
 
 // ==========================================
 // GOAL — ESTATI OTOMATIK (Pati 41/50)
@@ -6582,7 +6604,7 @@ function buildGoalDraftForAutoStatus(){
   return {
     createdAt: g ? g.createdAt : todayISO(),
     deadline: document.getElementById('goalDeadline').value,
-    progress: parseInt(document.getElementById('goalProgress').value) || 0,
+    progress: computeGoalDraftProgress(),
     milestones: goalMilestoneDraft,
     isFinancial: document.getElementById('goalIsFinancial').checked,
     currentSavings: document.getElementById('goalCurrentSavings').value ? parseFloat(document.getElementById('goalCurrentSavings').value) : null,
@@ -6590,32 +6612,55 @@ function buildGoalDraftForAutoStatus(){
   };
 }
 
-// Rafrechi apèsi Estati Otomatik la nan modal la: si kaz la koche, kalkile
-// epi afiche rezilta a nan <select id="goalStatus"> (dezaktive pou moun pa
-// eseye modifye l pandan otomatik la aktif); si l dekoche, redonnen kontwòl
-// manyèl la nan moun nan (menm konpòtman ak anvan Pati 41).
-function renderGoalAutoStatusPreview(){
-  const checkbox = document.getElementById('goalAutoStatus');
-  const statusSel = document.getElementById('goalStatus');
-  const badge = document.getElementById('goalAutoStatusBadge');
-  if (!checkbox || !statusSel) return;
-  if (checkbox.checked){
-    const draft = buildGoalDraftForAutoStatus();
-    const auto = computeAutoGoalStatus(draft);
-    statusSel.value = auto;
-    statusSel.disabled = true;
-    if (badge) badge.hidden = false;
-  } else {
-    statusSel.disabled = false;
-    if (badge) badge.hidden = true;
+// Rafrechi afichaj Pwogrè (%) la nan modal la — 100% otomatik, san chan
+// manyèl. Endike tou dèske sous kalkil la ye (Aprantisaj / Milestones /
+// Finansye / valè deja anrejistre) pou moun nan konprann dèske sa soti.
+function renderGoalProgressPreview(){
+  const bar = document.getElementById('goalProgressBar');
+  const pctLbl = document.getElementById('goalProgressPct');
+  const srcLbl = document.getElementById('goalProgressSourceLbl');
+  if (!bar || !pctLbl) return;
+  const pct = computeGoalDraftProgress();
+  bar.style.width = pct + '%';
+  pctLbl.textContent = pct + '%';
+  if (srcLbl){
+    let source = 'Baze sou valè aktyèl Objektif la';
+    if (goalLearningDraft && goalLearningDraft.filter(k => LEARNING_COURSES[k]).length) source = 'Baze sou Kou Aprantisaj lye yo';
+    else if (goalMilestoneDraft && goalMilestoneDraft.length) source = 'Baze sou Etap (Milestones) yo';
+    else if (document.getElementById('goalIsFinancial').checked && document.getElementById('goalEstimatedValue').value) source = 'Baze sou Sere/Kou Finansye';
+    srcLbl.textContent = source;
   }
 }
-['goalProgress','goalDeadline','goalCurrentSavings','goalEstimatedValue'].forEach(id => {
+
+// Rafrechi afichaj Estati la nan modal la. Estati toujou OTOMATIK sof si
+// moun nan chwazi "Sispann" oswa "Achive" manyèlman (goalStatusOverride).
+function renderGoalAutoStatusPreview(){
+  const display = document.getElementById('goalStatusDisplay');
+  if (!display) return;
+  renderGoalProgressPreview();
+  const status = goalStatusOverride || computeAutoGoalStatus(buildGoalDraftForAutoStatus());
+  const style = GOAL_STATUS_STYLE[status] || GOAL_STATUS_STYLE['not-started'];
+  display.style.background = style.bg;
+  display.style.color = style.fg;
+  display.textContent = GOAL_STATUS[status] || status;
+  const pauseBtn = document.getElementById('goalPauseToggleBtn');
+  const archiveBtn = document.getElementById('goalArchiveToggleBtn');
+  if (pauseBtn) pauseBtn.classList.toggle('btn-primary', goalStatusOverride === 'paused');
+  if (archiveBtn) archiveBtn.classList.toggle('btn-primary', goalStatusOverride === 'archived');
+}
+['goalDeadline','goalCurrentSavings','goalEstimatedValue'].forEach(id => {
   const el = document.getElementById(id);
   if (el){ el.addEventListener('input', renderGoalAutoStatusPreview); el.addEventListener('change', renderGoalAutoStatusPreview); }
 });
 document.getElementById('goalIsFinancial')?.addEventListener('change', renderGoalAutoStatusPreview);
-document.getElementById('goalAutoStatus')?.addEventListener('change', renderGoalAutoStatusPreview);
+document.getElementById('goalPauseToggleBtn')?.addEventListener('click', () => {
+  goalStatusOverride = goalStatusOverride === 'paused' ? null : 'paused';
+  renderGoalAutoStatusPreview();
+});
+document.getElementById('goalArchiveToggleBtn')?.addEventListener('click', () => {
+  goalStatusOverride = goalStatusOverride === 'archived' ? null : 'archived';
+  renderGoalAutoStatusPreview();
+});
 // Milestone yo chanje (ajoute/koche/efase) san yon "evènman" inik apa — nou
 // obsève lis la menm jan Pati 2/50 obsève modal Habit la.
 (function initGoalAutoStatusMilestoneObserver(){
@@ -6750,10 +6795,10 @@ function openGoalModal(id){
   document.getElementById('goalType').value = g ? g.type : 'short';
   document.getElementById('goalPriority').value = g ? g.priority : 'medium';
   document.getElementById('goalDeadline').value = g ? (g.deadline || '') : '';
-  document.getElementById('goalProgress').value = g ? (g.progress || 0) : 0;
   document.getElementById('goalCategory').value = g ? (g.category || 'personal') : 'personal';
-  document.getElementById('goalStatus').value = g ? (g.status || 'not-started') : 'not-started';
-  document.getElementById('goalAutoStatus').checked = g ? (g.autoStatus !== false) : true;
+  // Estati toujou otomatik pa default; sèl eksepsyon se si Objektif la te
+  // sove deja kòm 'paused' oswa 'archived' (chwa manyèl sèlman — Pati 41).
+  goalStatusOverride = (g && !g.autoStatus && (g.status === 'paused' || g.status === 'archived')) ? g.status : null;
   document.getElementById('goalEstimatedValue').value = g && g.estimatedValue != null ? g.estimatedValue : '';
   document.getElementById('goalIsFinancial').checked = g ? !!g.isFinancial : false;
   document.getElementById('goalCurrentSavings').value = g && g.currentSavings != null ? g.currentSavings : '';
@@ -6794,10 +6839,10 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
     type: document.getElementById('goalType').value,
     priority: document.getElementById('goalPriority').value,
     deadline: document.getElementById('goalDeadline').value,
-    progress: parseInt(document.getElementById('goalProgress').value) || 0,
+    progress: computeGoalDraftProgress(),
     milestones: goalMilestoneDraft,
     category: document.getElementById('goalCategory').value,
-    status: document.getElementById('goalStatus').value,
+    status: 'not-started', // valè tanporè — ranplase pi ba a
     estimatedValue: document.getElementById('goalEstimatedValue').value ? parseFloat(document.getElementById('goalEstimatedValue').value) : null,
     isFinancial: document.getElementById('goalIsFinancial').checked,
     currentSavings: document.getElementById('goalCurrentSavings').value ? parseFloat(document.getElementById('goalCurrentSavings').value) : null,
@@ -6807,11 +6852,11 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
     links: goalLinksDraft,
     linkedLearningCourses: goalLearningDraft.slice(),
     dependsOn: goalDependencyDraft.slice(),
-    autoStatus: document.getElementById('goalAutoStatus').checked,
+    autoStatus: !goalStatusOverride,
   };
   // Si Objektif la lye ak Kou Aprantisaj, pwogrè a SÈLMAN ka soti nan leson
-  // konplete (courseProgress) — nou ranplase nenpòt valè manyèl moun nan
-  // antre nan chan "Pwogrè (%)" a pou anpeche yon "validasyon fo".
+  // konplete (courseProgress) — nou ranplase nenpòt lòt valè kalkile pou
+  // anpeche yon "validasyon fo".
   if (payload.linkedLearningCourses.length){
     const validCourses = payload.linkedLearningCourses.filter(k => LEARNING_COURSES[k]);
     if (validCourses.length){
@@ -6819,12 +6864,15 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
       payload.progress = Math.round(total / validCourses.length);
     }
   }
-  // Pati 41/50: si Estati Otomatik aktive, kalkile valè final (otorite) la
-  // isit — pa depann sèlman sou apèsi an dirèk la, pou evite yon estati
-  // ki pa ajou si yon chan te chanje san deklanche renderGoalAutoStatusPreview.
+  // Estati: si "Sispann"/"Achive" pa chwazi manyèlman, kalkile valè
+  // otomatik (otorite) la isit — pa depann sèlman sou apèsi an dirèk la,
+  // pou evite yon estati ki pa ajou si yon chan te chanje san deklanche
+  // renderGoalAutoStatusPreview.
   if (payload.autoStatus){
     const createdAtForCalc = editingGoalId ? (goals.find(x=>x.id===editingGoalId)||{}).createdAt : new Date().toISOString();
     payload.status = computeAutoGoalStatus({ ...payload, createdAt: createdAtForCalc });
+  } else {
+    payload.status = goalStatusOverride;
   }
   if (editingGoalId){
     const g = goals.find(x => x.id === editingGoalId);
