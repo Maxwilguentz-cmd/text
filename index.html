@@ -410,6 +410,24 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 .goal-details-section-title{font-size:11.5px;font-weight:700;color:var(--text-dim);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.03em;}
 .goal-details-notes{font-size:12.5px;color:var(--text-dim);line-height:1.6;white-space:pre-wrap;}
 
+/* ---- Goal Details View (Pati 2/3: Modil Konekte / Milestones / Istwa) ---- */
+.goal-details-modules-grid{display:flex;flex-direction:column;gap:8px;}
+.goal-module-card{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border-soft,var(--border));border-radius:12px;cursor:pointer;background:var(--surface-2);transition:border-color .15s;}
+.goal-module-card:hover{border-color:var(--blue);}
+.goal-module-card-ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;}
+.goal-module-card-body{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+.goal-module-card-body b{font-size:12.5px;color:var(--text);}
+.goal-module-card-body span{font-size:11px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.goal-module-card-arrow{width:15px;height:15px;color:var(--text-faint);flex-shrink:0;}
+.milestone-card .ms-status-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;}
+.goal-details-history-list{display:flex;flex-direction:column;gap:2px;}
+.goal-history-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-soft,var(--border));}
+.goal-history-row:last-child{border-bottom:none;}
+.goal-history-ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;}
+.goal-history-body{display:flex;flex-direction:column;gap:2px;}
+.goal-history-body .txt{font-size:12px;color:var(--text);line-height:1.4;}
+.goal-history-body .meta{font-size:10.5px;color:var(--text-faint);}
+
 
 /* ---- Pati 48/50: klate koneksyon + eksplikasyon pwogrè + apèsi aktivite ---- */
 .goal-progress-row .mini-progress span{transition:width .5s cubic-bezier(.4,0,.2,1);}
@@ -2296,6 +2314,15 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div class="goal-details-field"><span class="lbl">Dat Limit</span><span class="val" id="goalDetailsDeadline">—</span></div>
         <div class="goal-details-field"><span class="lbl">Jou Ki Rete</span><span class="val" id="goalDetailsDaysRemaining">—</span></div>
       </div>
+
+      <div class="goal-details-section-title">Modil Konekte</div>
+      <div class="goal-details-modules-grid" id="goalDetailsModulesGrid"></div>
+
+      <div class="goal-details-section-title">Etap (Milestones)</div>
+      <div class="milestone-list" id="goalDetailsMilestonesList"></div>
+
+      <div class="goal-details-section-title">Istwa Objektif</div>
+      <div class="goal-details-history-list" id="goalDetailsHistoryList"></div>
 
       <div class="goal-details-section-title">Nòt</div>
       <div class="goal-details-notes" id="goalDetailsNotes">—</div>
