@@ -7336,15 +7336,45 @@ let pendingGoalIdForNewHabit = null;
   btn.addEventListener('click', () => {
     if (!editingGoalId) return;
     pendingGoalIdForNewHabit = editingGoalId;
+    document.getElementById('goalModalOverlay').classList.remove('open'); // kache Modifye Objektif pandan Nouvo Abitid la parèt
     openHabitModal(null); // itilize fòm kreyasyon Abitid ki egziste deja — pa kreye yon lòt fòm
   });
 })();
 
 // Si moun nan fèmen fòm Abitid la san anrejistre, anile lyen an tann lan
-document.getElementById('closeHabitModal').addEventListener('click', () => { pendingGoalIdForNewHabit = null; });
+document.getElementById('closeHabitModal').addEventListener('click', () => { pendingGoalIdForNewHabit = null; updateHabitGoalSavingsFieldVisibility(); });
 document.getElementById('habitModalOverlay').addEventListener('click', e => {
-  if (e.target.id === 'habitModalOverlay') pendingGoalIdForNewHabit = null;
+  if (e.target.id === 'habitModalOverlay'){ pendingGoalIdForNewHabit = null; updateHabitGoalSavingsFieldVisibility(); }
 });
+
+// ==========================================
+// GOAL <-> HABIT — chan "Epay pou Objektif la" nan fòm Nouvo Abitid (Pati 43/50)
+// Sèlman vizib lè Abitid la ap kreye apati yon Objektif kategori "Finans"
+// (pendingGoalIdForNewHabit + goalCategory === 'finance'). Itilize menm
+// sistèm kontribisyon ki egziste deja (Pati 12/19), pa gen nouvo chan sou
+// Habit la — valè a sove sou goal.habitContributions[habitId].amount.
+// ==========================================
+function updateHabitGoalSavingsFieldVisibility(){
+  const wrap = document.getElementById('habitGoalSavingsWrap');
+  if (!wrap) return;
+  const g = pendingGoalIdForNewHabit ? goals.find(x => x.id === pendingGoalIdForNewHabit) : null;
+  const show = !!(g && g.category === 'finance');
+  wrap.hidden = !show;
+  if (!show){
+    const inp = document.getElementById('habitGoalSavingsAmount');
+    if (inp) inp.value = '';
+  }
+}
+
+(function hookOpenHabitModalForGoalSavingsField(){
+  if (typeof openHabitModal !== 'function') return;
+  const originalOpenHabitModal = openHabitModal;
+  openHabitModal = function(id){
+    const result = originalOpenHabitModal(id);
+    updateHabitGoalSavingsFieldVisibility();
+    return result;
+  };
+})();
 
 // ==========================================
 // GOAL <-> HABIT <-> FINANCE — bouton rapid "Ajoute yon Abitid" (Pati 4/4)
@@ -7390,11 +7420,16 @@ document.getElementById('saveHabitBtn').addEventListener('click', () => {
   const name = document.getElementById('habitName').value.trim();
   if (!name) return; // Habit modil la deja bloke anrejistreman san non — kite lyen an tann pou pwochen eseye
   const goalId = pendingGoalIdForNewHabit;
+  const savingsInput = document.getElementById('habitGoalSavingsAmount');
+  const savingsAmount = savingsInput ? parseFloat(savingsInput.value) : NaN;
   pendingGoalIdForNewHabit = null;
   // Abitid ki fenk kreye a se dènye eleman nan lis la (Habit modil la push li nan menm klik la)
   const habitId = editingHabitId || (habits[habits.length - 1] && habits[habits.length - 1].id);
   if (habitId){
     linkHabitToGoal(goalId, habitId);
+    if (isFinite(savingsAmount) && savingsAmount > 0){
+      setGoalHabitContribution(goalId, habitId, savingsAmount, 'HTG'); // chak fwa abitid la fèt, ajoute nan budje objektif la epi rekalkile pousantaj la
+    }
     if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(goalId, habitId, 'habit-linked');
     if (typeof refreshGoalHabitContributionTotals === 'function') refreshGoalHabitContributionTotals(goalId);
     renderGoals();
@@ -7403,6 +7438,7 @@ document.getElementById('saveHabitBtn').addEventListener('click', () => {
     if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
     showToast('Abitid lye ak objektif la ✓');
   }
+  updateHabitGoalSavingsFieldVisibility(); // kache/reset chan an pou pwochen fwa
 });
 
 // Habit modil la ka modifye/efase yon abitid ki lye — rafrechi lis la pou rete ajou
