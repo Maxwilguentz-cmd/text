@@ -2177,6 +2177,186 @@ function buildGoalStatistics(){
   };
 }
 
+// ==========================================
+// DONE ACHIEVEMENT PA OBJEKTIF (Pati 45/50)
+// PA kreye yon nouvo sistèm Achievement, PA touche ACHIEVEMENT_DEFS,
+// checkAchievements() ni renderAchievementsView() ki egziste deja.
+// GOAL_ACHIEVEMENT_DEFS se yon lis SEPARE, menm fòma ak ACHIEVEMENT_DEFS
+// (id/label/desc/icon/color/progress()/target) + yon chan adisyonèl
+// `relatedGoal()` ki idantifye Objektif spesifik ki lakòz/ki ka lakòz
+// deblokaj la. Pa gen wiring nan `checkAchievements()` — se done pare
+// pou yon fiti entegrasyon.
+// ==========================================
+function firstCreatedGoal(list){
+  const arr = (list || goals).filter(g => g.createdAt);
+  if (!arr.length) return null;
+  return arr.slice().sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
+}
+
+const GOAL_ACHIEVEMENT_DEFS = [
+  { id:'ga1', cat:'goals', label:'Premye Objektif', desc:'Kreye premye Objektif ou', icon:'target', color:'var(--blue)',
+    progress: () => goals.length, target: 1,
+    relatedGoal: () => { const g = firstCreatedGoal(goals); return g ? { id:g.id, title:g.title } : null; } },
+
+  { id:'ga2', cat:'goals', label:'Premye Abitid Lye', desc:'Konekte yon Abitid ak yon Objektif pou premye fwa', icon:'link-2', color:'var(--green)',
+    progress: () => habits.filter(h => h.goalId).length, target: 1,
+    relatedGoal: () => {
+      const h = habits.find(x => x.goalId);
+      if (!h) return null;
+      const g = goals.find(x => x.id === h.goalId);
+      return g ? { id:g.id, title:g.title, habitId:h.id, habitName:h.name } : null;
+    } },
+
+  { id:'ga3', cat:'goals', label:'Premye Objektif Konplete', desc:'Konplete premye Objektif ou', icon:'trophy', color:'var(--orange)',
+    progress: () => goals.filter(g => g.status === 'completed').length, target: 1,
+    relatedGoal: () => { const g = firstCreatedGoal(goals.filter(g => g.status === 'completed')); return g ? { id:g.id, title:g.title } : null; } },
+
+  { id:'ga4', cat:'goals', label:'Premye Objektif Finansye Konplete', desc:'Konplete premye Objektif Finansye ou', icon:'piggy-bank', color:'var(--green)',
+    progress: () => goals.filter(g => g.isFinancial && g.status === 'completed').length, target: 1,
+    relatedGoal: () => { const g = firstCreatedGoal(goals.filter(g => g.isFinancial && g.status === 'completed')); return g ? { id:g.id, title:g.title } : null; } },
+
+  { id:'ga5', cat:'goals', label:'Premye Objektif Aprantisaj Konplete', desc:'Konplete premye Objektif ki lye ak Aprantisaj', icon:'graduation-cap', color:'var(--orange)',
+    progress: () => goals.filter(g => Array.isArray(g.linkedLearningCourses) && g.linkedLearningCourses.length && g.status === 'completed').length, target: 1,
+    relatedGoal: () => {
+      const g = firstCreatedGoal(goals.filter(g => Array.isArray(g.linkedLearningCourses) && g.linkedLearningCourses.length && g.status === 'completed'));
+      return g ? { id:g.id, title:g.title } : null;
+    } },
+
+  { id:'ga6', cat:'goals', label:'Premye Objektif Pwojè Konplete', desc:'Konplete premye Objektif ki lye ak yon Pwojè', icon:'folder-kanban', color:'var(--blue)',
+    progress: () => goals.filter(g => g.status === 'completed' && projects.some(p => p.goalId === g.id)).length, target: 1,
+    relatedGoal: () => {
+      const g = firstCreatedGoal(goals.filter(g => g.status === 'completed' && projects.some(p => p.goalId === g.id)));
+      if (!g) return null;
+      const proj = projects.find(p => p.goalId === g.id);
+      return { id:g.id, title:g.title, projectId: proj ? proj.id : null, projectName: proj ? proj.name : null };
+    } },
+];
+
+// Rezoud yon "snapshot" aktyèl pou tout GOAL_ACHIEVEMENT_DEFS — done sèlman,
+// pa gen okenn efè bò kote (pa persiste, pa afiche toast, pa touche
+// unlockedAchievements). Fòma sòti a swiv egzanp la: label/desc kòm
+// "Condition", progress/target kòm "x/y".
+function buildGoalAchievementData(){
+  return GOAL_ACHIEVEMENT_DEFS.map(a => {
+    const progress = Math.min(a.progress(), a.target);
+    return {
+      id: a.id,
+      label: a.label,
+      condition: a.desc,
+      icon: a.icon,
+      color: a.color,
+      progress,
+      target: a.target,
+      unlocked: progress >= a.target,
+      relatedGoal: a.relatedGoal ? a.relatedGoal() : null
+    };
+  });
+}
+
+// ==========================================
+// MOTÈ SENKWONIZASYON OTOMATIK POU GOAL (Pati 46/50)
+// Yon kouch KONEKSYON ki "koute" chanjman ki gen rapò ak Goal, epi ki
+// PREPARE (san aplike/san modifye) yon pakè mizajou pou chak modil konekte.
+// - PA REEKRI okenn modil ki egziste deja: pou chak modil ki gen deja yon
+//   fonksyon ki "posede" senkwonizasyon reyèl la (ex: syncGoalCalendarEvents
+//   pou Calendar, syncGoalLearningProgress pou Learning), motè a SÈLMAN site
+//   non fonksyon sa a (`ownedBy`) — li pa kopye lojik la.
+// - PA KREYE DONE DOUBLE: pou modil ki deja gen yon fonksyon "read" pi
+//   (goalMilestoneProgress, computeGoalHabitProgress, elt.), motè a rele
+//   fonksyon sa a dirèkteman olye rekalkile menm bagay la yon lòt jan.
+// - Chak modil rete ENDEPANDAN: motè a pa janm modifye `habits`, `tx`,
+//   `events`, `projects`, `budgets` — li sèlman LI epi retounen yon rezime.
+// - Motè a PA otomatikman "wire" nan persistHabits()/persistTx()/elt. ki
+//   egziste deja — se yon estrikti pare, pa yon rekonstriksyon achitekti a.
+// ==========================================
+
+// Chak antre dekri: `owns` = non fonksyon ki reyèlman posede/aplike
+// senkwonizasyon an pou modil sa a (si genyen — null si se yon pakè
+// "done prepare" san okenn efè bò kote), ak `read(g)` = fonksyon ki
+// LI (san modifye) done aktyèl yo pou prepare pakè a.
+const GOAL_SYNC_MODULES = {
+  habits: {
+    owns: null, // pa gen yon sèl fonksyon "apply" — Habit rete pwòp done l, Goal LI sèlman
+    read: g => computeGoalHabitProgress(g.id)
+  },
+  finance: {
+    owns: null,
+    read: g => g.isFinancial ? computeGoalFinanceSyncStatus(g.id) : null
+  },
+  calendar: {
+    owns: 'syncGoalCalendarEvents', // fonksyon sa a deja egziste e li rete responsab aplike chanjman an
+    read: g => ({ hasDeadline: !!g.deadline, deadlineDate: g.deadline || null })
+  },
+  learning: {
+    owns: 'syncGoalLearningProgress',
+    read: g => computeGoalLearningProgress(g.id)
+  },
+  projects: {
+    owns: 'syncProjectStatusFromGoal',
+    read: g => { const p = projects.find(x => x.goalId === g.id); return p ? { id:p.id, name:p.name, status:p.status } : null; }
+  },
+  budget: {
+    // Pa gen fonksyon Budget<->Goal ki egziste ankò — nou SÈLMAN prepare yon
+    // apèsi (pa gen chan nouvo sou `budgets`, pa gen ekriti okenn kote)
+    owns: null,
+    read: g => (g.isFinancial && g.monthlySavingPlan) ? {
+      suggestedMonthlyAmount: Number(g.monthlySavingPlan) || 0,
+      remaining: computeGoalFinancialRemaining(g)
+    } : null
+  },
+  statistics: {
+    owns: null,
+    read: g => buildGoalStatisticsFor(g.id) // Pati 44/50
+  },
+  achievements: {
+    owns: null,
+    read: g => buildGoalAchievementData().filter(a => a.relatedGoal && a.relatedGoal.id === g.id) // Pati 45/50
+  },
+  aiContext: {
+    owns: null,
+    read: g => buildGoalAIContext(g.id) // Pati 43/50
+  }
+};
+
+// ---- Prepare yon pakè mizajou konplè pou YON chanjman sou YON Objektif ----
+// `sourceModule` se non modil ki lakòz chanjman an (ex: 'habits'), jis pou
+// rekò/detekte bouk — motè a pa itilize l pou fè okenn ekriti.
+function prepareGoalSyncUpdate(goalId, sourceModule){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return null;
+  const preparedUpdates = {};
+  Object.keys(GOAL_SYNC_MODULES).forEach(key => {
+    const mod = GOAL_SYNC_MODULES[key];
+    let data = null;
+    try { data = mod.read(g); } catch(e) { data = null; }
+    preparedUpdates[key] = { ownedBy: mod.owns, data };
+  });
+  return {
+    goalId: g.id,
+    goalName: g.title,
+    sourceModule: sourceModule || null,
+    preparedAt: new Date().toISOString(),
+    preparedUpdates
+  };
+}
+
+// ---- Kouch "koute" (pub/sub) — estrikti pou konekte chanjman pi devan ----
+// Rejis obsèvatè: nenpòt pati nan app la ka anrejistre yon callback ki pral
+// resevwa pakè `prepareGoalSyncUpdate(...)` la chak fwa `emitGoalSync` rele.
+// PA gen okenn `persist*` egzistan ki rele `emitGoalSync` kounye a — se yon
+// estrikti pare, konekte l se yon travay pou yon lòt Pati pi presi sou
+// chak sit deklanchman.
+const _goalSyncListeners = [];
+function onGoalSync(callback){
+  if (typeof callback === 'function') _goalSyncListeners.push(callback);
+}
+function emitGoalSync(goalId, sourceModule){
+  const update = prepareGoalSyncUpdate(goalId, sourceModule);
+  if (!update) return null;
+  _goalSyncListeners.forEach(cb => { try { cb(update); } catch(e) { /* yon obsèvatè pa dwe kraze lòt yo */ } });
+  return update;
+}
+
 // ---- AKSYON: fonksyon ki egzekite règ*/persist* ki deja egziste yo apre konfimasyon itilizatè a ----
 function coachRefreshView(viewName){
   const el = document.getElementById('view-' + viewName);
