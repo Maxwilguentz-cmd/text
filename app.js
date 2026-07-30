@@ -385,6 +385,9 @@ function normalizeGoals(arr){
       g.status = pct >= 100 ? 'completed' : (pct > 0 ? 'in-progress' : 'not-started');
     }
     if (g.estimatedValue === undefined) g.estimatedValue = null;
+    if (g.isFinancial === undefined) g.isFinancial = false;
+    if (g.currentSavings === undefined) g.currentSavings = null;
+    if (g.walletId === undefined) g.walletId = null;
     if (g.notes === undefined) g.notes = '';
     if (!g.links) g.links = { habitIds:[], financeIds:[], calendarIds:[], learningIds:[], projectIds:[] };
     else GOAL_LINK_TYPES.forEach(t => { if (!Array.isArray(g.links[t.key])) g.links[t.key] = []; });
@@ -423,6 +426,77 @@ function linkHabitToGoal(goalId, habitId){
   persistHabits();
   return true;
 }
+
+// ==========================================
+// GOAL <-> FINANCE — koneksyon debaz (Pati 16/50)
+// Pa touche Wallet/Finance modil la ankò (sa vin pita) — se sèlman de nouvo
+// chan SOU Goal la: `isFinancial` (mak si se yon Objektif Finansye) ak
+// `currentSavings` (Sere Deja). "Kou" reyitilize chan `estimatedValue` ki
+// egziste deja (pa gen dupliyata) e "Rete" pa janm sove — li toujou KALKILE
+// an dirèk: estimatedValue - currentSavings.
+// ==========================================
+function computeGoalFinancialRemaining(g){
+  if (!g) return 0;
+  const cost = Number(g.estimatedValue) || 0;
+  const saved = Number(g.currentSavings) || 0;
+  return Math.round((cost - saved) * 100) / 100;
+}
+
+// ==========================================
+// GOAL FINANSYE — pousantaj konplete (Pati 17/50)
+// Sèvi ak menm de chan Pati 16 yo (estimatedValue, currentSavings) — pa gen
+// nouvo chan. Pousantaj la limite ant 0 ak 100 (menm si moun nan sere plis
+// pase kou a).
+// ==========================================
+function computeGoalFinancialProgressPct(g){
+  if (!g) return 0;
+  const cost = Number(g.estimatedValue) || 0;
+  const saved = Number(g.currentSavings) || 0;
+  if (cost <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((saved / cost) * 100)));
+}
+
+function updateGoalFinancialFieldsVisibility(){
+  const isFinancial = document.getElementById('goalIsFinancial').checked;
+  document.getElementById('goalFinancialFields').hidden = !isFinancial;
+  document.getElementById('goalFinancialRemainingRow').hidden = !isFinancial;
+  document.getElementById('goalSourceWalletRow').hidden = !isFinancial;
+}
+
+// ==========================================
+// GOAL <-> WALLET — preparasyon koneksyon (Pati 18/50)
+// Sèlman yon REFERANS (goal.walletId) sou yon Wallet ki egziste deja — pa
+// touche `wallets` modil la, pa kreye okenn tranzaksyon, pa deplase lajan.
+// Lis la senpleman li done Wallet ki egziste deja (Kach/Bank/MonCash/elatriye).
+// ==========================================
+function renderGoalSourceWalletOptions(selectedId){
+  const sel = document.getElementById('goalSourceWallet');
+  const current = selectedId || '';
+  sel.innerHTML = '<option value="">— Pa chwazi —</option>' +
+    wallets.map(w => `<option value="${w.id}">${escapeHtml(w.name)} (${WALLET_TYPE_LABELS[w.type] || 'Lòt'})</option>`).join('');
+  sel.value = current;
+}
+
+function renderGoalFinancialRemaining(){
+  const costInput = document.getElementById('goalEstimatedValue');
+  const savedInput = document.getElementById('goalCurrentSavings');
+  document.getElementById('goalCostDisplay').value = costInput.value || '';
+  const draft = {
+    estimatedValue: parseFloat(costInput.value) || 0,
+    currentSavings: parseFloat(savedInput.value) || 0
+  };
+  const remaining = computeGoalFinancialRemaining(draft);
+  const pct = computeGoalFinancialProgressPct(draft);
+  document.getElementById('goalFinancialRemaining').textContent = remaining;
+  document.getElementById('goalFinancialSaved').textContent = draft.currentSavings;
+  document.getElementById('goalFinancialProgressPct').textContent = pct + '%';
+  document.getElementById('goalFinancialProgressBar').style.width = pct + '%';
+}
+
+document.getElementById('goalIsFinancial').addEventListener('change', updateGoalFinancialFieldsVisibility);
+['goalEstimatedValue','goalCurrentSavings'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderGoalFinancialRemaining);
+});
 
 function unlinkHabitFromGoal(goalId, habitId){
   const g = goals.find(x => x.id === goalId);
@@ -4987,6 +5061,11 @@ function openGoalModal(id){
   document.getElementById('goalCategory').value = g ? (g.category || 'personal') : 'personal';
   document.getElementById('goalStatus').value = g ? (g.status || 'not-started') : 'not-started';
   document.getElementById('goalEstimatedValue').value = g && g.estimatedValue != null ? g.estimatedValue : '';
+  document.getElementById('goalIsFinancial').checked = g ? !!g.isFinancial : false;
+  document.getElementById('goalCurrentSavings').value = g && g.currentSavings != null ? g.currentSavings : '';
+  renderGoalSourceWalletOptions(g ? g.walletId : null);
+  updateGoalFinancialFieldsVisibility();
+  renderGoalFinancialRemaining();
   document.getElementById('goalNotes').value = g ? (g.notes || '') : '';
   goalMilestoneDraft = g ? JSON.parse(JSON.stringify(g.milestones || [])) : [];
   goalLinksDraft = g && g.links ? JSON.parse(JSON.stringify(g.links)) : { habitIds:[], financeIds:[], calendarIds:[], learningIds:[], projectIds:[] };
@@ -5014,6 +5093,9 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
     category: document.getElementById('goalCategory').value,
     status: document.getElementById('goalStatus').value,
     estimatedValue: document.getElementById('goalEstimatedValue').value ? parseFloat(document.getElementById('goalEstimatedValue').value) : null,
+    isFinancial: document.getElementById('goalIsFinancial').checked,
+    currentSavings: document.getElementById('goalCurrentSavings').value ? parseFloat(document.getElementById('goalCurrentSavings').value) : null,
+    walletId: document.getElementById('goalSourceWallet').value || null,
     notes: document.getElementById('goalNotes').value.trim(),
     links: goalLinksDraft,
   };
@@ -5214,7 +5296,9 @@ function computeGoalHabitProgress(goalId){
 // ==========================================
 function ensureGoalHabitContribution(g, habitId){
   if (!g.habitContributions || typeof g.habitContributions !== 'object') g.habitContributions = {};
-  if (!g.habitContributions[habitId]) g.habitContributions[habitId] = { amount: 0, unit: '', total: 0 };
+  if (!g.habitContributions[habitId]) g.habitContributions[habitId] = { amount: 0, unit: '', total: 0, walletId: '', processedDates: [] };
+  if (g.habitContributions[habitId].walletId === undefined) g.habitContributions[habitId].walletId = '';
+  if (!Array.isArray(g.habitContributions[habitId].processedDates)) g.habitContributions[habitId].processedDates = [];
   return g.habitContributions[habitId];
 }
 
@@ -5240,6 +5324,67 @@ function setGoalHabitContribution(goalId, habitId, amount, unit){
   cfg.total = computeGoalHabitContributionTotal(goalId, habitId);
   persistGoals();
   return cfg;
+}
+
+// ==========================================
+// GOAL <-> WALLET — sous kòb pou Abitid ki sere (Pati 19/50)
+// Sèlman yon REFERANS (walletId) anrejistre sou konfigirasyon kontribisyon
+// Objektif-Abitid (menm chan Pati 12, pa gen nouvo estrikti/dosye separe) —
+// pa touche `wallets`, pa kreye tranzaksyon, pa deplase lajan.
+// ==========================================
+function setGoalHabitContributionWallet(goalId, habitId, walletId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return null;
+  const cfg = ensureGoalHabitContribution(g, habitId);
+  cfg.walletId = walletId || '';
+  persistGoals();
+  return cfg;
+}
+
+// ==========================================
+// GOAL FINANSYE — règ validasyon anvan nenpòt aksyon lajan (Pati 20/50)
+// Sèlman yon FONKSYON VERIFIKASYON — pa gen okenn transfè, pa touche
+// `wallets`, pa kreye/modifye okenn tranzaksyon Finance. Rezève pou pati k'ap
+// vini yo lè transfè reyèl la ap enplemante; pou kounye a li sèlman itilize
+// (li sèlman) done ki egziste deja: Goal, Habit, Wallet, ak
+// g.habitContributions[habitId].processedDates (Pati 20 — pa gen okenn kòd
+// ki ekri ladan l ankò, se yon prepataisyon anti-doublon pou pita).
+// Retounen { valid, errors } — `errors` se yon lis mesaj lizib an Kreyòl.
+// ==========================================
+function validateGoalSavingAction(goalId, habitId, walletId, amount, dateISO){
+  const errors = [];
+  const date = dateISO || todayISO();
+
+  const g = goals.find(x => x.id === goalId);
+  if (!g) errors.push('Objektif la pa egziste.');
+
+  const h = habits.find(x => x.id === habitId);
+  if (!h) errors.push('Abitid la pa egziste.');
+  else if (h.goalId !== goalId) errors.push('Abitid la pa lye ak Objektif sa a.');
+
+  const w = wallets.find(x => x.id === walletId);
+  if (!w) errors.push('Wallet la pa egziste.');
+
+  const amt = Number(amount);
+  if (!isFinite(amt) || amt <= 0) errors.push('Kantite lajan an pa valab.');
+
+  if (h){
+    const doneOnDate = Array.isArray(h.completions) && h.completions.includes(date);
+    if (!doneOnDate) errors.push('Abitid la poko fèt pou dat sa a — pa ka fè okenn transfè apati yon Abitid ki pa konplete.');
+  }
+
+  if (w && isFinite(amt) && amt > 0){
+    const currentBalance = walletBalance(w);
+    if (currentBalance - amt < 0) errors.push('Transfè sa a ta kreye yon balans negatif sou Wallet la — anile.');
+  }
+
+  if (g && h){
+    const cfg = g.habitContributions && g.habitContributions[h.id];
+    const alreadyProcessed = cfg && Array.isArray(cfg.processedDates) && cfg.processedDates.includes(date);
+    if (alreadyProcessed) errors.push('Kontribisyon pou dat sa a deja trete pou koneksyon sa a — pa ka fèt de fwa.');
+  }
+
+  return { valid: errors.length === 0, errors };
 }
 
 // Rekalkile tout total kontribisyon yo pou yon Objektif (deklanche apre
@@ -5302,6 +5447,39 @@ function renderGoalContributionSummary(){
     </div>`;
 }
 
+// ==========================================
+// GOAL <-> HABIT — afiche "poukisa" chak Abitid lye (Pati 15/50)
+// Vizyalizasyon POU LEKTI SÈLMAN — pa gen okenn nouvo chan sou Goal ni sou
+// Habit. "Kontribisyon" an afiche isit la soti nan menm done ki egziste deja:
+// si yon inite/kontribisyon konfigire pou koneksyon an (Pati 12), nou itilize
+// li; sinon nou tonbe sou h.category (chan ki egziste deja sou Habit la) kòm
+// rezon kontribisyon an. Pa gen dosye separe, pa gen dupliyata.
+// ==========================================
+function renderGoalHabitWhyLinked(){
+  const wrap = document.getElementById('goalHabitWhyLinkedList');
+  if (!wrap) return;
+  if (!editingGoalId){ wrap.innerHTML = ''; return; }
+  const g = goals.find(x => x.id === editingGoalId);
+  const linked = getHabitsForGoal(editingGoalId);
+  if (!g || !linked.length){
+    wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen abitid lye.</span>';
+    return;
+  }
+  wrap.innerHTML = linked.map(h => {
+    const cfg = g.habitContributions && g.habitContributions[h.id];
+    const contribType = (cfg && cfg.unit && cfg.unit.trim()) ? cfg.unit.trim()
+      : (h.category && h.category.trim() ? h.category.trim() : 'Kontribisyon jeneral');
+    return `<div class="milestone-row" style="flex-direction:column;align-items:stretch;gap:2px;">
+      <span style="font-size:11px;color:var(--text-faint);">Objektif:</span>
+      <span><b>${escapeHtml(g.name)}</b></span>
+      <span style="font-size:11px;color:var(--text-faint);margin-top:4px;">Abitid Lye:</span>
+      <span>${escapeHtml(h.name)}</span>
+      <span style="font-size:11px;color:var(--text-faint);margin-top:4px;">Kontribisyon:</span>
+      <span class="tag" style="background:var(--blue-soft);color:var(--blue);width:fit-content;">${escapeHtml(contribType)}</span>
+    </div>`;
+  }).join('');
+}
+
 function renderGoalLinkedHabitsList(){
   const wrap = document.getElementById('goalLinkedHabitsList');
   const countLbl = document.getElementById('goalLinkedHabitsCount');
@@ -5333,6 +5511,18 @@ function renderGoalLinkedHabitsList(){
     const contribAmount = contribCfg ? contribCfg.amount : '';
     const contribUnit = contribCfg ? contribCfg.unit : '';
     const contribTotal = contribCfg ? contribCfg.total : 0;
+    const contribWalletId = contribCfg ? (contribCfg.walletId || '') : '';
+    const contribWallet = contribWalletId ? wallets.find(w => w.id === contribWalletId) : null;
+    const walletOptions = goalObj && goalObj.isFinancial
+      ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text-dim);margin-top:2px;">
+          <span>Sous Kòb (sere):</span>
+          <select class="field goalHabitContribWallet" data-habit-id="${h.id}" style="width:140px;padding:2px 6px;font-size:11px;">
+            <option value="">— Pa chwazi —</option>
+            ${wallets.map(w => `<option value="${w.id}" ${w.id === contribWalletId ? 'selected' : ''}>${escapeHtml(w.name)}</option>`).join('')}
+          </select>
+          ${contribWallet ? `<span class="tag" style="background:var(--surface-2);color:var(--text-dim);" title="Wallet ki prepare pou sere kontribisyon sa a">${escapeHtml(contribWallet.name)}</span>` : ''}
+        </div>`
+      : '';
     return `<div class="milestone-row" style="flex-direction:column;align-items:stretch;gap:6px;" data-habit-id="${h.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span><b>${escapeHtml(h.name)}</b>
@@ -5348,6 +5538,7 @@ function renderGoalLinkedHabitsList(){
         <input type="text" class="field goalHabitContribUnit" data-habit-id="${h.id}" value="${escapeHtml(contribUnit)}" placeholder="inite (Pw. HTG)" style="width:100px;padding:2px 6px;font-size:11px;">
         ${contribCfg && contribCfg.amount > 0 ? `<span class="tag" style="background:var(--green-soft);color:var(--green);" title="Total kimilatif kontribisyon abitid sa a bay objektif la">Total: ${contribTotal}${contribUnit ? ' ' + escapeHtml(contribUnit) : ''}</span>` : ''}
       </div>
+      ${walletOptions}
     </div>`;
   }).join('');
   wrap.querySelectorAll('.goalUnlinkHabit').forEach(ic => ic.addEventListener('click', e => {
@@ -5374,8 +5565,18 @@ function renderGoalLinkedHabitsList(){
     inp.addEventListener('change', applyContribChange);
     inp.addEventListener('click', e => e.stopPropagation());
   });
+  wrap.querySelectorAll('.goalHabitContribWallet').forEach(sel => {
+    sel.addEventListener('change', e => {
+      e.stopPropagation();
+      const habitId = e.currentTarget.dataset.habitId;
+      setGoalHabitContributionWallet(editingGoalId, habitId, e.currentTarget.value);
+      renderGoalLinkedHabitsList();
+    });
+    sel.addEventListener('click', e => e.stopPropagation());
+  });
   if (window.lucide) lucide.createIcons();
   if (typeof renderGoalContributionSummary === 'function') renderGoalContributionSummary();
+  if (typeof renderGoalHabitWhyLinked === 'function') renderGoalHabitWhyLinked();
 }
 
 // Lè yon abitid make fèt/pa fèt jodi a, kontribisyon ak pwogrè a ka chanje —
