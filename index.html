@@ -2209,6 +2209,30 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div><label>Dat Limit <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="date" id="goalDeadline"></div>
         <div><label>Valè Estime <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="number" id="goalEstimatedValue" placeholder="Pw. 50000"></div>
       </div>
+      <div class="goal-finance-section">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;"><input type="checkbox" id="goalIsFinancial" style="width:auto;"> Sa se yon Objektif Finansye</label>
+        <div id="goalFinancialFields" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;" hidden>
+          <div><label>Kou (Cost) <span style="color:var(--text-faint);font-weight:400;">(= Valè Estime)</span></label><input type="number" id="goalCostDisplay" disabled placeholder="0"></div>
+          <div><label>Sere Deja (Saved)</label><input type="number" id="goalCurrentSavings" placeholder="Pw. 3000"></div>
+        </div>
+        <div id="goalSourceWalletRow" style="margin-top:8px;" hidden>
+          <label>Sous Kòb (Source Wallet) <span style="color:var(--text-faint);font-weight:400;">(referans sèlman — pa deplase lajan)</span></label>
+          <select class="field" id="goalSourceWallet">
+            <option value="">— Pa chwazi —</option>
+          </select>
+        </div>
+        <div id="goalFinancialRemainingRow" style="margin-top:8px;" hidden>
+          <label style="display:block;margin-bottom:6px;">Pwogrè Finansye <span style="color:var(--text-faint);font-weight:400;">(otomatik)</span></label>
+          <div class="goal-progress-row" style="margin-bottom:6px;">
+            <div class="mini-progress"><span id="goalFinancialProgressBar" style="width:0%;background:var(--green);"></span></div>
+            <b id="goalFinancialProgressPct">0%</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span style="color:var(--text-faint);">Sere (Saved): <b id="goalFinancialSaved" style="color:var(--text);">0</b></span>
+            <span style="color:var(--text-faint);">Rete (Remaining): <b id="goalFinancialRemaining">0</b></span>
+          </div>
+        </div>
+      </div>
       <div><label>Pwogrè (%)</label><input type="number" id="goalProgress" min="0" max="100" value="0"></div>
       <div>
         <label>Etap (Milestones)</label>
@@ -2223,6 +2247,8 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <b id="goalHabitProgressPct">0%</b>
         </div>
         <div class="milestone-list" id="goalLinkedHabitsList"></div>
+        <label style="margin-top:12px;display:block;">Poukisa Chak Abitid Lye <span style="color:var(--text-faint);font-weight:400;">(Objektif → Abitid → Kontribisyon)</span></label>
+        <div class="milestone-list" id="goalHabitWhyLinkedList"></div>
         <label style="margin-top:12px;display:block;">Rezime Kontribisyon <span style="color:var(--text-faint);font-weight:400;">(total pa Abitid + total jeneral)</span></label>
         <div class="milestone-list" id="goalContributionSummaryList"></div>
         <label style="margin-top:12px;display:block;">Istwa Pwogrè <span style="color:var(--text-faint);font-weight:400;">(evolisyon otomatik)</span></label>
