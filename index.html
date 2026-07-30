@@ -1,43 +1,2674 @@
-# OSLIFE UI/UX IMPROVEMENT — PART 4/4
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSLIFE — Life Center</title>
 
-Continue from Part 3.
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
----
+<style>
+/* ============================================================
+   DESIGN TOKENS — OSLIFE
+============================================================= */
+:root{
+  --bg:#0B0F1A;
+  --bg-elevated:#10141F;
+  --surface:#141926;
+  --surface-2:#1A2030;
+  --border:#232A3B;
+  --border-soft:#1B2130;
+  --text:#EDEFF5;
+  --text-dim:#9AA3B8;
+  --text-faint:#5C6478;
 
-## Goal Details Cleanup
+  --blue:#3E7BFA;
+  --blue-soft:rgba(62,123,250,.14);
+  --green:#2FBF87;
+  --green-soft:rgba(47,191,135,.14);
+  --orange:#F5A623;
+  --orange-soft:rgba(245,166,35,.14);
+  --red:#EF4444;
+  --red-soft:rgba(239,68,68,.14);
 
-Remove every Goal History section from the Goal interface.
+  --gradient-life: linear-gradient(135deg, var(--blue), var(--green));
 
-Do not delete stored history.
+  --radius-lg:20px;
+  --radius-md:14px;
+  --radius-sm:9px;
 
-Only stop displaying it.
+  --font-display:'Sora', sans-serif;
+  --font-body:'Inter', sans-serif;
+  --font-mono:'IBM Plex Mono', monospace;
 
----
+  --shadow-card: 0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -12px rgba(0,0,0,.55);
+}
 
-## Edit Goal Cleanup
+[data-theme="light"]{
+  --bg:#F5F6FA;
+  --bg-elevated:#FFFFFF;
+  --surface:#FFFFFF;
+  --surface-2:#F0F1F6;
+  --border:#E4E6EF;
+  --border-soft:#ECEEF4;
+  --text:#161A24;
+  --text-dim:#5B6376;
+  --text-faint:#8A91A3;
+  --shadow-card: 0 1px 0 rgba(255,255,255,.6) inset, 0 12px 30px -14px rgba(20,24,40,.18);
+}
 
-Remove:
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+html{background:var(--bg);}
+body{
+  font-family:var(--font-body);
+  background:
+    radial-gradient(circle at 12% -10%, rgba(62,123,250,.10), transparent 40%),
+    radial-gradient(circle at 100% 0%, rgba(47,191,135,.07), transparent 35%),
+    var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  transition:background .3s ease, color .3s ease;
+}
+::selection{background:var(--blue-soft);color:var(--text);}
+*{scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:var(--text-faint);}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-corner{background:transparent;}
+a{color:inherit;text-decoration:none;}
+button{font-family:var(--font-body);}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px;}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+}
+.mono{font-family:var(--font-mono);}
 
-* Suspend
-* Archive
+/* ---------------- LAYOUT SHELL ---------------- */
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
 
-The Goal status is already automatic.
+/* ---------------- SIDEBAR ---------------- */
+.sidebar{
+  background:var(--bg-elevated);border-right:1px solid var(--border);padding:22px 14px;
+  display:flex;flex-direction:column;gap:22px;position:sticky;top:0;height:100vh;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px;font-family:var(--font-display);font-weight:800;font-size:17px;letter-spacing:.2px;}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;font-weight:800;font-size:13px;box-shadow:0 4px 14px -4px rgba(62,123,250,.55);}
+.nav-group{display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto;}
+.nav-label{font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--text-faint);padding:14px 12px 6px;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--radius-sm);color:var(--text-dim);font-size:13.5px;font-weight:500;cursor:pointer;position:relative;transition:background .15s ease, color .15s ease;}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;stroke-width:2;}
+.nav-item:hover{background:var(--surface-2);color:var(--text);}
+.nav-item.active{background:var(--blue-soft);color:var(--blue);font-weight:600;}
+.nav-item.active::before{content:'';position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:3px;height:16px;border-radius:3px;background:var(--blue);}
+.sidebar-foot{border-top:1px solid var(--border-soft);padding-top:14px;display:flex;align-items:center;gap:10px;}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient-life);display:grid;place-items:center;font-weight:700;font-size:12.5px;color:#06110C;flex-shrink:0;}
+.sidebar-foot .who{min-width:0;}
+.sidebar-foot .who b{display:block;font-size:12.5px;font-weight:600;}
+.sidebar-foot .who span{font-size:11px;color:var(--text-faint);}
 
----
+/* ---------------- MAIN ---------------- */
+.main{padding:22px 28px 60px;max-width:1180px;}
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px;flex-wrap:wrap;}
+.greeting h1{font-family:var(--font-display);font-size:26px;font-weight:700;letter-spacing:-.2px;}
+.greeting p{color:var(--text-dim);font-size:13px;margin-top:4px;}
+.topbar-actions{display:flex;align-items:center;gap:8px;}
+.icon-btn{width:36px;height:36px;border-radius:11px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);display:grid;place-items:center;cursor:pointer;transition:.15s ease;}
+.icon-btn:hover{color:var(--text);border-color:var(--blue);}
+.icon-btn svg{width:16px;height:16px;}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:11px;border:1px solid transparent;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s ease;}
+.btn svg{width:15px;height:15px;}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 6px 16px -6px rgba(62,123,250,.55);}
+.btn-primary:hover{filter:brightness(1.08);}
+.btn-ghost{background:var(--surface);border-color:var(--border);color:var(--text-dim);}
+.btn-ghost:hover{color:var(--text);border-color:var(--blue);}
 
-Move these fields from Edit Goal to Goal Details:
+/* ---------------- VIEWS ---------------- */
+.view[hidden]{display:none;}
+.view-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.view-head h2{font-family:var(--font-display);font-size:22px;font-weight:700;}
 
-* Start Date
-* Target Date
-* Days Remaining
+/* ---------------- HERO ROW ---------------- */
+.hero-row{display:grid;grid-template-columns:320px 1fr;gap:16px;margin-bottom:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);animation:rise .5s ease both;}
+@keyframes rise{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+.life-score-card{padding:22px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.life-score-card .label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-faint);font-weight:600;align-self:flex-start;}
+.dial-wrap{position:relative;width:150px;height:150px;}
+.dial-wrap svg{transform:rotate(-90deg);}
+.dial-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.dial-center .num{font-family:var(--font-mono);font-size:34px;font-weight:600;line-height:1;}
+.dial-center .sub{font-size:10.5px;color:var(--text-faint);margin-top:4px;letter-spacing:.4px;}
+.cat-grid{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;}
+.cat-row{display:flex;align-items:center;gap:8px;font-size:11.5px;}
+.cat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.cat-row .name{color:var(--text-dim);flex:1;}
+.cat-row .val{font-family:var(--font-mono);font-weight:600;}
+.score-history-row{width:100%;display:flex;gap:10px;}
+.score-history-stat{flex:1;background:var(--surface-2);border-radius:var(--radius-sm);padding:8px 10px;text-align:center;}
+.score-history-stat span{display:block;font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.score-history-stat b{font-family:var(--font-mono);font-size:14px;}
+.score-history-stat b.up{color:var(--green);}
+.score-history-stat b.down{color:var(--red);}
+.score-sparkline{width:100%;height:32px;display:flex;align-items:flex-end;gap:3px;}
+.score-sparkline .bar{flex:1;background:var(--blue-soft);border-radius:3px 3px 0 0;min-height:2px;transition:height .4s ease;}
+.score-sparkline .bar.today{background:var(--gradient-life);}
+.level-title-lbl{font-size:10.5px;color:var(--text-dim);margin-top:2px;}
+.insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.insight-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow-card);}
+.insight-card .cat{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+.insight-card .cat svg{width:14px;height:14px;}
+.insight-card .txt{font-size:13px;line-height:1.55;color:var(--text-dim);}
+.insight-card .txt b{color:var(--text);}
+@media (max-width:720px){.insight-grid{grid-template-columns:1fr;}}
+.unlock-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+.unlock-chip{display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface-2);}
+.unlock-chip.locked{color:var(--text-faint);}
+.unlock-chip.unlocked{color:var(--green);background:var(--green-soft);border-color:transparent;}
+.unlock-chip svg{width:12px;height:12px;}
+.briefing-card{padding:22px;display:flex;flex-direction:column;gap:14px;}
+.briefing-head{display:flex;align-items:center;gap:10px;}
+.briefing-head .ic{width:34px;height:34px;border-radius:10px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;flex-shrink:0;}
+.briefing-head .ic svg{width:17px;height:17px;}
+.briefing-head h3{font-family:var(--font-display);font-size:15px;font-weight:700;}
+.briefing-head span{font-size:11.5px;color:var(--text-faint);}
+.briefing-body{font-size:13.5px;line-height:1.65;color:var(--text-dim);}
+.briefing-body b{color:var(--text);font-weight:600;}
+.briefing-list{display:flex;flex-direction:column;gap:8px;margin-top:2px;}
+.briefing-list .item{display:flex;align-items:center;gap:9px;font-size:13px;}
+.briefing-list .item svg{width:14px;height:14px;flex-shrink:0;}
+.briefing-cta{margin-top:auto;}
 
-The Edit Goal window should only contain editable information.
+/* ---------------- WIDGET GRID ---------------- */
+.section-label{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-faint);font-weight:600;margin:26px 2px 12px;}
+.widget-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;}
+.widget{padding:18px;display:flex;flex-direction:column;gap:12px;}
+.widget-head{display:flex;align-items:center;justify-content:space-between;}
+.widget-head .title{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;}
+.widget-head .title .ic{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;}
+.widget-head .title .ic svg{width:14px;height:14px;}
+.widget-head .more{color:var(--text-faint);cursor:pointer;}
+.widget-head .more svg{width:16px;height:16px;}
+.mini-progress{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;}
+.mini-progress span{display:block;height:100%;border-radius:99px;}
+.task-row{display:flex;align-items:center;gap:9px;font-size:12.5px;}
+.task-row .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.task-row .t{flex:1;color:var(--text-dim);}
+.task-row.done .t{text-decoration:line-through;color:var(--text-faint);}
+.tag{font-size:9.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding:2px 7px;border-radius:99px;}
+.habit-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.habit-cell{aspect-ratio:1;border-radius:6px;background:var(--surface-2);}
+.habit-cell.on{background:var(--green);}
+.stat-line{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-dim);}
+.stat-line b{font-family:var(--font-mono);color:var(--text);font-weight:600;}
+.widget-empty{text-align:center;padding:16px 8px;color:var(--text-faint);font-size:12px;border:1px dashed var(--border);border-radius:var(--radius-sm);}
+.widget.finance .title .ic{background:var(--blue-soft);color:var(--blue);}
+.widget.internet .title .ic{background:var(--orange-soft);color:var(--orange);}
+.widget.goals .title .ic{background:var(--green-soft);color:var(--green);}
+.widget.tasks .title .ic{background:var(--blue-soft);color:var(--blue);}
+.widget.habits .title .ic{background:var(--green-soft);color:var(--green);}
+.widget.learning .title .ic{background:var(--orange-soft);color:var(--orange);}
+.widget.health .title .ic{background:var(--red-soft);color:var(--red);}
+.widget.journal .title .ic{background:var(--green-soft);color:var(--green);}
 
----
+/* ---------------- RECENT ACTIVITY ---------------- */
+.activity-card{padding:20px 22px;}
+.timeline{display:flex;flex-direction:column;}
+.tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:12.5px;}
+.tl-item:last-child{border-bottom:none;}
+.tl-dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;margin-top:1px;}
+.tl-dot svg{width:13px;height:13px;}
+.tl-text b{font-weight:600;}
+.tl-time{color:var(--text-faint);font-size:11px;margin-left:auto;white-space:nowrap;padding-left:10px;}
 
-## Final Rules
+/* ---------------- TOOLBAR / FORM CONTROLS (shared) ---------------- */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:center;}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:8px 12px;flex:1;min-width:180px;}
+.search-box svg{width:15px;height:15px;color:var(--text-faint);flex-shrink:0;}
+.search-box input{border:none;background:transparent;color:var(--text);font-size:13px;outline:none;flex:1;font-family:var(--font-body);}
+select.field, .field-input{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--text);font-size:12.5px;font-family:var(--font-body);}
 
-* Do not break existing functionality.
-* Do not modify backend logic.
-* Keep the existing OSLIFE design language.
-* Improve clarity and reduce unnecessary interface elements.
+/* ---------------- TASKS: KANBAN ---------------- */
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:14px;overflow-x:auto;padding-bottom:10px;}
+.kanban-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;min-height:140px;display:flex;flex-direction:column;gap:10px;}
+.kanban-col-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text-dim);}
+.kanban-col-head .count{font-family:var(--font-mono);background:var(--surface-2);border-radius:99px;padding:1px 8px;font-size:11px;}
+.kanban-list{display:flex;flex-direction:column;gap:8px;min-height:44px;border-radius:10px;transition:.15s;}
+.kanban-list.drag-over{outline:2px dashed var(--blue);outline-offset:2px;background:var(--blue-soft);}
+.task-card{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:10px 11px;font-size:12.5px;cursor:grab;display:flex;flex-direction:column;gap:6px;transition:.15s;}
+.task-card:hover{border-color:var(--blue);}
+.task-card:active{cursor:grabbing;}
+.task-card .tc-title{font-weight:600;color:var(--text);}
+.task-card .tc-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center;}
+.task-card .tc-sub{font-size:10.5px;color:var(--text-faint);display:flex;align-items:center;gap:4px;}
+.pill{font-size:9.5px;font-weight:700;letter-spacing:.2px;text-transform:uppercase;padding:2px 7px;border-radius:99px;}
+.task-stats{display:flex;gap:22px;flex-wrap:wrap;margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 18px;}
+.task-stats .st{display:flex;flex-direction:column;gap:2px;}
+.task-stats .st b{font-family:var(--font-mono);font-size:17px;}
+.task-stats .st span{font-size:10.5px;color:var(--text-faint);}
+
+/* ---------------- MODALS (shared) ---------------- */
+.modal-overlay{position:fixed;inset:0;background:rgba(5,7,12,.6);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:540px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 30px 70px -20px rgba(0,0,0,.6);animation:rise .2s ease both;}
+.modal.narrow{max-width:440px;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-soft);}
+.modal-head h3{font-family:var(--font-display);font-size:16px;}
+.modal-body{padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;}
+.modal-body label{font-size:11px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:-2px;display:block;}
+.modal-body input[type=text],.modal-body input[type=datetime-local],.modal-body input[type=date],.modal-body input[type=time],.modal-body input[type=number],.modal-body textarea,.modal-body select,.modal-body input:not([type]){
+  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 11px;color:var(--text);font-size:13px;font-family:var(--font-body);
+}
+.modal-body input[type=file]{font-size:11.5px;color:var(--text-dim);}
+.modal-body textarea{resize:vertical;min-height:60px;font-family:var(--font-body);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-row.three{grid-template-columns:1fr 1fr 1fr;}
+/* ---- Tx modal: kategori-espesifik chan (Dlo / Bwason) — expand ak animasyon ---- */
+.tx-extra-fields{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s cubic-bezier(.4,0,.2,1);}
+.tx-extra-fields.open{grid-template-rows:1fr;}
+.tx-extra-fields-inner{overflow:hidden;display:flex;flex-direction:column;gap:12px;min-height:0;}
+.tx-extra-fields-inner .hint{font-size:11px;color:var(--text-faint);display:flex;align-items:center;gap:6px;margin-top:-2px;}
+.tx-extra-fields-inner .hint i{width:12px;height:12px;}
+.chk{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-dim);text-transform:none;letter-spacing:0;font-weight:500;}
+.chk input{width:auto;}
+.modal-foot{display:flex;justify-content:space-between;gap:10px;padding:14px 20px;border-top:1px solid var(--border-soft);flex-wrap:wrap;}
+.subtask-row{display:flex;align-items:center;gap:8px;}
+.subtask-row input[type=text]{flex:1;}
+.subtask-row .rm{cursor:pointer;color:var(--text-faint);flex-shrink:0;}
+.subtask-row .rm:hover{color:var(--red);}
+.attach-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);border-radius:99px;padding:4px 10px;font-size:11.5px;margin:2px 4px 2px 0;color:var(--text-dim);}
+.attach-chip .rm{cursor:pointer;}
+.attach-chip .rm:hover{color:var(--red);}
+
+/* ---------------- CALENDAR ---------------- */
+.cal-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+.cal-nav{display:flex;align-items:center;gap:8px;}
+.cal-title{font-family:var(--font-display);font-size:17px;font-weight:700;min-width:170px;}
+.cal-views{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:3px;}
+.cal-view-btn{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;}
+.cal-view-btn.active{background:var(--blue);color:#fff;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cal-dow{font-size:10.5px;color:var(--text-faint);text-align:center;font-weight:600;text-transform:uppercase;padding-bottom:4px;}
+.cal-cell{background:var(--surface);border:1px solid var(--border);border-radius:10px;min-height:92px;padding:7px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:.15s;}
+.cal-cell:hover{border-color:var(--blue);}
+.cal-cell.other{opacity:.35;}
+.cal-cell.today{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset;}
+.cal-cell .dnum{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);}
+.cal-evt{font-size:10px;padding:2px 6px;border-radius:6px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cal-week-cols{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.cal-week-col{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;min-height:170px;cursor:pointer;transition:.15s;}
+.cal-week-col:hover{border-color:var(--blue);}
+.cal-week-col h4{font-size:11px;color:var(--text-faint);text-transform:uppercase;margin-bottom:8px;}
+.cal-day-list, .agenda-list{display:flex;flex-direction:column;gap:8px;}
+.agenda-group{margin-bottom:14px;}
+.agenda-group h4{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.evt-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12.5px;cursor:pointer;transition:.15s;}
+.evt-row:hover{border-color:var(--blue);}
+.evt-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.evt-row .time{font-family:var(--font-mono);color:var(--text-faint);font-size:11px;min-width:44px;flex-shrink:0;}
+.evt-row .info{flex:1;min-width:0;}
+.evt-row .info b{font-weight:600;}
+.evt-row .info span{display:block;color:var(--text-faint);font-size:11px;}
+.ai-suggest{display:flex;align-items:center;gap:12px;background:var(--gradient-life);border-radius:var(--radius-md);padding:14px 16px;color:#06110C;margin-bottom:16px;}
+.ai-suggest svg{width:20px;height:20px;flex-shrink:0;}
+.ai-suggest b{display:block;font-size:13px;}
+.ai-suggest span{font-size:11.5px;opacity:.85;}
+
+/* ---------------- FAB / TOAST ---------------- */
+.fab{position:fixed;bottom:26px;right:26px;width:52px;height:52px;border-radius:50%;background:var(--gradient-life);color:#06110C;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 26px -8px rgba(62,123,250,.6);z-index:60;transition:transform .2s ease;}
+.fab:hover{transform:scale(1.06);}
+.fab svg{width:22px;height:22px;}
+.qa-panel{position:fixed;bottom:90px;right:26px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:0 20px 50px -18px rgba(0,0,0,.6);padding:10px;display:none;flex-direction:column;gap:2px;z-index:60;width:210px;}
+.qa-panel.open{display:flex;animation:rise .18s ease both;}
+.qa-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);font-size:12.5px;color:var(--text-dim);cursor:pointer;}
+.qa-item:hover{background:var(--surface-2);color:var(--text);}
+.qa-item svg{width:15px;height:15px;}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-elevated);border:1px solid var(--border);color:var(--text);padding:11px 18px;border-radius:99px;font-size:12.5px;font-weight:500;box-shadow:0 14px 30px -10px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;z-index:80;display:flex;align-items:center;gap:8px;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast svg{width:15px;height:15px;color:var(--green);}
+
+/* ---------------- HABITS ---------------- */
+.habit-list{display:flex;flex-direction:column;gap:12px;}
+.habit-item{padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+.habit-item-head{display:flex;align-items:center;gap:12px;}
+.habit-item-head .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex-shrink:0;}
+.habit-item-head .ic svg{width:18px;height:18px;}
+.habit-item-head .info{flex:1;min-width:0;}
+.habit-item-head .info b{font-size:13.5px;font-weight:700;display:block;}
+.habit-item-head .info span{font-size:11px;color:var(--text-faint);}
+.habit-check{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);display:grid;place-items:center;cursor:pointer;flex-shrink:0;color:transparent;transition:.15s;}
+.habit-check svg{width:16px;height:16px;}
+.habit-check.checked{background:var(--green);border-color:var(--green);color:#06110C;}
+.habit-stats-row{display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px;color:var(--text-dim);}
+.habit-stats-row b{font-family:var(--font-mono);color:var(--text);}
+.heatmap{display:grid;grid-template-columns:repeat(26,1fr);gap:3px;}
+.heatmap .hcell{aspect-ratio:1;border-radius:3px;background:var(--surface-2);}
+.hb-lvl-0{background:var(--surface-2);}
+.hb-lvl-1{background:color-mix(in srgb, var(--green) 30%, var(--surface-2));}
+.hb-lvl-2{background:color-mix(in srgb, var(--green) 60%, var(--surface-2));}
+.hb-lvl-3{background:var(--green);}
+.xp-bar-wrap{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:16px;}
+.xp-badge{width:40px;height:40px;border-radius:11px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;flex-shrink:0;font-family:var(--font-mono);font-weight:700;font-size:12px;}
+.xp-info{flex:1;}
+.xp-info .row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-dim);margin-bottom:5px;}
+.xp-info .row b{color:var(--text);font-family:var(--font-mono);}
+.badge-chip{display:inline-flex;align-items:center;gap:5px;background:var(--orange-soft);color:var(--orange);border-radius:99px;padding:3px 10px;font-size:10.5px;font-weight:700;}
+
+/* ---------------- GOALS ---------------- */
+.goal-list{display:flex;flex-direction:column;gap:12px;}
+.goal-card{padding:16px 18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;}
+.goal-card:hover{border-color:var(--blue);}
+.goal-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.goal-card-head b{font-size:13.5px;font-weight:700;}
+.goal-desc{font-size:12px;color:var(--text-dim);line-height:1.5;}
+.goal-meta-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-faint);}
+.goal-progress-row{display:flex;align-items:center;gap:10px;}
+.goal-progress-row .mini-progress{flex:1;}
+.goal-progress-row b{font-family:var(--font-mono);font-size:11.5px;color:var(--text);}
+.goal-links-section{display:flex;flex-direction:column;gap:8px;}
+.goal-links-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+@media (max-width:520px){.goal-links-grid{grid-template-columns:1fr;}}
+.goal-link-chip{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12.5px;color:var(--text-dim);transition:border-color .15s,background-color .15s;}
+.goal-link-chip.active{border-color:var(--blue);color:var(--text);background:var(--blue-soft);}
+.goal-link-chip.locked{cursor:default;}
+.goal-link-chip input{accent-color:var(--blue);}
+.goal-link-chip input:disabled{cursor:default;}
+.goal-category-tag{font-size:11px;padding:2px 8px;border-radius:6px;background:var(--surface-2);color:var(--text-dim);}
+.milestone-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);}
+.milestone-row input[type=checkbox]{width:auto;}
+.milestone-row.done span{text-decoration:line-through;color:var(--text-faint);}
+.milestone-list{display:flex;flex-direction:column;gap:6px;margin-top:2px;}
+.milestone-card{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--border-soft,var(--border));border-radius:10px;background:var(--surface-2);}
+.milestone-card .ms-top{display:flex;align-items:center;gap:8px;}
+.milestone-card .ms-top input[type=checkbox]{width:auto;flex-shrink:0;}
+.milestone-card .ms-title{flex:1;font-size:13px;font-weight:700;color:var(--text);line-height:1.4;}
+.milestone-card.done .ms-title{text-decoration:line-through;color:var(--text-faint);}
+.milestone-card .msRemove{flex-shrink:0;cursor:pointer;color:var(--text-faint);width:13px;height:13px;}
+.milestone-card .ms-weight{display:inline-flex;align-self:flex-start;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--blue-soft,rgba(59,130,246,.14));color:var(--blue);}
+.milestone-card .ms-desc{font-size:11.5px;color:var(--text-faint);line-height:1.5;}
+.milestone-card .ms-date{font-size:10.5px;color:var(--text-faint);display:flex;align-items:center;gap:4px;}
+
+/* ---- Goal Details View (Pati 1/3: nouvo navigasyon Objektif) ---- */
+.goal-details-summary{padding:20px;border-radius:16px;background:var(--gradient-life, linear-gradient(135deg,var(--blue),var(--green)));color:#fff;display:flex;flex-direction:column;gap:12px;}
+.goal-details-summary-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.goal-details-summary-title{font-family:var(--font-display);font-size:16px;font-weight:700;line-height:1.3;}
+.goal-details-summary-status{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(255,255,255,.22);color:#fff;white-space:nowrap;}
+.goal-details-summary-track{height:14px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden;}
+.goal-details-summary-track span{display:block;height:100%;border-radius:99px;background:#fff;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.goal-details-summary-bottom{display:flex;align-items:center;justify-content:space-between;font-size:12px;}
+.goal-details-summary-bottom b{font-family:var(--font-mono);font-size:18px;}
+.goal-details-summary-days{display:flex;align-items:center;gap:5px;font-size:11.5px;color:rgba(255,255,255,.9);}
+.goal-details-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+@media (max-width:520px){.goal-details-grid{grid-template-columns:1fr;}}
+.goal-details-field{display:flex;flex-direction:column;gap:3px;}
+.goal-details-field .lbl{font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em;}
+.goal-details-field .val{font-size:13px;color:var(--text);font-weight:600;}
+.goal-details-field .val.mono{font-family:var(--font-mono);}
+.goal-details-section-title{font-size:11.5px;font-weight:700;color:var(--text-dim);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.03em;}
+.goal-details-notes{font-size:12.5px;color:var(--text-dim);line-height:1.6;white-space:pre-wrap;}
+
+/* ---- Goal Details View (Pati 2/3: Modil Konekte / Milestones / Istwa) ---- */
+.goal-details-modules-grid{display:flex;flex-direction:column;gap:8px;}
+.goal-module-card{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border-soft,var(--border));border-radius:12px;cursor:pointer;background:var(--surface-2);transition:border-color .15s;}
+.goal-module-card:hover{border-color:var(--blue);}
+.goal-module-card-ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;}
+.goal-module-card-body{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
+.goal-module-card-body b{font-size:12.5px;color:var(--text);}
+.goal-module-card-body span{font-size:11px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.goal-module-card-arrow{width:15px;height:15px;color:var(--text-faint);flex-shrink:0;}
+.milestone-card .ms-status-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;}
+.goal-details-history-list{display:flex;flex-direction:column;gap:2px;}
+.goal-history-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-soft,var(--border));}
+.goal-history-row:last-child{border-bottom:none;}
+.goal-history-ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;}
+.goal-history-body{display:flex;flex-direction:column;gap:2px;}
+.goal-history-body .txt{font-size:12px;color:var(--text);line-height:1.4;}
+.goal-history-body .meta{font-size:10.5px;color:var(--text-faint);}
+.goal-history-row{transition:background-color .15s ease;border-radius:8px;}
+.goal-history-row:hover{background:var(--surface-2);}
+
+/* ---- Goal Details View (Pati 3/3: aksyon anba paj la + animasyon ak polish final) ---- */
+@keyframes goalDetailsOverlayIn{ from{opacity:0;} to{opacity:1;} }
+@keyframes goalDetailsOverlayOut{ from{opacity:1;} to{opacity:0;} }
+@keyframes goalDetailsModalIn{ from{opacity:0; transform:translateY(14px) scale(.98);} to{opacity:1; transform:translateY(0) scale(1);} }
+@keyframes goalDetailsModalOut{ from{opacity:1; transform:translateY(0) scale(1);} to{opacity:0; transform:translateY(10px) scale(.98);} }
+#goalDetailsModalOverlay.open{animation:goalDetailsOverlayIn .18s ease both;}
+#goalDetailsModalOverlay.closing{animation:goalDetailsOverlayOut .16s ease both;}
+#goalDetailsModalOverlay .goal-details-modal{animation:goalDetailsModalIn .22s cubic-bezier(.2,.8,.3,1) both;}
+#goalDetailsModalOverlay.closing .goal-details-modal{animation:goalDetailsModalOut .16s ease both;}
+@media (prefers-reduced-motion:reduce){
+  #goalDetailsModalOverlay.open,#goalDetailsModalOverlay.closing,
+  #goalDetailsModalOverlay .goal-details-modal{animation:none!important;}
+}
+
+/* Kat (Objektif nan lis la / Modil Konekte) — ti "lift" dous lè sourit la sou li */
+.goal-card,.goal-module-card{transition:border-color .15s ease,transform .15s ease,box-shadow .15s ease;}
+.goal-card:hover,.goal-module-card:hover{transform:translateY(-2px);box-shadow:0 10px 22px -14px rgba(0,0,0,.45);}
+.goal-card:active,.goal-module-card:active{transform:translateY(0);}
+
+/* Bouton — ti "press" lejè lè klike, pou tout bouton nan Detay Objektif la */
+.goal-details-modal .btn,.goal-details-modal .icon-btn{transition:transform .12s ease,filter .15s ease,border-color .15s ease,color .15s ease,background-color .15s ease;}
+.goal-details-modal .btn:active,.goal-details-modal .icon-btn:active{transform:scale(.96);}
+
+/* Rejè aksyon anba Detay Objektif la */
+.goal-details-foot-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;}
+.btn-danger-ghost{color:var(--red);border-color:var(--border);}
+.btn-danger-ghost:hover{border-color:var(--red);background:var(--red-soft);color:var(--red);}
+.btn-danger-ghost.btn-primary{background:var(--red);color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px rgba(239,68,68,.5);}
+.btn-danger-ghost.btn-primary:hover{filter:brightness(1.06);}
+@media (max-width:520px){
+  #goalDetailsModalOverlay .modal-foot{flex-direction:column-reverse;align-items:stretch;}
+  .goal-details-foot-actions{margin-left:0;width:100%;}
+  .goal-details-foot-actions .btn{flex:1;justify-content:center;}
+  #closeGoalDetailsModalBtn{width:100%;justify-content:center;}
+}
+
+/* ---- Pati 48/50: klate koneksyon + eksplikasyon pwogrè + apèsi aktivite ---- */
+.goal-progress-row .mini-progress span{transition:width .5s cubic-bezier(.4,0,.2,1);}
+.goal-connection-badges{display:flex;flex-wrap:wrap;gap:6px;animation:rise .4s ease both;}
+.goal-connection-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--text-dim);border:1px solid var(--border-soft);}
+.goal-progress-explain{font-size:11px;color:var(--text-faint);font-style:italic;line-height:1.4;}
+.goal-activity-preview{display:flex;flex-direction:column;gap:4px;margin-top:2px;}
+.goal-activity-preview-row{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text-faint);animation:rise .35s ease both;}
+.goal-activity-preview-row .dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+
+/* ---------------- LEARNING (Duolingo-style) ---------------- */
+.hearts-row{display:flex;gap:3px;}
+.hearts-row svg{width:15px;height:15px;}
+
+/* Course selector grid */
+.duo-course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
+.duo-course-card{padding:18px 14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;transition:.18s;position:relative;overflow:hidden;}
+.duo-course-card:hover{transform:translateY(-3px);border-color:var(--blue);}
+.duo-course-card .duo-ic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;box-shadow:0 4px 0 rgba(0,0,0,.15);}
+.duo-course-card .duo-ic svg{width:26px;height:26px;}
+.duo-course-card b{font-size:13.5px;}
+.duo-course-card .duo-ring{width:100%;}
+.duo-course-card .duo-ring-bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;}
+.duo-course-card .duo-ring-fill{height:100%;border-radius:99px;transition:width .3s;}
+.duo-course-card .duo-meta{font-size:10.5px;color:var(--text-faint);}
+.duo-course-card .duo-crown{position:absolute;top:8px;right:8px;color:var(--yellow,#ffc107);width:16px;height:16px;}
+
+/* Winding lesson path */
+.duo-unit-banner{border-radius:var(--radius-md);padding:14px 18px;margin:22px 0 26px;color:#fff;box-shadow:0 4px 0 rgba(0,0,0,.15);}
+.duo-unit-banner .duo-unit-label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;opacity:.85;}
+.duo-unit-banner .duo-unit-title{font-size:15px;font-weight:700;margin-top:2px;}
+.duo-path{display:flex;flex-direction:column;align-items:center;gap:0;position:relative;padding:6px 0 10px;}
+.duo-path-node-wrap{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
+.duo-path-node-wrap:not(:last-child)::after{content:'';position:absolute;top:66px;width:6px;height:36px;background:var(--border-soft);border-radius:3px;left:50%;transform:translateX(-50%);}
+.duo-path-node-wrap.pos-l{align-self:flex-start;margin-left:18%;}
+.duo-path-node-wrap.pos-r{align-self:flex-end;margin-right:18%;}
+.duo-path-node-wrap.pos-c{align-self:center;}
+.duo-path-node-wrap:not(:last-child).pos-l::after,
+.duo-path-node-wrap:not(:last-child).pos-r::after{display:none;}
+.duo-node-btn{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;cursor:pointer;border:none;position:relative;box-shadow:0 6px 0 rgba(0,0,0,.18);transition:.12s;background:var(--surface-2);color:var(--text-faint);}
+.duo-node-btn svg{width:24px;height:24px;}
+.duo-node-btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.18);}
+.duo-node-btn.locked{cursor:not-allowed;box-shadow:0 6px 0 rgba(0,0,0,.08);opacity:.55;}
+.duo-node-btn.done{background:var(--green-soft);color:var(--green);box-shadow:0 6px 0 color-mix(in srgb, var(--green) 45%, transparent);}
+.duo-node-btn.current{animation:duoBounce 1.6s ease-in-out infinite;}
+.duo-node-btn .duo-star{position:absolute;top:-9px;right:-4px;width:18px;height:18px;color:var(--yellow,#ffc107);}
+.duo-node-label{font-size:10px;color:var(--text-dim);margin-top:6px;max-width:88px;text-align:center;line-height:1.2;font-weight:600;}
+.duo-node-start-badge{position:absolute;top:-30px;background:var(--text);color:var(--surface);font-size:9.5px;font-weight:700;padding:3px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+.duo-node-start-badge::after{content:'';position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--text);}
+@keyframes duoBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+
+/* Lesson modal (Duolingo-style challenge) */
+.duo-lesson-section{margin-bottom:14px;}
+.duo-lesson-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);font-weight:700;margin-bottom:6px;}
+.duo-lesson-body{font-size:13px;color:var(--text-dim);line-height:1.6;}
+.duo-lesson-code{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;font-family:var(--font-mono);font-size:11.5px;color:var(--text);white-space:pre-wrap;}
+.duo-progress-track{height:14px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin-bottom:16px;}
+.duo-progress-fill{height:100%;border-radius:99px;background:var(--gradient-life);transition:width .3s;}
+.duo-opt{display:flex;align-items:center;gap:8px;padding:12px 14px;border:2px solid var(--border);border-radius:12px;font-size:13px;cursor:pointer;color:var(--text-dim);font-weight:600;transition:.1s;}
+.duo-opt:hover{border-color:var(--blue);transform:translateY(-1px);}
+.duo-opt.correct{border-color:var(--green);background:var(--green-soft);color:var(--green);}
+.duo-opt.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red);}
+.duo-feedback-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-radius:12px;margin-top:14px;font-size:13px;font-weight:700;}
+.duo-feedback-bar.ok{background:var(--green-soft);color:var(--green);}
+.duo-feedback-bar.ko{background:var(--red-soft);color:var(--red);}
+
+/* ---------------- FINANCE ---------------- */
+.wallet-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+.wallet-card{padding:14px 16px;display:flex;flex-direction:column;gap:6px;cursor:pointer;}
+.wallet-card:hover{border-color:var(--blue);}
+.wallet-card .wname{font-size:11.5px;color:var(--text-faint);}
+.wallet-card .wbal{font-family:var(--font-mono);font-size:17px;font-weight:600;}
+.finance-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start;}
+.tx-list{display:flex;flex-direction:column;}
+.tx-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:12.5px;cursor:pointer;}
+.tx-row:last-child{border-bottom:none;}
+.tx-row .tic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;}
+.tx-row .tic svg{width:15px;height:15px;}
+.tx-row .info{flex:1;min-width:0;}
+.tx-row .info b{font-weight:600;display:block;}
+.tx-row .info span{color:var(--text-faint);font-size:11px;}
+.tx-row .amt{font-family:var(--font-mono);font-weight:600;white-space:nowrap;}
+.amt.income{color:var(--green);}
+.amt.expense{color:var(--red);}
+.budget-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.budget-row .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);}
+.budget-row .lbl b{color:var(--text);font-family:var(--font-mono);}
+.chart-card{padding:18px;}
+.chart-card h4{font-family:var(--font-display);font-size:13.5px;margin-bottom:12px;}
+.legend{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+.legend .lg-row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-dim);}
+.legend .lg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.legend .lg-row b{margin-left:auto;font-family:var(--font-mono);color:var(--text);}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:10px;}
+.bar-chart .bc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.bar-chart .bc-fill{width:100%;border-radius:5px 5px 0 0;background:var(--blue);min-height:3px;}
+.bar-chart .bc-lbl{font-size:9.5px;color:var(--text-faint);}
+
+/* ---------------- INTERNET / PLANS ---------------- */
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+.plan-card{padding:16px 18px;display:flex;flex-direction:column;gap:10px;cursor:pointer;}
+.plan-card:hover{border-color:var(--blue);}
+.plan-card-head{display:flex;align-items:center;gap:10px;}
+.plan-card-head .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;background:var(--orange-soft);color:var(--orange);}
+.plan-card-head .ic svg{width:17px;height:17px;}
+.plan-card-head .info{flex:1;min-width:0;}
+.plan-card-head .info b{font-size:13.5px;font-weight:700;display:block;}
+.plan-card-head .info span{font-size:11px;color:var(--text-faint);}
+.plan-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.plan-progress-row{display:flex;flex-direction:column;gap:5px;}
+.plan-progress-row .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);}
+.plan-progress-row .lbl b{font-family:var(--font-mono);color:var(--text);}
+.plan-foot{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--text-faint);}
+.plan-foot b{color:var(--text);font-family:var(--font-mono);}
+.plan-stats{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 18px;}
+.plan-stats .st{display:flex;flex-direction:column;gap:2px;}
+.plan-stats .st b{font-family:var(--font-mono);font-size:17px;}
+.plan-stats .st span{font-size:10.5px;color:var(--text-faint);}
+
+/* ---------------- NOTES ---------------- */
+.notes-layout{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start;}
+.notes-folders{padding:14px;display:flex;flex-direction:column;gap:8px;}
+.nf-head{display:flex;align-items:center;justify-content:space-between;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-faint);font-weight:700;}
+.nf-head svg{width:15px;height:15px;color:var(--text-dim);}
+.folder-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--radius-sm);font-size:12.5px;color:var(--text-dim);cursor:pointer;}
+.folder-item:hover{background:var(--surface-2);color:var(--text);}
+.folder-item.active{background:var(--blue-soft);color:var(--blue);font-weight:600;}
+.folder-item .cnt{margin-left:auto;font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);}
+.notes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;align-content:start;}
+.note-card{padding:14px 16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;position:relative;}
+.note-card:hover{border-color:var(--blue);}
+.note-card .nc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;}
+.note-card .nc-title{font-size:13.5px;font-weight:700;flex:1;min-width:0;}
+.note-card .nc-pin{width:14px;height:14px;color:var(--orange);flex-shrink:0;}
+.note-card .nc-fav{width:14px;height:14px;color:var(--red);flex-shrink:0;}
+.note-card .nc-snippet{font-size:12px;color:var(--text-dim);line-height:1.5;max-height:54px;overflow:hidden;}
+.note-card .nc-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:2px;}
+.note-card .nc-date{font-size:10.5px;color:var(--text-faint);margin-left:auto;}
+.note-card .nc-actions{display:flex;align-items:center;gap:6px;margin-top:2px;position:relative;}
+.note-card .nc-act-btn{width:26px;height:26px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);display:grid;place-items:center;cursor:pointer;transition:.15s ease;flex-shrink:0;}
+.note-card .nc-act-btn:hover{background:var(--surface-2);color:var(--text);border-color:var(--blue);}
+.note-card .nc-act-btn svg{width:13px;height:13px;}
+.note-menu{position:absolute;top:38px;right:14px;min-width:172px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:0 16px 40px -14px rgba(0,0,0,.45);padding:6px;z-index:20;display:none;flex-direction:column;gap:1px;animation:noteMenuIn .14s ease both;}
+.note-menu.open{display:flex;}
+@keyframes noteMenuIn{from{opacity:0;transform:translateY(-4px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+.note-menu .nm-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;font-size:12px;color:var(--text-dim);cursor:pointer;transition:.12s ease;}
+.note-menu .nm-item:hover{background:var(--surface-2);color:var(--text);}
+.note-menu .nm-item svg{width:14px;height:14px;flex-shrink:0;}
+.note-menu .nm-item.danger{color:var(--red);}
+.note-menu .nm-item.danger:hover{background:var(--red-soft);}
+.tag-pill{font-size:9.5px;font-weight:700;background:var(--surface-2);color:var(--text-dim);padding:2px 7px;border-radius:99px;}
+.empty-note{grid-column:1/-1;text-align:center;padding:34px 8px;color:var(--text-faint);font-size:12.5px;border:1px dashed var(--border);border-radius:var(--radius-md);}
+
+.rt-toolbar{display:flex;flex-wrap:wrap;gap:3px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px 10px 0 0;padding:6px;}
+.rt-toolbar button{width:28px;height:28px;border-radius:7px;border:none;background:transparent;color:var(--text-dim);display:grid;place-items:center;cursor:pointer;}
+.rt-toolbar button:hover{background:var(--surface);color:var(--text);}
+.rt-toolbar svg{width:14px;height:14px;}
+.rt-sep{width:1px;background:var(--border);margin:3px 4px;}
+.rt-body{border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:12px 14px;min-height:220px;max-height:400px;overflow-y:auto;font-size:13.5px;line-height:1.65;color:var(--text);}
+.rt-body:focus{outline:none;border-color:var(--blue);}
+.rt-body:empty:before{content:attr(data-placeholder);color:var(--text-faint);}
+.rt-body h2{font-family:var(--font-display);font-size:17px;margin:8px 0;}
+.rt-body blockquote{border-left:3px solid var(--blue);padding-left:12px;color:var(--text-dim);margin:8px 0;}
+.rt-body pre{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--font-mono);font-size:12px;overflow-x:auto;margin:8px 0;white-space:pre-wrap;}
+.rt-body table{border-collapse:collapse;width:100%;margin:8px 0;}
+.rt-body td,.rt-body th{border:1px solid var(--border);padding:6px 8px;font-size:12.5px;}
+.rt-body img{max-width:100%;border-radius:8px;margin:6px 0;}
+.rt-body ul,.rt-body ol{padding-left:20px;margin:6px 0;}
+.modal.wide{max-width:680px;}
+
+/* ---------------- PROJECTS ---------------- */
+.project-card .tc-files{display:flex;align-items:center;gap:4px;}
+
+/* ---------------- JOURNAL ---------------- */
+.journal-layout{display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start;}
+.mood-picker{display:flex;gap:8px;flex-wrap:wrap;}
+.mood-opt{width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface);display:grid;place-items:center;font-size:20px;cursor:pointer;transition:.15s;}
+.mood-opt:hover{border-color:var(--blue);}
+.mood-opt.active{border-color:var(--blue);background:var(--blue-soft);transform:scale(1.06);}
+.journal-list{display:flex;flex-direction:column;gap:12px;}
+.journal-entry{padding:16px 18px;display:flex;gap:14px;cursor:pointer;}
+.journal-entry:hover{border-color:var(--blue);}
+.journal-entry .je-mood{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:20px;flex-shrink:0;}
+.journal-entry .je-body{flex:1;min-width:0;}
+.journal-entry .je-date{font-size:10.5px;color:var(--text-faint);margin-bottom:4px;font-family:var(--font-mono);}
+.journal-entry .je-text{font-size:12.5px;color:var(--text-dim);line-height:1.55;max-height:40px;overflow:hidden;}
+.journal-entry .je-photos{display:flex;gap:6px;margin-top:8px;}
+.journal-entry .je-photos img{width:44px;height:44px;object-fit:cover;border-radius:8px;}
+.journal-entry .je-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.je-photo-input{display:flex;flex-wrap:wrap;gap:8px;}
+.je-photo-thumb{position:relative;width:60px;height:60px;border-radius:9px;overflow:hidden;}
+.je-photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.je-photo-thumb .rm{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:grid;place-items:center;cursor:pointer;}
+.je-photo-thumb .rm svg{width:10px;height:10px;}
+.mood-trend-card{padding:18px;}
+.mood-bar-chart{display:flex;align-items:flex-end;gap:6px;height:90px;}
+.mood-bar-chart .mbc-col{flex:1;display:flex;flex-direction:column;align-items:flex-end;gap:5px;height:100%;justify-content:flex-end;}
+.mood-bar-chart .mbc-fill{width:100%;border-radius:4px 4px 0 0;min-height:3px;}
+.mood-bar-chart .mbc-lbl{font-size:9px;color:var(--text-faint);}
+.ai-insight-card{padding:16px 18px;display:flex;gap:12px;align-items:flex-start;}
+.ai-insight-card .ic{width:32px;height:32px;border-radius:9px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;flex-shrink:0;}
+.ai-insight-card .ic svg{width:16px;height:16px;}
+.ai-insight-card p{font-size:12.5px;line-height:1.6;color:var(--text-dim);}
+.ai-insight-card p b{color:var(--text);}
+.ai-summary-card{padding:16px 18px;display:flex;gap:12px;align-items:flex-start;transition:box-shadow .25s ease;}
+.ai-summary-card .as-status{width:11px;height:11px;border-radius:50%;margin-top:4px;flex-shrink:0;background:var(--text-faint);transition:background-color .3s ease;}
+.ai-summary-card .as-status.pulse{animation:asPulse 1.6s ease-in-out infinite;}
+@keyframes asPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.35);}}
+.ai-summary-card .as-body{flex:1;min-width:0;}
+.ai-summary-card .as-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;transition:color .3s ease;}
+.ai-summary-card p{font-size:12.5px;line-height:1.6;color:var(--text-dim);margin:0;}
+
+/* ---------------- COACH AI ---------------- */
+.coach-agent-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:16px;margin-bottom:22px;}
+.coach-agent-card{padding:18px;display:flex;flex-direction:column;gap:10px;}
+.coach-agent-head{display:flex;align-items:center;gap:10px;}
+.coach-agent-head .ic{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;}
+.coach-agent-head .ic svg{width:16px;height:16px;}
+.coach-agent-head b{font-size:13px;font-weight:700;}
+.coach-agent-card .role{font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;}
+.coach-agent-body{font-size:12px;line-height:1.6;color:var(--text-dim);}
+.coach-agent-body b{color:var(--text);}
+.coach-agent-cta{align-self:flex-start;font-size:11.5px;font-weight:600;color:var(--blue);cursor:pointer;display:flex;align-items:center;gap:5px;}
+.coach-agent-cta svg{width:12px;height:12px;}
+.coach-agent-cta:hover{text-decoration:underline;}
+.coach-chat-card{display:flex;flex-direction:column;height:480px;padding:0;overflow:hidden;}
+.coach-chat-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.coach-chat-head .ic{width:34px;height:34px;border-radius:10px;background:var(--gradient-life);display:grid;place-items:center;color:#06110C;flex-shrink:0;}
+.coach-chat-head .ic svg{width:17px;height:17px;}
+.coach-chat-head h3{font-family:var(--font-display);font-size:15px;font-weight:700;}
+.coach-chat-head span{font-size:11px;color:var(--text-faint);}
+.coach-chat-body{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px;}
+.coach-msg{display:flex;gap:9px;max-width:80%;}
+.coach-msg.user{align-self:flex-end;flex-direction:row-reverse;}
+.coach-msg .avatar{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;background:var(--surface-2);color:var(--text-dim);}
+.coach-msg.ai .avatar{background:var(--gradient-life);color:#06110C;}
+.coach-msg .avatar svg{width:13px;height:13px;}
+.coach-msg .bubble{background:var(--surface-2);border-radius:13px;padding:10px 13px;font-size:12.5px;line-height:1.55;color:var(--text);}
+.coach-msg.user .bubble{background:var(--blue);color:#fff;}
+.coach-msg .bubble b{color:inherit;}
+.coach-chat-suggestions{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 12px;flex-shrink:0;}
+.coach-chip{font-size:11px;padding:6px 11px;border-radius:99px;border:1px solid var(--border);color:var(--text-dim);cursor:pointer;background:var(--surface);transition:.15s ease;}
+.coach-chip:hover{border-color:var(--blue);color:var(--blue);}
+.coach-chat-input{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--border);flex-shrink:0;}
+.coach-chat-input input{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:10px 13px;font-size:12.5px;color:var(--text);}
+.coach-chat-input input:focus{outline:none;border-color:var(--blue);}
+.coach-chat-input button{width:38px;height:38px;border-radius:11px;background:var(--blue);color:#fff;display:grid;place-items:center;flex-shrink:0;cursor:pointer;}
+.coach-chat-input button svg{width:16px;height:16px;}
+@media (max-width: 1100px){ .coach-agent-grid{grid-template-columns:repeat(2, 1fr);} }
+@media (max-width: 640px){ .coach-agent-grid{grid-template-columns:1fr;} .coach-msg{max-width:92%;} }
+.coach-action-card{margin-top:9px;border:1px solid var(--border);border-radius:11px;padding:10px 12px;background:var(--surface);}
+.coach-action-card.done{display:flex;align-items:center;gap:7px;color:var(--green);font-size:12px;background:transparent;border-color:transparent;padding:6px 0 0;}
+.coach-action-card.cancelled{display:flex;align-items:center;gap:7px;color:var(--text-faint);font-size:12px;background:transparent;border-color:transparent;padding:6px 0 0;}
+.coach-action-card.done svg,.coach-action-card.cancelled svg{width:14px;height:14px;flex-shrink:0;}
+.coach-action-summary{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text);margin-bottom:9px;}
+.coach-action-summary svg{width:14px;height:14px;color:var(--blue);flex-shrink:0;}
+.coach-action-btns{display:flex;gap:8px;justify-content:flex-end;}
+.coach-action-btns .btn{padding:6px 12px;font-size:11.5px;}
+.coach-fallback-note{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text-faint);margin-bottom:6px;}
+.coach-fallback-note svg{width:12px;height:12px;flex-shrink:0;}
+
+/* ---------------- HEALTH ---------------- */
+.health-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.health-card{padding:18px;display:flex;flex-direction:column;gap:12px;}
+.health-card-head{display:flex;align-items:center;gap:10px;}
+.health-card-head .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;}
+.health-card-head .ic svg{width:16px;height:16px;}
+.health-card-head b{font-size:13px;font-weight:700;display:block;}
+.health-card-head span{font-size:10.5px;color:var(--text-faint);}
+.water-progress-row{display:flex;align-items:center;gap:10px;}
+.water-progress-row .mini-progress{flex:1;}
+.water-progress-lbl{font-family:var(--font-mono);font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--text);}
+.water-input-row{display:flex;gap:8px;}
+.water-input-row input[type=number]{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;font-family:var(--font-body);}
+.water-input-row input[type=number]:focus{outline:none;border-color:var(--blue);}
+.water-input-row select{flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 8px;color:var(--text);font-size:13px;}
+.water-input-row .btn{padding:10px 14px;flex-shrink:0;}
+.health-card .hint{font-size:11px;color:var(--text-faint);display:flex;align-items:center;gap:6px;line-height:1.4;}
+.health-card .hint i{width:12px;height:12px;flex-shrink:0;}
+@media (max-width:520px){
+  .water-input-row{flex-wrap:wrap;}
+  .water-input-row input[type=number]{flex:1 1 100px;}
+  .water-input-row select{flex:0 0 68px;}
+  .water-input-row .btn{flex:1 1 100%;justify-content:center;}
+}
+.health-stepper{display:flex;align-items:center;gap:12px;}
+.health-stepper button{width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--text);display:grid;place-items:center;cursor:pointer;flex-shrink:0;}
+.health-stepper button:hover{border-color:var(--blue);}
+.health-stepper button svg{width:14px;height:14px;}
+.health-stepper .val{font-family:var(--font-mono);font-size:16px;font-weight:600;min-width:60px;text-align:center;}
+
+/* ---------------- NOTIFICATION CENTER ---------------- */
+.notif-wrap{position:relative;}
+.notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:grid;place-items:center;padding:0 4px;font-family:var(--font-mono);line-height:1;}
+.notif-panel{position:absolute;top:calc(100% + 10px);right:0;width:340px;max-height:440px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 20px 50px -20px rgba(0,0,0,.5);z-index:80;}
+.notif-panel-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border-soft);font-size:13px;position:sticky;top:0;background:var(--surface);}
+.notif-panel-head span{color:var(--blue);font-size:11.5px;cursor:pointer;font-weight:600;}
+.notif-panel-body{display:flex;flex-direction:column;}
+.notif-item{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border-soft);cursor:pointer;transition:.15s ease;}
+.notif-item:last-child{border-bottom:none;}
+.notif-item:hover{background:color-mix(in srgb, var(--blue) 5%, transparent);}
+.notif-item.unread{background:color-mix(in srgb, var(--blue) 7%, transparent);}
+.notif-ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;}
+.notif-ic svg{width:15px;height:15px;}
+.notif-body{flex:1;min-width:0;}
+.notif-body .title{font-size:12.5px;font-weight:600;}
+.notif-body .desc{font-size:11.5px;color:var(--text-dim);margin-top:2px;line-height:1.4;}
+.notif-body .time{font-size:10px;color:var(--text-faint);margin-top:4px;font-family:var(--font-mono);}
+.notif-empty{padding:30px 16px;text-align:center;color:var(--text-faint);font-size:12.5px;}
+
+/* ---------------- APP LOCK / SECURITY ---------------- */
+.lock-overlay{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:500;padding:20px;}
+.lock-overlay.open{display:flex;}
+.lock-card{width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;}
+.lock-logo{width:56px;height:56px;border-radius:16px;background:var(--gradient-life);display:grid;place-items:center;color:#fff;}
+.lock-logo svg{width:26px;height:26px;}
+.lock-card h2{font-family:var(--font-display);font-size:20px;margin:0;}
+.lock-card p{color:var(--text-dim);font-size:13px;margin:0;}
+.lock-pin-dots{display:flex;gap:12px;margin:6px 0;}
+.lock-pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);transition:.15s ease;}
+.lock-pin-dot.filled{background:var(--blue);border-color:var(--blue);}
+.lock-keypad{display:grid;grid-template-columns:repeat(3,64px);gap:12px;margin-top:4px;}
+.lock-key{width:64px;height:64px;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:19px;font-weight:600;cursor:pointer;display:grid;place-items:center;transition:.12s ease;}
+.lock-key:active{transform:scale(.93);background:var(--surface-2);}
+.lock-key.ghost{background:transparent;border-color:transparent;}
+.lock-key svg{width:20px;height:20px;}
+.lock-error{color:var(--red);font-size:12.5px;min-height:16px;}
+.lock-forgot{background:none;border:none;color:var(--blue);font-size:12.5px;font-weight:600;cursor:pointer;margin-top:4px;}
+.lock-recovery-body{width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px;text-align:left;}
+.security-status-card{display:flex;align-items:center;gap:12px;padding:16px;}
+.security-status-ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;}
+.recovery-code-box{font-family:var(--font-mono);font-size:18px;font-weight:700;letter-spacing:2px;text-align:center;padding:16px;border:1px dashed var(--border);border-radius:12px;background:var(--surface-2);}
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px;}
+.settings-row + .settings-row{border-top:1px solid var(--border-soft);}
+.settings-row .lbl{font-size:13px;font-weight:600;}
+.settings-row .sub{font-size:11.5px;color:var(--text-dim);margin-top:2px;font-weight:400;}
+.mode-toggle{display:flex;border:1px solid var(--border);border-radius:11px;overflow:hidden;}
+.mode-toggle button{flex:1;padding:8px 12px;background:var(--surface);border:none;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;}
+.mode-toggle button.active{background:var(--blue);color:#fff;}
+
+/* ---------------- ACHIEVEMENTS ---------------- */
+.ach-section-title{font-family:var(--font-display);font-weight:700;font-size:14px;margin:24px 2px 12px;display:flex;align-items:center;gap:8px;color:var(--text);}
+.ach-section-title .count{font-family:var(--font-mono);font-weight:600;font-size:11px;color:var(--text-faint);}
+.ach-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:14px;}
+.ach-card{padding:16px;display:flex;flex-direction:column;gap:10px;position:relative;transition:opacity .2s ease;}
+.ach-card.locked{opacity:.5;}
+.ach-card.unlocked{box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -14px rgba(47,191,135,.35);}
+.ach-ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;}
+.ach-ic svg{width:20px;height:20px;}
+.ach-card b{font-size:13px;font-weight:700;}
+.ach-card .desc{font-size:11.5px;color:var(--text-dim);}
+.ach-lock{position:absolute;top:14px;right:14px;color:var(--text-faint);}
+.ach-lock svg{width:14px;height:14px;}
+.ach-progress-lbl{font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);}
+
+/* ---------------- DAILY MISSIONS ---------------- */
+.mission-row{display:flex;align-items:center;gap:12px;padding:9px 2px;}
+.mission-row + .mission-row{border-top:1px solid var(--border-soft);}
+.mission-ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex-shrink:0;}
+.mission-ic svg{width:18px;height:18px;}
+.mission-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+.mission-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;}
+.mission-top .mono{font-family:var(--font-mono);color:var(--text-dim);font-size:11px;flex-shrink:0;}
+.mission-foot{display:flex;justify-content:space-between;align-items:center;padding-top:8px;margin-top:2px;border-top:1px solid var(--border-soft);font-size:11.5px;color:var(--text-faint);}
+
+/* ---------------- LIFE TIMELINE (full page) ---------------- */
+.tl-date-label{font-size:11px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;padding:16px 4px 8px;}
+.tl-date-label:first-child{padding-top:2px;}
+
+/* ---------------- STATISTICS ---------------- */
+.stats-tabs{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:10px;}
+.period-tab{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;color:var(--text-dim);cursor:pointer;white-space:nowrap;}
+.period-tab.active{background:var(--blue);color:#fff;}
+.stats-chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.chart-card{padding:16px 18px;}
+.chart-card-head{margin-bottom:10px;}
+.chart-card-head h4{font-size:12.5px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;}
+.chart-card svg{width:100%;height:auto;display:block;}
+.chart-empty{font-size:12px;color:var(--text-faint);padding:24px 0;text-align:center;}
+.stats-cat-card{display:flex;flex-direction:column;gap:8px;}
+.stats-cat-card .head{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;}
+.stats-cat-card .head .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;}
+.stats-cat-card .head .ic svg{width:14px;height:14px;}
+.heatmap-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;overflow-x:auto;padding-bottom:4px;}
+.heatmap-cell{width:11px;height:11px;border-radius:3px;background:var(--surface-2);}
+.heatmap-legend{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-faint);margin-top:8px;justify-content:flex-end;}
+.heatmap-legend .heatmap-cell{width:10px;height:10px;}
+.comparison-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;font-size:12.5px;}
+.comparison-row + .comparison-row{border-top:1px solid var(--border-soft);}
+.comparison-row .lbl{color:var(--text-dim);flex:1;}
+.comparison-row .vals{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-weight:600;}
+.comparison-row .delta{font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;}
+.comparison-row .delta.up{background:var(--green-soft);color:var(--green);}
+.comparison-row .delta.down{background:var(--red-soft);color:var(--red);}
+.comparison-row .delta.flat{background:var(--surface-2);color:var(--text-faint);}
+.report-box{padding:18px 20px;font-size:13px;line-height:1.85;color:var(--text-dim);white-space:pre-wrap;}
+.report-box b{color:var(--text);}
+.export-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ---------------- MOBILE ---------------- */
+@media (max-width: 900px){
+  .shell{grid-template-columns:1fr;}
+  .ach-grid{grid-template-columns:1fr;}
+  .sidebar{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;width:100%;flex-direction:row;padding:8px 10px;gap:0;z-index:70;border-right:none;border-top:1px solid var(--border);justify-content:space-around;}
+  .brand,.sidebar-foot,.nav-label{display:none;}
+  .nav-group{flex-direction:row;justify-content:space-around;flex:1;overflow:visible;}
+  .nav-item{flex-direction:column;gap:3px;padding:6px 8px;font-size:9.5px;}
+  .nav-item.active::before{display:none;}
+  .nav-item span{display:none;}
+  .main{padding:18px 16px 100px;}
+  .hero-row{grid-template-columns:1fr;}
+  .widget-grid{grid-template-columns:1fr;}
+  .kanban{grid-template-columns:1fr;}
+  .cal-week-cols{grid-template-columns:1fr;}
+  .form-row,.form-row.three{grid-template-columns:1fr;}
+  .finance-grid{grid-template-columns:1fr;}
+  .plan-grid{grid-template-columns:1fr;}
+  .notes-layout{grid-template-columns:1fr;}
+  .journal-layout{grid-template-columns:1fr;}
+  .health-grid{grid-template-columns:1fr 1fr;}
+  .stats-chart-row{grid-template-columns:1fr;}
+
+  /* Kache ansyen sidebar-tounen-bottom-nav lan; nou ranplase l ak .mobile-bottom-nav */
+  .sidebar{display:none;}
+  .main{padding-bottom:96px;}
+
+  /* Amelyorasyon jeneral responsive: touch target pi gwo, pa gen zoom iOS sou input */
+  .btn,.icon-btn{min-height:40px;}
+  input,select,textarea.field,.field{font-size:16px !important;}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .topbar{gap:10px;}
+  .greeting h1{font-size:21px;}
+  .card{overflow-wrap:break-word;}
+}
+
+/* ---------------- MOBILE BOTTOM NAV (5 items) ---------------- */
+.mobile-bottom-nav{display:none;}
+@media (max-width:900px){
+  .mobile-bottom-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:75;
+    background:var(--bg-elevated);border-top:1px solid var(--border);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));justify-content:space-around;
+  }
+  .mobile-bottom-nav .nav-item{
+    flex:1;flex-direction:column;gap:3px;padding:6px 4px;font-size:9.5px;
+    border-radius:var(--radius-sm);min-height:48px;justify-content:center;
+  }
+  .mobile-bottom-nav .nav-item.active::before{display:none;}
+}
+
+/* ---------------- "PLIS" BOTTOM SHEET ---------------- */
+.mobile-more-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:85;
+  opacity:0;transition:opacity .2s ease;
+}
+.mobile-more-overlay.open{display:block;opacity:1;}
+.mobile-more-sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:86;background:var(--bg-elevated);
+  border-radius:20px 20px 0 0;border:1px solid var(--border);border-bottom:none;
+  padding:10px 16px calc(18px + env(safe-area-inset-bottom));
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,.24,1);
+  max-height:78vh;overflow-y:auto;box-shadow:0 -10px 30px -10px rgba(0,0,0,.4);
+}
+.mobile-more-sheet.open{transform:translateY(0);}
+.mobile-more-handle{width:36px;height:4px;border-radius:3px;background:var(--border);margin:2px auto 14px;}
+.mobile-more-title{font-family:var(--font-display);font-weight:700;font-size:15px;margin-bottom:14px;}
+.mobile-more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.mobile-more-item{
+  display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 6px;
+  border-radius:var(--radius-md);background:var(--surface);border:1px solid var(--border);
+  color:var(--text-dim);cursor:pointer;min-height:76px;justify-content:center;
+  transition:background .15s ease,color .15s ease;
+}
+.mobile-more-item:active{background:var(--surface-2);}
+.mobile-more-item i{width:20px;height:20px;stroke-width:2;color:var(--blue);}
+.mobile-more-item span{font-size:10.5px;font-weight:500;text-align:center;line-height:1.25;}
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand"><span class="mark">OS</span>OSLIFE</div>
+    <nav class="nav-group" id="navGroup"></nav>
+    <div class="sidebar-foot">
+      <div class="avatar">W</div>
+      <div class="who"><b>Wilguentz</b><span>Pétion-Ville</span></div>
+    </div>
+  </aside>
+
+  <!-- ============ MOBILE BOTTOM NAV (5 items) ============ -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav">
+    <div class="nav-item" data-view="dashboard" title="Dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></div>
+    <div class="nav-item" data-view="tasks" title="Travay"><i data-lucide="check-square"></i><span>Travay</span></div>
+    <div class="nav-item" data-view="coach" title="Coach AI"><i data-lucide="sparkles"></i><span>Coach AI</span></div>
+    <div class="nav-item" data-view="finance" title="Finans"><i data-lucide="wallet"></i><span>Finans</span></div>
+    <div class="nav-item" id="mobileMoreBtn" title="Plis"><i data-lucide="more-horizontal"></i><span>Plis</span></div>
+  </nav>
+
+  <!-- ============ "PLIS" BOTTOM SHEET ============ -->
+  <div class="mobile-more-overlay" id="mobileMoreOverlay"></div>
+  <div class="mobile-more-sheet" id="mobileMoreSheet">
+    <div class="mobile-more-handle"></div>
+    <div class="mobile-more-title">Plis Modil</div>
+    <div class="mobile-more-grid" id="mobileMoreGrid"></div>
+  </div>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <div class="topbar">
+      <div class="greeting">
+        <h1 id="greetingText">Bonjou, Wilguentz 👋</h1>
+        <p id="dateText">Jodi a se ...</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="themeToggle" title="Chanje tèm" aria-label="Chanje tèm"><i data-lucide="moon"></i></button>
+        <div class="notif-wrap" id="notifWrap">
+          <button class="icon-btn" id="notifBellBtn" title="Notifikasyon" aria-label="Notifikasyon">
+            <i data-lucide="bell"></i>
+            <span class="notif-badge" id="notifBadge" hidden>0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel" hidden>
+            <div class="notif-panel-head"><b>Notifikasyon</b><span id="notifMarkAllBtn">Make tout li</span></div>
+            <div class="notif-panel-body" id="notifPanelBody"></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="quickAddTop"><i data-lucide="plus"></i> Aksyon Rapid</button>
+      </div>
+    </div>
+
+    <!-- ================= DASHBOARD VIEW ================= -->
+    <section class="view" id="view-dashboard">
+      <div class="hero-row">
+        <div class="card life-score-card">
+          <span class="label">Life Score</span>
+          <div class="dial-wrap">
+            <svg width="150" height="150" viewBox="0 0 150 150">
+              <circle cx="75" cy="75" r="64" fill="none" stroke="var(--surface-2)" stroke-width="12"/>
+              <circle id="scoreArc" cx="75" cy="75" r="64" fill="none" stroke="url(#lifeGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="402" stroke-dashoffset="402"/>
+              <defs><linearGradient id="lifeGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="var(--blue)"/><stop offset="100%" stop-color="var(--green)"/></linearGradient></defs>
+            </svg>
+            <div class="dial-center"><span class="num" id="scoreNum">0</span><span class="sub">sou 100</span></div>
+          </div>
+          <div class="cat-grid" id="catGrid"></div>
+          <div class="score-history-row">
+            <div class="score-history-stat"><span>Anvan</span><b id="scorePrevNum">–</b></div>
+            <div class="score-history-stat"><span>Amelyorasyon</span><b id="scoreDeltaNum">–</b></div>
+          </div>
+          <div class="score-sparkline" id="scoreSparkline"></div>
+        </div>
+
+        <div class="card briefing-card">
+          <div class="briefing-head">
+            <div class="ic"><i data-lucide="sparkles"></i></div>
+            <div><h3>Rezime AI Jodi a</h3><span id="aiBriefingSub">Prepare pou ou a 6:00 AM</span></div>
+          </div>
+          <p class="briefing-body" id="aiBriefingBody">
+            Ap analize done ou yo...
+          </p>
+          <div class="briefing-list" id="aiBriefingList"></div>
+          <div class="briefing-cta">
+            <button class="btn btn-ghost" id="startLessonBtn"><i data-lucide="book-open"></i> Fè leson JavaScript ou anvan midi</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Misyon Jodi a</div>
+      <div class="card" id="missionsCard" style="padding:16px 18px;display:flex;flex-direction:column;"></div>
+
+      <div class="section-label">Apèsi Jodi a</div>
+      <div class="widget-grid">
+
+        <div class="card widget tasks">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="check-square"></i></span> Travay</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>Total jodi a</span><b>3</b></div>
+        </div>
+
+        <div class="card widget habits">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="flame"></i></span> Abitid</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="habit-grid" id="habitGrid"></div>
+          <div class="stat-line"><span>Streak aktyèl</span><b id="dashHabitStreak">10 jou</b></div>
+        </div>
+
+        <div class="card widget learning" id="dashLearningWidget" style="cursor:pointer;" title="Ale nan Aprantisaj">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="graduation-cap"></i></span> Aprantisaj</div><span class="more"><i data-lucide="chevron-right"></i></span></div>
+          <div class="stat-line"><span id="dashLearnCourseLbl">—</span><b id="dashLearnCoursePct">0%</b></div>
+          <div class="mini-progress"><span id="dashLearnCourseBar" style="width:0%;background:var(--orange)"></span></div>
+          <div class="stat-line"><span>XP jodi a</span><b id="dashLearnXpToday">+0 XP</b></div>
+          <div class="stat-line"><span>Streak aprantisaj</span><b id="dashLearnStreak">0 jou</b></div>
+        </div>
+
+        <div class="card widget finance">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="wallet"></i></span> Finans</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>Balans aktyèl</span><b id="dashFinBalance">12,450 HTG</b></div>
+          <div class="stat-line"><span>Depans mwa a</span><b id="dashFinExpense">3,200 HTG</b></div>
+          <div class="stat-line"><span>Epay</span><b id="dashFinSavings">4,000 HTG</b></div>
+          <div class="mini-progress"><span id="dashFinBudgetBar" style="width:72%;background:var(--blue)"></span></div>
+          <div class="stat-line"><span>Bidjè itilize</span><b id="dashFinBudgetPct">72%</b></div>
+        </div>
+
+        <div class="card widget internet">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="wifi"></i></span> Plan Entènèt</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>Operatè</span><b id="dashNetOperator">—</b></div>
+          <div class="stat-line"><span>Plan</span><b id="dashNetName">—</b></div>
+          <div class="stat-line"><span>Rete</span><b id="dashNetRemaining" style="color:var(--orange)">—</b></div>
+          <div class="mini-progress"><span id="dashNetBar" style="width:0%;background:var(--orange)"></span></div>
+          <button class="btn btn-ghost" id="renewInternetBtn" style="margin-top:4px;justify-content:center;"><i data-lucide="refresh-cw"></i> Renouvle Plan</button>
+        </div>
+
+        <div class="card widget goals">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="target"></i></span> Objektif</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div id="dashGoalsWrap"></div>
+        </div>
+
+        <div class="card widget health">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="heart-pulse"></i></span> Sante</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>Dlo jodi a</span><b id="dashHealthWater">0/8 vè</b></div>
+          <div class="stat-line"><span>Dòmi</span><b id="dashHealthSleep">0h</b></div>
+          <div class="stat-line"><span>Egzèsis</span><b id="dashHealthExercise">0 min</b></div>
+        </div>
+
+        <div class="card widget journal">
+          <div class="widget-head"><div class="title"><span class="ic"><i data-lucide="book-heart"></i></span> Jounal</div><span class="more"><i data-lucide="more-horizontal"></i></span></div>
+          <div class="stat-line"><span>Antre total</span><b id="dashJournalCount">0</b></div>
+          <div class="stat-line"><span>Imè mwayèn</span><b id="dashJournalMood">—</b></div>
+          <div class="stat-line"><span>Streak ekriti</span><b id="dashJournalStreak">0 jou</b></div>
+        </div>
+
+      </div>
+
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Aktivite Resan</span>
+        <span id="seeAllActivityBtn" style="cursor:pointer;color:var(--blue);font-weight:600;text-transform:none;letter-spacing:0;font-size:12px;">Wè Tout Istwa →</span>
+      </div>
+      <div class="card activity-card"><div class="timeline" id="timeline"></div></div>
+    </section>
+
+    <!-- ================= TASKS VIEW ================= -->
+    <section class="view" id="view-tasks" hidden>
+      <div class="view-head">
+        <h2>Jesyon Travay</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" id="manageTemplatesBtn"><i data-lucide="layout-template"></i> Modèl</button>
+          <button class="btn btn-primary" id="newTaskBtn"><i data-lucide="plus"></i> Nouvo Travay</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="taskSearch" placeholder="Chèche travay oswa tag..."></div>
+        <select class="field" id="filterPriority">
+          <option value="">Tout priyorite</option>
+          <option value="low">Ba</option>
+          <option value="medium">Mwayen</option>
+          <option value="high">Wo</option>
+          <option value="urgent">Ijan</option>
+        </select>
+        <select class="field" id="filterCategory"><option value="">Tout kategori</option></select>
+        <select class="field" id="sortTasks">
+          <option value="deadline">Triye pa dat limit</option>
+          <option value="priority">Triye pa priyorite</option>
+          <option value="title">Triye pa non (A-Z)</option>
+        </select>
+      </div>
+
+      <div class="kanban" id="kanbanBoard"></div>
+      <div class="task-stats" id="taskStats"></div>
+    </section>
+
+    <!-- ================= CALENDAR VIEW ================= -->
+    <section class="view" id="view-calendar" hidden>
+      <div class="view-head">
+        <h2>Kalandriye</h2>
+        <button class="btn btn-primary" id="newEventBtn"><i data-lucide="plus"></i> Nouvo Evènman</button>
+      </div>
+
+      <div class="cal-head">
+        <div class="cal-nav">
+          <button class="icon-btn" id="calPrev"><i data-lucide="chevron-left"></i></button>
+          <span class="cal-title" id="calTitle">—</span>
+          <button class="icon-btn" id="calNext"><i data-lucide="chevron-right"></i></button>
+          <button class="btn btn-ghost" id="calToday">Jodi a</button>
+        </div>
+        <div class="cal-views">
+          <span class="cal-view-btn" data-view="month">Mwa</span>
+          <span class="cal-view-btn" data-view="week">Semèn</span>
+          <span class="cal-view-btn" data-view="day">Jou</span>
+          <span class="cal-view-btn" data-view="agenda">Ajanda</span>
+        </div>
+      </div>
+
+      <div id="calGridWrap"></div>
+    </section>
+
+    <!-- ================= HABITS VIEW ================= -->
+    <section class="view" id="view-habits" hidden>
+      <div class="view-head">
+        <h2>Abitid</h2>
+        <button class="btn btn-primary" id="newHabitBtn"><i data-lucide="plus"></i> Nouvo Abitid</button>
+      </div>
+
+      <div class="xp-bar-wrap">
+        <div class="xp-badge" id="xpLevelBadge">Lv.1</div>
+        <div class="xp-info">
+          <div class="row"><span>XP total</span><b id="xpTotalLbl">0 XP</b></div>
+          <div class="mini-progress"><span id="xpBarFill" style="width:0%;background:var(--gradient-life)"></span></div>
+          <div class="row" style="margin-top:6px;margin-bottom:0;"><span>Badj</span><span id="badgeList"></span></div>
+        </div>
+      </div>
+
+      <div class="habit-list" id="habitList"></div>
+    </section>
+
+    <!-- ================= FINANCE VIEW ================= -->
+    <section class="view" id="view-finance" hidden>
+      <div class="view-head">
+        <h2>Finans</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" id="manageWalletsBtn"><i data-lucide="landmark"></i> Kont</button>
+          <button class="btn btn-ghost" id="manageBudgetsBtn"><i data-lucide="pie-chart"></i> Bidjè</button>
+          <button class="btn btn-primary" id="newTxBtn"><i data-lucide="plus"></i> Nouvo Tranzaksyon</button>
+        </div>
+      </div>
+
+      <div class="wallet-strip" id="walletStrip"></div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="txSearch" placeholder="Chèche tranzaksyon..."></div>
+        <select class="field" id="filterTxType">
+          <option value="">Antre + Sòti</option>
+          <option value="income">Antre</option>
+          <option value="expense">Sòti</option>
+        </select>
+        <select class="field" id="filterTxCategory"><option value="">Tout kategori</option></select>
+      </div>
+
+      <div class="finance-grid">
+        <div class="card" style="padding:18px;">
+          <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:10px;">Tranzaksyon Resan</h4>
+          <div class="tx-list" id="txList"></div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card" style="padding:18px;">
+            <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:10px;">Bidjè Mwa a</h4>
+            <div id="budgetSummary"></div>
+          </div>
+          <div class="card" style="padding:18px;" id="budgetGoalConnectionsCard" hidden>
+            <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:10px;">Objektif Finansye Lye <span style="color:var(--text-faint);font-weight:400;font-size:11px;">(preparasyon — pa gen kalkil bidjè touche)</span></h4>
+            <div id="budgetGoalConnections"></div>
+          </div>
+          <div class="card chart-card">
+            <h4>Depans pa Kategori</h4>
+            <div id="pieChartWrap"></div>
+          </div>
+          <div class="card chart-card">
+            <h4>Revni pa Kategori</h4>
+            <div id="incomePieChartWrap"></div>
+          </div>
+          <div class="card chart-card">
+            <h4>Antre vs Sòti — 6 dènye mwa</h4>
+            <div id="barChartWrap"></div>
+          </div>
+          <div class="card chart-card">
+            <h4>Revni (Income) — Evolisyon</h4>
+            <div class="stats-tabs" id="incomePeriodTabs">
+              <span class="period-tab" data-income-period="daily">Chak Jou</span>
+              <span class="period-tab" data-income-period="weekly">Chak Semèn</span>
+              <span class="period-tab" data-income-period="monthly">Chak Mwa</span>
+              <span class="period-tab" data-income-period="yearly">Chak Ane</span>
+            </div>
+            <div id="incomeChartWrap"></div>
+            <div class="legend" id="incomeLegend" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= INTERNET / PLANS VIEW ================= -->
+    <section class="view" id="view-internet" hidden>
+      <div class="view-head">
+        <h2>Plan Entènèt & Selilè</h2>
+        <button class="btn btn-primary" id="newPlanBtn"><i data-lucide="plus"></i> Nouvo Plan</button>
+      </div>
+
+      <div id="planAiSuggest"></div>
+
+      <div class="plan-stats" id="planStats"></div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="planSearch" placeholder="Chèche plan oswa operatè..."></div>
+        <select class="field" id="filterPlanOperator"><option value="">Tout operatè</option></select>
+        <select class="field" id="filterPlanStatus">
+          <option value="">Tout estati</option>
+          <option value="active">Aktif</option>
+          <option value="paused">An Poz</option>
+          <option value="expired">Ekspire</option>
+          <option value="completed">Fini</option>
+          <option value="cancelled">Anile</option>
+        </select>
+      </div>
+
+      <div class="plan-grid" id="planGrid"></div>
+    </section>
+
+    <!-- ================= PROJECTS VIEW ================= -->
+    <section class="view" id="view-projects" hidden>
+      <div class="view-head">
+        <h2>Jesyon Pwojè</h2>
+        <button class="btn btn-primary" id="newProjectBtn"><i data-lucide="plus"></i> Nouvo Pwojè</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="projectSearch" placeholder="Chèche pwojè..."></div>
+        <select class="field" id="sortProjects">
+          <option value="deadline">Triye pa dat limit</option>
+          <option value="progress">Triye pa pwogrè</option>
+          <option value="name">Triye pa non (A-Z)</option>
+        </select>
+      </div>
+
+      <div class="kanban" id="projectBoard"></div>
+      <div class="task-stats" id="projectStats"></div>
+    </section>
+
+    <!-- ================= NOTES VIEW ================= -->
+    <section class="view" id="view-notes" hidden>
+      <div class="view-head">
+        <h2>Nòt</h2>
+        <button class="btn btn-primary" id="newNoteBtn"><i data-lucide="plus"></i> Nouvo Nòt</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="noteSearch" placeholder="Chèche nòt oswa tag..."></div>
+        <label class="chk" style="background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:8px 12px;">
+          <input type="checkbox" id="showArchivedNotes"> Montre achiv
+        </label>
+      </div>
+
+      <div class="notes-layout">
+        <div class="card notes-folders">
+          <div class="nf-head"><span>Dosye</span><i data-lucide="folder-plus" id="addFolderBtn" title="Nouvo dosye"></i></div>
+          <div id="folderList"></div>
+        </div>
+        <div id="notesGrid" class="notes-grid"></div>
+      </div>
+    </section>
+
+    <!-- ================= JOURNAL VIEW ================= -->
+    <section class="view" id="view-journal" hidden>
+      <div class="view-head">
+        <h2>Jounal</h2>
+        <button class="btn btn-primary" id="newJournalBtn"><i data-lucide="plus"></i> Nouvo Antre</button>
+      </div>
+
+      <div class="card ai-insight-card" style="margin-bottom:16px;">
+        <div class="ic"><i data-lucide="sparkles"></i></div>
+        <p id="journalAiInsight">Ekri premye antre ou pou AI kòmanse analize imè ak pwogrè ou.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="journalSearch" placeholder="Chèche antre oswa tag..."></div>
+      </div>
+
+      <div class="journal-layout">
+        <div class="journal-list" id="journalList"></div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card mood-trend-card">
+            <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:12px;">Tandans Imè — 7 dènye jou</h4>
+            <div class="mood-bar-chart" id="moodTrendChart"></div>
+          </div>
+          <div class="card" style="padding:18px;">
+            <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:10px;">Estatistik</h4>
+            <div class="stat-line"><span>Total antre</span><b id="journalTotalCount">0</b></div>
+            <div class="stat-line"><span>Imè mwayèn</span><b id="journalAvgMood">—</b></div>
+            <div class="stat-line"><span>Streak ekriti</span><b id="journalStreak">0 jou</b></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HEALTH VIEW ================= -->
+    <section class="view" id="view-health" hidden>
+      <div class="view-head">
+        <h2>Sante</h2>
+        <button class="btn btn-ghost" id="editHealthGoalsBtn"><i data-lucide="target"></i> Objektif</button>
+      </div>
+
+      <div class="card ai-insight-card" style="margin-bottom:16px;">
+        <div class="ic"><i data-lucide="heart-pulse"></i></div>
+        <p id="healthAiInsight">Ajoute done sante jodi a pou wè sijesyon AI.</p>
+      </div>
+
+      <div class="card ai-summary-card" id="healthAiSummaryCard" style="margin-bottom:16px;">
+        <div class="as-status" id="healthAiStatusDot"></div>
+        <div class="as-body">
+          <div class="as-label" id="healthAiStatusLabel">Ap analize...</div>
+          <p id="healthAiSummaryText">Ap analize done ou yo pou bay yon rekòmandasyon an tan reyèl.</p>
+        </div>
+      </div>
+
+      <div class="health-grid">
+        <div class="card health-card">
+          <div class="health-card-head"><div class="ic" style="background:var(--blue-soft);color:var(--blue);"><i data-lucide="glass-water"></i></div><div><b>Dlo</b><span id="waterGoalLbl">Objektif: 2 L</span></div></div>
+          <div class="water-progress-row">
+            <div class="mini-progress"><span id="waterProgressBar" style="width:0%;background:var(--blue)"></span></div>
+            <b class="water-progress-lbl" id="waterTodayLbl">0 L / 2 L</b>
+          </div>
+          <div class="water-input-row">
+            <input type="number" id="waterAmountInput" placeholder="Pw. 500" min="0" step="any" inputmode="decimal" aria-label="Kantite dlo">
+            <select id="waterUnitInput" aria-label="Inite">
+              <option value="ml">ml</option>
+              <option value="L">L</option>
+            </select>
+            <button class="btn btn-primary" id="waterAddBtn" type="button"><i data-lucide="plus"></i> Ajoute</button>
+          </div>
+          <div class="hint" id="waterAiMsg"><i data-lucide="sparkles"></i><span id="waterAiMsgText">Ajoute premye dlo w jodi a.</span></div>
+        </div>
+
+        <div class="card health-card">
+          <div class="health-card-head"><div class="ic" style="background:var(--orange-soft);color:var(--orange);"><i data-lucide="moon-star"></i></div><div><b>Dòmi</b><span id="sleepGoalLbl">Objektif: 8 èdtan</span></div></div>
+          <div class="health-stepper">
+            <button id="sleepMinus"><i data-lucide="minus"></i></button>
+            <span class="val" id="sleepVal">0h</span>
+            <button id="sleepPlus"><i data-lucide="plus"></i></button>
+          </div>
+          <div class="mini-progress"><span id="sleepBar" style="width:0%;background:var(--orange)"></span></div>
+        </div>
+
+        <div class="card health-card">
+          <div class="health-card-head"><div class="ic" style="background:var(--green-soft);color:var(--green);"><i data-lucide="activity"></i></div><div><b>Egzèsis</b><span id="exerciseGoalLbl">Objektif: 30 min</span></div></div>
+          <div class="health-stepper">
+            <button id="exerciseMinus"><i data-lucide="minus"></i></button>
+            <span class="val" id="exerciseVal">0 min</span>
+            <button id="exercisePlus"><i data-lucide="plus"></i></button>
+          </div>
+          <div class="mini-progress"><span id="exerciseBar" style="width:0%;background:var(--green)"></span></div>
+        </div>
+
+        <div class="card health-card">
+          <div class="health-card-head"><div class="ic" style="background:var(--red-soft);color:var(--red);"><i data-lucide="smile"></i></div><div><b>Imè Jodi a</b><span>Kijan ou santi w?</span></div></div>
+          <div class="mood-picker" id="healthMoodPicker"></div>
+        </div>
+      </div>
+
+      <div class="section-label">Estatistik</div>
+      <div class="finance-grid">
+        <div class="card chart-card">
+          <h4>Dlo — 7 dènye jou</h4>
+          <div id="waterChartWrap"></div>
+        </div>
+        <div class="card chart-card">
+          <h4>Dòmi — 7 dènye jou</h4>
+          <div id="sleepChartWrap"></div>
+        </div>
+      </div>
+
+      <div class="section-label">Dashboard Sante an Tan Reyèl</div>
+      <div class="widget-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="card" style="padding:16px 18px;">
+          <div class="stat-line"><span>Sik jodi a</span><b id="hdSugarToday">0g</b></div>
+          <div class="mini-progress" style="margin-top:8px;"><span id="hdSugarBar" style="width:0%;background:var(--orange)"></span></div>
+        </div>
+        <div class="card" style="padding:16px 18px;">
+          <div class="stat-line"><span>Kafeyin jodi a</span><b id="hdCaffeineToday">0mg</b></div>
+          <div class="mini-progress" style="margin-top:8px;"><span id="hdCaffeineBar" style="width:0%;background:var(--red)"></span></div>
+        </div>
+        <div class="card" style="padding:16px 18px;">
+          <div class="stat-line"><span>Total bwason jodi a</span><b id="hdDrinksToday">0</b></div>
+        </div>
+        <div class="card" style="padding:16px 18px;">
+          <div class="stat-line"><span>Nòt sante aktyèl</span><b id="hdHealthScore">0%</b></div>
+        </div>
+        <div class="card" style="padding:16px 18px;">
+          <div class="stat-line"><span>Endèks Idratasyon</span><b id="hdHydrationIndex">0%</b></div>
+          <div class="mini-progress" style="margin-top:8px;"><span id="hdHydrationBar" style="width:0%;background:var(--blue)"></span></div>
+        </div>
+        <div class="card" style="padding:16px 18px;">
+          <div class="stat-line"><span>Endèks Sik</span><b id="hdSugarIndex">0%</b></div>
+          <div class="mini-progress" style="margin-top:8px;"><span id="hdSugarIndexBar" style="width:0%;background:var(--orange)"></span></div>
+        </div>
+      </div>
+
+      <div class="section-label">Estatistik Bwason ak Sante</div>
+      <div class="finance-grid">
+        <div class="card chart-card">
+          <h4>Dlo — Rezime</h4>
+          <div class="stat-line"><span>Jodi a</span><b id="wsWaterToday">0 ml</b></div>
+          <div class="stat-line"><span>Semèn sa a</span><b id="wsWaterWeek">0 ml</b></div>
+          <div class="stat-line"><span>Mwa sa a</span><b id="wsWaterMonth">0 ml</b></div>
+          <div class="stat-line"><span>Ane sa a</span><b id="wsWaterYear">0 ml</b></div>
+        </div>
+        <div class="card chart-card">
+          <h4>Analiz Bwason (AI Memory)</h4>
+          <div id="drinkAnalysisWrap"></div>
+        </div>
+      </div>
+      <div class="finance-grid">
+        <div class="card chart-card">
+          <h4>Finans Bwason</h4>
+          <div class="stat-line"><span>Total depans (Dlo + Bwason)</span><b id="wsDrinkSpendTotal">0 HTG</b></div>
+          <div class="stat-line"><span>Mwayèn chak mwa</span><b id="wsDrinkSpendAvg">0 HTG</b></div>
+        </div>
+        <div class="card chart-card">
+          <h4>Evolisyon Sik — 14 dènye jou</h4>
+          <div id="habitEvolutionChart"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= GOALS VIEW ================= -->
+    <section class="view" id="view-goals" hidden>
+      <div class="view-head">
+        <h2>Objektif</h2>
+        <button class="btn btn-primary" id="newGoalBtn"><i data-lucide="plus"></i> Nouvo Objektif</button>
+      </div>
+
+      <div class="card ai-insight-card" style="margin-bottom:16px;">
+        <div class="ic"><i data-lucide="sparkles"></i></div>
+        <p id="goalAiInsight">Ajoute yon objektif pou AI kòmanse bay sijesyon.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="goalSearch" placeholder="Chèche objektif..."></div>
+        <select class="field" id="filterGoalType">
+          <option value="">Tout tip</option>
+          <option value="short">Kout tèm</option>
+          <option value="medium">Mwayen tèm</option>
+          <option value="long">Long tèm</option>
+        </select>
+        <select class="field" id="sortGoals">
+          <option value="deadline">Triye pa dat limit</option>
+          <option value="progress">Triye pa pwogrè</option>
+          <option value="priority">Triye pa priyorite</option>
+        </select>
+      </div>
+
+      <div class="goal-list" id="goalList"></div>
+      <div class="task-stats" id="goalStats"></div>
+    </section>
+
+    <!-- ================= ACHIEVEMENTS VIEW ================= -->
+    <section class="view" id="view-achievements" hidden>
+      <div class="view-head">
+        <h2>Achievements</h2>
+        <span style="color:var(--text-dim);font-size:12px;" id="achCountLbl">0/0 debloke</span>
+      </div>
+      <div id="achievementsWrap"></div>
+    </section>
+
+    <!-- ================= LIFE TIMELINE VIEW ================= -->
+    <section class="view" id="view-timeline" hidden>
+      <div class="view-head">
+        <h2>Istwa Lavi</h2>
+        <span style="color:var(--text-dim);font-size:12px;" id="timelineCount">0 evènman</span>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box"><i data-lucide="search"></i><input id="timelineSearch" placeholder="Chèche nan istwa lavi w..."></div>
+        <select class="field" id="timelineCategoryFilter">
+          <option value="">Tout kategori</option>
+          <option value="tasks">Travay</option>
+          <option value="learning">Aprantisaj</option>
+          <option value="finance">Finans</option>
+          <option value="habits">Abitid</option>
+          <option value="goals">Objektif</option>
+          <option value="achievements">Achievement</option>
+          <option value="missions">Misyon</option>
+          <option value="calendar">Kalandriye</option>
+          <option value="journal">Jounal</option>
+          <option value="health">Sante</option>
+        </select>
+        <input type="date" class="field" id="timelineDateFilter">
+        <button class="btn btn-ghost" id="timelineClearFilters"><i data-lucide="x"></i> Efase Filtè</button>
+      </div>
+
+      <div class="card activity-card"><div class="timeline" id="timelineFull"></div></div>
+    </section>
+
+    <!-- ================= STATISTICS VIEW ================= -->
+    <section class="view" id="view-statistics" hidden>
+      <div class="view-head">
+        <h2>Estatistik</h2>
+        <div class="stats-tabs" id="statsPeriodTabs">
+          <span class="period-tab" data-period="daily">Chak Jou</span>
+          <span class="period-tab" data-period="weekly">Chak Semèn</span>
+          <span class="period-tab" data-period="monthly">Chak Mwa</span>
+          <span class="period-tab" data-period="yearly">Chak Ane</span>
+        </div>
+      </div>
+
+      <div class="card ai-insight-card" style="margin-bottom:16px;">
+        <div class="ic"><i data-lucide="sparkles"></i></div>
+        <p id="statsPeriodSummary">Ap kalkile estatistik ou yo...</p>
+      </div>
+
+      <div class="section-label">Kategori</div>
+      <div class="widget-grid" id="statsCategoryGrid"></div>
+
+      <div class="section-label">Grafik</div>
+      <div class="stats-chart-row">
+        <div class="card chart-card">
+          <div class="chart-card-head"><h4>Tandans Aktivite (14 dènye jou)</h4></div>
+          <div id="statsLineChart"></div>
+        </div>
+        <div class="card chart-card">
+          <div class="chart-card-head"><h4>Repatisyon pa Kategori</h4></div>
+          <div id="statsPieChart"></div>
+        </div>
+      </div>
+      <div class="stats-chart-row">
+        <div class="card chart-card">
+          <div class="chart-card-head"><h4>Konparezon Modil</h4></div>
+          <div id="statsBarChart"></div>
+        </div>
+        <div class="card chart-card">
+          <div class="chart-card-head"><h4>Heatmap Aktivite (12 semèn)</h4></div>
+          <div id="statsHeatmap"></div>
+        </div>
+      </div>
+
+      <div class="section-label">Konparezon</div>
+      <div class="card" id="statsComparisonCard" style="padding:16px 18px;"></div>
+
+      <div class="section-label">Insights</div>
+      <div class="insight-grid" id="statsInsightsGrid"></div>
+
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Rapò</span>
+        <div class="stats-tabs" id="statsReportTabs">
+          <span class="period-tab" data-report="daily">Jodi a</span>
+          <span class="period-tab" data-report="weekly">Semèn</span>
+          <span class="period-tab" data-report="monthly">Mwa</span>
+          <span class="period-tab" data-report="yearly">Ane</span>
+        </div>
+      </div>
+      <div class="card report-box" id="statsReportBox">Chwazi yon peryòd pou jenere rapò a.</div>
+
+      <div class="section-label">Ekspòte</div>
+      <div class="export-row">
+        <button class="btn btn-ghost" id="statsExportPdfBtn"><i data-lucide="file-text"></i> PDF</button>
+        <button class="btn btn-ghost" id="statsExportCsvBtn"><i data-lucide="table"></i> CSV</button>
+        <button class="btn btn-ghost" id="statsExportJsonBtn"><i data-lucide="braces"></i> JSON</button>
+      </div>
+    </section>
+
+    <!-- ================= COACH AI VIEW ================= -->
+    <section class="view" id="view-coach" hidden>
+      <div class="view-head">
+        <h2>Coach AI</h2>
+      </div>
+
+      <div class="card briefing-card" style="margin-bottom:20px;">
+        <div class="briefing-head">
+          <div class="ic"><i data-lucide="sparkles"></i></div>
+          <div><h3 id="coachAssistantTitle">Asistan Chak Jou</h3><span id="coachAssistantSub">Rezime pèsonèl ou</span></div>
+        </div>
+        <p class="briefing-body" id="coachAssistantBody">Ap prepare rezime w...</p>
+        <div class="briefing-list" id="coachAssistantList"></div>
+      </div>
+
+      <div class="section-label">AI Insights</div>
+      <div class="insight-grid" id="aiInsightsGrid"></div>
+
+      <div class="section-label">Pèsonalizasyon</div>
+      <div class="insight-grid" id="personalizationGrid"></div>
+
+      <div class="section-label">Nivo & Debloke</div>
+      <div class="card" style="padding:18px;margin-bottom:20px;">
+        <div class="xp-bar-wrap" style="margin-bottom:0;">
+          <div class="xp-badge" id="coachLevelBadge">Lv.1</div>
+          <div class="xp-info">
+            <div class="row"><span>Nivo Aktyèl · <b id="coachLevelTitle">Debutan</b></span><b id="coachLevelXpLbl">0 XP</b></div>
+            <div class="mini-progress"><span id="coachLevelBarFill" style="width:0%;background:var(--gradient-life)"></span></div>
+            <div class="row" style="margin-top:6px;margin-bottom:0;"><span>Pwochen nivo nan</span><span id="coachLevelNext">100 XP</span></div>
+          </div>
+        </div>
+        <div class="unlock-grid" id="unlockGrid"></div>
+      </div>
+
+      <div class="section-label">Ekip Coach Ou</div>
+      <div class="coach-agent-grid" id="coachAgentGrid"></div>
+
+      <div class="section-label">Chat ak Coach</div>
+      <div class="card coach-chat-card">
+        <div class="coach-chat-head">
+          <div class="ic"><i data-lucide="bot"></i></div>
+          <div><h3>Coach AI</h3><span>Mande m sou tach, lajan, aprantisaj oswa objektif ou</span></div>
+        </div>
+        <div class="coach-chat-body" id="coachChatBody"></div>
+        <div class="coach-chat-suggestions" id="coachChatSuggestions"></div>
+        <div class="coach-chat-input">
+          <input type="text" id="coachChatInput" placeholder="Ekri yon mesaj..." autocomplete="off">
+          <button id="coachChatSendBtn" aria-label="Voye"><i data-lucide="send"></i></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS VIEW ================= -->
+    <section class="view" id="view-settings" hidden>
+      <div class="view-head">
+        <h2>Paramèt</h2>
+      </div>
+
+      <div class="section-label">Sekirite</div>
+      <div class="card security-status-card" style="margin-bottom:14px;">
+        <div class="security-status-ic" id="securityStatusIcon"><i data-lucide="shield"></i></div>
+        <div style="flex:1;">
+          <b id="securityStatusTitle">Lock Dezaktive</b>
+          <div class="sub" style="font-size:11.5px;color:var(--text-dim);margin-top:2px;" id="securityStatusSub">Aplikasyon ou pa pwoteje pou kounye a.</div>
+        </div>
+        <button class="btn btn-primary" id="securityToggleBtn">Aktive Lock</button>
+      </div>
+
+      <div class="card" id="securityOptionsCard" style="padding:4px 18px;margin-bottom:20px;" hidden>
+        <div class="settings-row">
+          <div><div class="lbl">Chanje Kòd</div><div class="sub">Modifye PIN oswa modpas ou</div></div>
+          <button class="btn btn-ghost" id="changeSecurityCodeBtn">Chanje</button>
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Auto-Lock</div><div class="sub">Fèmen otomatikman apre yon peryòd inaktivite</div></div>
+          <select class="field" id="autoLockSelect" style="width:auto;">
+            <option value="1">1 minit</option>
+            <option value="5">5 minit</option>
+            <option value="15">15 minit</option>
+            <option value="30">30 minit</option>
+            <option value="custom">Pèsonalize...</option>
+          </select>
+        </div>
+        <div class="settings-row" id="customAutoLockRow" hidden>
+          <div><div class="lbl">Minit Pèsonalize</div></div>
+          <input type="number" class="field" id="customAutoLockInput" min="1" max="240" style="width:90px;">
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Dezaktive Lock</div><div class="sub">Retire pwoteksyon aplikasyon an</div></div>
+          <button class="btn btn-ghost" id="disableSecurityBtn" style="color:var(--red);">Dezaktive</button>
+        </div>
+      </div>
+
+      <div class="section-label">Objektif — Revizyon Final Sinkwonizasyon (Pati 49/50)</div>
+      <div class="card" style="padding:4px 18px;margin-bottom:20px;">
+        <div class="settings-row">
+          <div><div class="lbl">Verifye Koneksyon Objektif yo</div><div class="sub">Egzamine lyen Goal ↔ Habits/Finance/Wallets/Calendar/Learning/Projects/Achievements, repare referans kase, epi teste 3 senaryo egzanp (san touche done reyèl ou)</div></div>
+          <button class="btn btn-primary" id="runGoalSyncReviewBtn"><i data-lucide="shield-check"></i> Verifye Sinkwonizasyon</button>
+        </div>
+        <pre id="goalSyncReviewResult" class="card" style="margin-top:10px;padding:14px;font-size:11.5px;line-height:1.6;white-space:pre-wrap;background:var(--surface-2);font-family:inherit;" hidden></pre>
+      </div>
+
+      <div class="section-label">Backup & Restore</div>
+      <div class="card" style="padding:4px 18px;margin-bottom:20px;">
+        <div class="settings-row">
+          <div><div class="lbl">Ekspòte Done (JSON)</div><div class="sub">Telechaje yon fichye backup (.json) ak tout done OSLIFE ou</div></div>
+          <button class="btn btn-ghost" id="exportBackupBtn"><i data-lucide="download"></i> Ekspòte</button>
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Restore Backup</div><div class="sub">Enpòte yon fichye (.json), chwazi ki modil pou restore</div></div>
+          <label class="btn btn-ghost" for="importBackupInput" style="cursor:pointer;"><i data-lucide="upload"></i> Enpòte</label>
+          <input type="file" id="importBackupInput" accept=".json" style="display:none;">
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Ekspòte CSV pa Modil</div><div class="sub">Tasks, Finance, Habits, Notes oswa Journal an CSV</div></div>
+          <select class="field" id="csvModuleSelect" style="width:140px;">
+            <option value="tasks">Tasks</option>
+            <option value="finance">Finance</option>
+            <option value="habits">Habits</option>
+            <option value="notes">Notes</option>
+            <option value="journal">Journal</option>
+          </select>
+          <button class="btn btn-ghost" id="exportCsvBtn"><i data-lucide="file-down"></i> CSV</button>
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Enpòte CSV</div><div class="sub">Ajoute nouvo done nan modil ki chwazi anwo a (Tasks oswa Finance)</div></div>
+          <label class="btn btn-ghost" for="importCsvInput" style="cursor:pointer;"><i data-lucide="upload"></i> CSV</label>
+          <input type="file" id="importCsvInput" accept=".csv" style="display:none;">
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Backup Otomatik</div><div class="sub" id="autoBackupSub">Dezaktive</div></div>
+          <label class="chk" style="text-transform:none;margin-bottom:0;"><input type="checkbox" id="autoBackupToggle"> Aktive</label>
+        </div>
+        <div class="settings-row" id="autoBackupFreqRow" hidden>
+          <div><div class="lbl">Frekans</div></div>
+          <select class="field" id="autoBackupFreqSelect" style="width:120px;">
+            <option value="daily">Chak jou</option>
+            <option value="weekly">Chak semèn</option>
+            <option value="custom">Pèsonalize</option>
+          </select>
+        </div>
+        <div class="settings-row" id="autoBackupCustomRow" hidden>
+          <div><div class="lbl">Chak konbyen jou</div></div>
+          <input type="number" class="field" id="autoBackupCustomInput" min="1" max="90" style="width:90px;">
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Restore Backup Otomatik</div><div class="sub" id="autoBackupLastSub">Pa gen backup otomatik ankò</div></div>
+          <button class="btn btn-ghost" id="restoreAutoBackupBtn">Restore</button>
+        </div>
+      </div>
+
+      <div class="section-label">Sinkwonizasyon Cloud</div>
+      <div class="card" style="padding:4px 18px;margin-bottom:20px;">
+        <div class="settings-row">
+          <div><div class="lbl">Estati</div><div class="sub" id="syncStatusSub">Dezaktive — pa gen kòd sinkwonizasyon</div></div>
+          <div id="syncStatusIc" style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-faint);"><i data-lucide="cloud-off"></i></div>
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Kòd Sinkwonizasyon</div><div class="sub">Antre menm kòd la sou tout aparèy ou pou senkwonize done yo otomatikman</div></div>
+          <input type="text" class="field" id="syncCodeInput" placeholder="ekz. mwen-2026" style="width:160px;">
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Aktive</div><div class="sub">Konekte aparèy sa a ak kòd la anwo a — pa gen bezwen bouton "Sync" apre sa</div></div>
+          <button class="btn btn-primary" id="syncEnableBtn">Konekte</button>
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Dezaktive</div><div class="sub">Rete lokal sèlman sou aparèy sa a</div></div>
+          <button class="btn btn-ghost" id="syncDisableBtn" style="color:var(--red);">Dekonekte</button>
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Backup nan Cloud</div><div class="sub" id="cloudBackupSub">Sove tout done ou yo (tout modil) sou kont sinkwonizasyon w lan kounye a</div></div>
+          <button class="btn btn-primary" id="cloudBackupBtn"><i data-lucide="upload-cloud" style="width:15px;height:15px;margin-right:6px;vertical-align:-3px;"></i><span class="cbLabel">Backup nan Cloud</span></button>
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Restore nan Cloud</div><div class="sub" id="cloudRestoreSub">Retabli done ou yo apati dènye backup sou kont sinkwonizasyon w lan</div></div>
+          <button class="btn btn-ghost" id="cloudRestoreBtn"><i data-lucide="download-cloud" style="width:15px;height:15px;margin-right:6px;vertical-align:-3px;"></i><span class="cbLabel">Restore nan Cloud</span></button>
+        </div>
+      </div>
+
+      <div class="section-label">Coach AI — Backend</div>
+      <div class="card" style="padding:4px 18px;margin-bottom:20px;">
+        <div class="settings-row">
+          <div><div class="lbl">Estati</div><div class="sub" id="coachBackendStatusSub">Pa konfigire — mòd lokal (règ) ap itilize</div></div>
+          <div id="coachBackendStatusIc" style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-faint);"><i data-lucide="server-off"></i></div>
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">URL Backend</div><div class="sub">Adrès sèvè ki kenbe kle API a an sekirite — pa gen okenn API key ki dwe antre isit la</div></div>
+          <input type="text" class="field" id="coachBackendUrlInput" placeholder="https://mon-backend.exemple.com" style="width:220px;">
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Sove & Teste</div><div class="sub">Sove URL la epi verifye si backend la reponn</div></div>
+          <button class="btn btn-primary" id="coachBackendSaveBtn">Sove & Teste</button>
+        </div>
+      </div>
+
+      <div class="section-label">Vi Prive (Privacy)</div>
+      <div class="card" style="padding:14px 18px;margin-bottom:20px;">
+        <ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--text-dim);line-height:1.8;">
+          <li>OSLIFE pa kolekte okenn done ki pa nesesè pou fonksyone.</li>
+          <li>Ou se sèl pwopriyetè tout done ou yo.</li>
+          <li>Pa defo, tout done rete lokalman sou aparèy ou (LocalStorage/IndexedDB).</li>
+          <li>Si w aktive Sinkwonizasyon Cloud pi wo a, done ou yo chifre epi voye sou sèvè Firebase ou konfigire a, sèlman pou senkwonize ant aparèy ou.</li>
+          <li>Done ou yo pa janm pataje san pèmisyon ou.</li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ================= RESTORE MODULE SELECTION MODAL ================= -->
+<div class="modal-overlay" id="restoreModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Chwazi Ki Modil pou Restore</h3><button class="icon-btn" id="closeRestoreModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--text-dim);">Sa ap ranplase done aktyèl yo pou chak modil ou chwazi. Deselektone yo si w vle kenbe done aktyèl ou pou yo.</p>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><input type="checkbox" id="restoreSelectAll" checked> <b>Tout Backup la</b></label>
+      <div id="restoreModuleList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div class="lock-error" id="restoreModalError" style="text-align:left;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelRestoreModal">Anile</button>
+      <button class="btn btn-primary" id="confirmRestoreModal" style="margin-left:auto;">Restore</button>
+    </div>
+  </div>
+</div>
+
+<div id="offlineBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--orange);color:#fff;text-align:center;font-size:12.5px;padding:6px;">
+  <i data-lucide="wifi-off" style="width:14px;height:14px;vertical-align:-2px;"></i> Ou hòrs liy — OSLIFE ap kontinye travay san entènèt, tout done ou yo sove lokalman.
+</div>
+
+<!-- ============ TASK MODAL ============ -->
+<div class="modal-overlay" id="taskModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="taskModalTitle">Nouvo Travay</h3><button class="icon-btn" id="closeTaskModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Tit</label><input type="text" id="taskTitle" placeholder="Ekri tit travay la"></div>
+      <div><label>Deskripsyon</label><textarea id="taskDesc" placeholder="Detay travay la (opsyonèl)"></textarea></div>
+      <div class="form-row three">
+        <div><label>Priyorite</label><select id="taskPriority">
+          <option value="low">Ba</option><option value="medium">Mwayen</option><option value="high">Wo</option><option value="urgent">Ijan</option>
+        </select></div>
+        <div><label>Kategori</label><input type="text" id="taskCategory" placeholder="Pw. BWdepot"></div>
+        <div><label>Estati</label><select id="taskStatus">
+          <option value="inbox">Resepsyon</option><option value="planned">Planifye</option><option value="in-progress">An Kou</option><option value="completed">Fini</option><option value="archived">Achive</option>
+        </select></div>
+      </div>
+      <div><label>Tag (separe ak vigil)</label><input type="text" id="taskTags" placeholder="pwojè, ijan, kliyan"></div>
+      <div><label>Lye ak Objektif <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><select id="taskGoalLink"><option value="">— Okenn —</option></select></div>
+      <div class="form-row">
+        <div><label>Dat limit</label><input type="datetime-local" id="taskDeadline"></div>
+        <div style="display:flex;align-items:flex-end;"><label class="chk"><input type="checkbox" id="taskReminderEnabled"> Aktive rapèl</label></div>
+      </div>
+      <div class="form-row">
+        <div style="display:flex;align-items:flex-end;"><label class="chk"><input type="checkbox" id="taskRecurring"> Travay repetitif</label></div>
+        <div id="recurringFreqWrap" hidden><label>Frekans</label><select id="taskRecurFreq">
+          <option value="daily">Chak jou</option><option value="weekly">Chak semèn</option><option value="monthly">Chak mwa</option>
+        </select></div>
+      </div>
+      <div>
+        <label>Sou-travay / Checklist</label>
+        <div id="subtaskList" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+        <button class="btn btn-ghost" id="addSubtaskBtn" type="button" style="margin-top:8px;"><i data-lucide="plus"></i> Ajoute sou-travay</button>
+      </div>
+      <div>
+        <label>Atachman</label>
+        <div id="attachList" style="margin-top:6px;"></div>
+        <input type="file" id="attachInput" multiple style="margin-top:6px;">
+      </div>
+      <div><label>Nòt</label><textarea id="taskNotes" placeholder="Nòt anplis..."></textarea></div>
+      <label class="chk"><input type="checkbox" id="saveAsTemplate"> Anrejistre kòm modèl pou pita</label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteTaskBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveTaskBtn" style="margin-left:auto;">Anrejistre Travay</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TEMPLATES MODAL ============ -->
+<div class="modal-overlay" id="templatesModalOverlay">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>Modèl Travay</h3><button class="icon-btn" id="closeTemplatesModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body" id="templatesList"></div>
+  </div>
+</div>
+
+<!-- ============ EVENT MODAL ============ -->
+<div class="modal-overlay" id="eventModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="eventModalTitle">Nouvo Evènman</h3><button class="icon-btn" id="closeEventModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Tit</label><input type="text" id="eventTitle" placeholder="Non evènman an"></div>
+      <div><label>Deskripsyon</label><textarea id="eventDesc" placeholder="Detay (opsyonèl)"></textarea></div>
+      <div class="form-row">
+        <div><label>Dat</label><input type="date" id="eventDate"></div>
+        <div><label>Lè</label><input type="time" id="eventTime"></div>
+      </div>
+      <div><label>Kote</label><input type="text" id="eventLocation" placeholder="Pw. Pétion-Ville"></div>
+      <div class="form-row">
+        <div><label>Kategori</label><select id="eventCategory">
+          <option value="event">Evènman</option>
+          <option value="deadline">Dat Limit</option>
+          <option value="birthday">Anivèsè</option>
+          <option value="study">Sesyon Etid</option>
+          <option value="appointment">Randevou</option>
+        </select></div>
+        <div><label>Repetisyon</label><select id="eventRecurrence">
+          <option value="none">Pa repete</option><option value="daily">Chak jou</option><option value="weekly">Chak semèn</option><option value="monthly">Chak mwa</option><option value="yearly">Chak ane</option>
+        </select></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="eventReminder"> Aktive rapèl</label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteEventBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveEventBtn" style="margin-left:auto;">Anrejistre Evènman</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HABIT MODAL ============ -->
+<div class="modal-overlay" id="habitModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="habitModalTitle">Nouvo Abitid</h3><button class="icon-btn" id="closeHabitModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Non</label><input type="text" id="habitName" placeholder="Pw. Li 20 minit"></div>
+      <div><label>Deskripsyon</label><textarea id="habitDesc" placeholder="Detay (opsyonèl)"></textarea></div>
+      <div class="form-row three">
+        <div><label>Frekans</label><select id="habitFrequency">
+          <option value="daily">Chak jou</option><option value="weekly">Chak semèn</option><option value="monthly">Chak mwa</option>
+        </select></div>
+        <div><label>Kategori</label><input type="text" id="habitCategory" placeholder="Pw. Sante"></div>
+        <div><label>Objektif</label><input type="text" id="habitGoal" placeholder="Pw. 30 jou"></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="habitReminder"> Aktive rapèl</label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteHabitBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveHabitBtn" style="margin-left:auto;">Anrejistre Abitid</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TRANSACTION MODAL ============ -->
+<div class="modal-overlay" id="txModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="txModalTitle">Nouvo Tranzaksyon</h3><button class="icon-btn" id="closeTxModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div><label>Tip</label><select id="txType">
+          <option value="expense">Sòti (Depans)</option><option value="income">Antre (Revni)</option>
+        </select></div>
+        <div><label id="txAmountLabel">Montan (HTG)</label><input type="number" id="txAmount" placeholder="0" step="any"></div>
+      </div>
+      <div><label>Deskripsyon</label><input type="text" id="txDesc" placeholder="Pw. Manje midi"></div>
+      <div class="form-row">
+        <div><label id="txCategoryLabel">Kategori</label><select id="txCategory"></select>
+          <div id="txNewCategoryWrap" style="display:flex;gap:6px;margin-top:6px;" hidden>
+            <input type="text" id="txNewCategoryInput" placeholder="Pw. Bay Lajan / Prete..." style="flex:1;">
+            <button class="btn btn-ghost" id="txAddNewCategoryBtn" type="button"><i data-lucide="check"></i></button>
+          </div>
+        </div>
+        <div><label>Kont</label><select id="txWallet"></select></div>
+      </div>
+
+      <!-- DLO: chan senplifye pou idratasyon -->
+      <div class="tx-extra-fields" id="txDloFields"><div class="tx-extra-fields-inner">
+        <div class="form-row">
+          <div><label>Kantite Dlo</label><input type="number" id="txWaterAmount" placeholder="Pw. 750" min="0" step="any"></div>
+          <div><label>Inite</label><select id="txWaterUnit"><option value="ml">ml</option><option value="L">L</option></select></div>
+        </div>
+        <div class="hint"><i data-lucide="sparkles"></i> AI ap mete l otomatikman nan Sante ak amelyore nòt idratasyon ou.</div>
+      </div></div>
+
+      <!-- BWASON: fòm elaji ak tip bwason -->
+      <div class="tx-extra-fields" id="txBwasonFields"><div class="tx-extra-fields-inner">
+        <div class="form-row">
+          <div><label>Non Bwason</label><input type="text" id="txDrinkName" placeholder="Pw. Coca-Cola"></div>
+          <div><label>Tip Bwason</label><select id="txDrinkType">
+            <option value="sugary">Bwason Sikre</option>
+            <option value="energy">Bwason Enèjetik</option>
+            <option value="coffee">Kafe</option>
+            <option value="juice">Ji Fwi</option>
+            <option value="milk">Lèt</option>
+            <option value="other">Lòt</option>
+          </select></div>
+        </div>
+        <div class="form-row">
+          <div><label>Kantite</label><input type="number" id="txDrinkQty" placeholder="Pw. 500" min="0" step="any"></div>
+          <div><label>Inite</label><select id="txDrinkUnit"><option value="ml">ml</option><option value="L">L</option></select></div>
+        </div>
+        <div class="hint"><i data-lucide="sparkles"></i> AI ap analize enpak li sou Sante selon tip bwason an.</div>
+      </div></div>
+
+      <!-- ESTATI PEMAN: parèt sèlman pou depans sou kont Kach -->
+      <div class="tx-extra-fields" id="txCashStatusFields"><div class="tx-extra-fields-inner">
+        <div><label>Estati Peman (Kach)</label>
+          <select id="txPaymentStatus">
+            <option value="paid">Peye Kounye a</option>
+            <option value="pending">Annatant — Deside pita</option>
+          </select>
+        </div>
+        <div class="hint"><i data-lucide="info"></i> "Annatant" pa retire lajan nan balans Kach la toutotan ou pa konfime l nan Tranzaksyon Resan.</div>
+      </div></div>
+
+      <div class="form-row">
+        <div><label>Dat</label><input type="date" id="txDate"></div>
+        <div><label>Lè</label><input type="time" id="txTime"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteTxBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveTxBtn" style="margin-left:auto;">Anrejistre Tranzaksyon</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: ESTATI TRANZAKSYON KACH ================= -->
+<div class="modal-overlay" id="txStatusModalOverlay">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-head"><h3>Estati Tranzaksyon</h3><button class="icon-btn" id="closeTxStatusModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="tx-row" id="txStatusSummary" style="cursor:default;"></div>
+      <p style="color:var(--text-dim);font-size:12.5px;margin-top:10px;">Ki estati tranzaksyon Kach sa a?</p>
+    </div>
+    <div class="modal-foot" style="flex-direction:column;gap:8px;align-items:stretch;">
+      <button class="btn btn-primary" id="txStatusPayNowBtn" style="width:100%;justify-content:center;"><i data-lucide="check-circle"></i> Peye Kounye a</button>
+      <button class="btn btn-ghost" id="txStatusAlreadyPaidBtn" style="width:100%;justify-content:center;"><i data-lucide="badge-check"></i> Deja Peye</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ WALLETS MODAL ============ -->
+<div class="modal-overlay" id="walletsModalOverlay">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>Kont / Wallet</h3><button class="icon-btn" id="closeWalletsModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div id="walletsManageList"></div>
+      <div class="form-row">
+        <div><label>Non nouvo kont</label><input type="text" id="newWalletName" placeholder="Pw. Sogebank"></div>
+        <div><label>Tip Kont</label><select id="newWalletType">
+          <option value="auto">Detekte otomatikman</option>
+          <option value="cash">Kach</option>
+          <option value="bank">Bank</option>
+          <option value="natcash">NatCash</option>
+          <option value="moncash">MonCash</option>
+          <option value="savings">Epay</option>
+          <option value="debitcard">Kat Debi (USD)</option>
+          <option value="custom">Lòt</option>
+        </select></div>
+      </div>
+      <div class="form-row">
+        <div><label id="newWalletBalanceLabel">Balans depa (HTG)</label><input type="number" id="newWalletBalance" placeholder="0" step="any"></div>
+      </div>
+      <button class="btn btn-primary" id="addWalletBtn" style="justify-content:center;"><i data-lucide="plus"></i> Ajoute Kont</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BUDGETS MODAL ============ -->
+<div class="modal-overlay" id="budgetsModalOverlay">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>Bidjè pa Kategori</h3><button class="icon-btn" id="closeBudgetsModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Peryòd</label><select id="budgetPeriod">
+        <option value="monthly">Mansyèl</option><option value="weekly">Semenèl</option>
+      </select></div>
+      <div id="budgetsManageList"></div>
+      <div style="margin-top:12px;">
+        <label style="display:block;margin-bottom:6px;">Objektif Finansye Lye <span style="color:var(--text-faint);font-weight:400;">(preparasyon koneksyon — pa gen kalkil bidjè touche)</span></label>
+        <div class="milestone-list" id="budgetsManageGoalList"></div>
+      </div>
+      <div class="form-row" style="align-items:end;margin-top:2px;">
+        <div><label>Non Bidjè (tape oswa chwazi)</label>
+          <input type="text" id="budgetAddCatInput" list="budgetAddCatList" placeholder="Pw. Manje, oswa non ou vle">
+          <datalist id="budgetAddCatList"></datalist>
+        </div>
+        <button type="button" class="btn btn-ghost" id="budgetAddCatBtn" style="height:38px;"><i data-lucide="plus"></i> Ajoute</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="saveBudgetsBtn" style="margin-left:auto;">Anrejistre Bidjè</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PLAN MODAL ============ -->
+<div class="modal-overlay" id="planModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="planModalTitle">Nouvo Plan</h3><button class="icon-btn" id="closePlanModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div><label>Operatè</label><select id="planOperator">
+          <option value="Natcom">Natcom</option>
+          <option value="Digicel">Digicel</option>
+          <option value="custom">Lòt (presize)...</option>
+        </select></div>
+        <div id="planOperatorCustomWrap" hidden><label>Non operatè</label><input type="text" id="planOperatorCustom" placeholder="Pw. Access Haiti"></div>
+        <div id="planTypeWrap"><label>Tip Plan</label><select id="planType">
+          <option value="internet">Entènèt</option>
+          <option value="unlimited">Ilimite</option>
+          <option value="calls">Apèl</option>
+          <option value="sms">SMS</option>
+          <option value="combo">Combo</option>
+          <option value="custom">Lòt</option>
+        </select></div>
+      </div>
+      <div><label>Non Plan</label><input type="text" id="planName" placeholder="Pw. Illimix 30"></div>
+      <div class="form-row three">
+        <div><label>Pri (HTG)</label><input type="number" id="planPrice" placeholder="0" step="any"></div>
+        <div><label>Dire (jou)</label><input type="number" id="planDuration" placeholder="Pw. 30"></div>
+        <div><label class="chk" style="text-transform:none;margin-bottom:0;"><input type="checkbox" id="planIsUnlimited"> Se yon plan ilimite</label></div>
+      </div>
+      <div class="form-row">
+        <div id="planTotalMbWrap"><label>Total MB nan plan an</label><input type="number" id="planTotalMb" placeholder="Pw. 5000" step="any"></div>
+      </div>
+      <div class="form-row">
+        <div><label>Dat kòmansman</label><input type="date" id="planStartDate"></div>
+        <div><label>Dat ekspirasyon</label><input type="date" id="planExpireDate"></div>
+      </div>
+      <div><label>Sous Peyman (Kont)</label><select id="planWallet"></select></div>
+      <div><label>Nòt</label><textarea id="planNotes" placeholder="Nòt anplis..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deletePlanBtn" hidden>Efase</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" id="duplicatePlanBtn" hidden><i data-lucide="copy"></i> Duplike</button>
+        <button class="btn btn-ghost" id="pauseResumePlanBtn" hidden></button>
+        <button class="btn btn-ghost" id="completePlanBtn" hidden>Fini</button>
+        <button class="btn btn-ghost" id="cancelPlanBtn" hidden>Anile</button>
+        <button class="btn btn-primary" id="savePlanBtn">Anrejistre Plan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PLAN USAGE MODAL ============ -->
+<div class="modal-overlay" id="planUsageModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="planUsageTitle">Plan</h3><button class="icon-btn" id="closePlanUsageModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div id="planUsageSummary" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;"></div>
+      <div id="planUsageBar" style="margin-bottom:14px;"></div>
+      <div id="planUsageTrackWrap">
+        <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:12px;">Swiv Itilizasyon Done</h4>
+        <div class="form-row three">
+          <div><label>MB ki rete kounye a</label><input type="number" id="dataUsageMbInput" placeholder="Pw. 850" step="any"></div>
+          <div><label>App</label>
+            <input type="text" id="dataUsageAppInput" list="dataUsageAppList" placeholder="Pw. Instagram">
+            <datalist id="dataUsageAppList"></datalist>
+          </div>
+          <div><label>Tan pase (minit)</label><input type="number" id="dataUsageMinInput" placeholder="Pw. 45"></div>
+        </div>
+        <button class="btn btn-primary" id="dataUsageSaveBtn" type="button" style="margin-top:10px;"><i data-lucide="plus"></i> Anrejistre</button>
+        <div id="dataUsageAnalysis" style="margin-top:16px;"></div>
+      </div>
+      <div id="planUsageUnlimitedMsg" class="widget-empty" hidden>Plan sa a ilimite — pa gen MB pou swiv.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="modifyPlanFromUsageBtn"><i data-lucide="pencil"></i> Modifye Plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK ACTIONS -->
+<!-- ============ PROJECT MODAL ============ -->
+<div class="modal-overlay" id="projectModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="projectModalTitle">Nouvo Pwojè</h3><button class="icon-btn" id="closeProjectModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Non</label><input type="text" id="projectName" placeholder="Non pwojè a"></div>
+      <div><label>Deskripsyon</label><textarea id="projectDesc" placeholder="Detay pwojè a (opsyonèl)"></textarea></div>
+      <div class="form-row">
+        <div><label>Estati</label><select id="projectStatus">
+          <option value="idea">Ide</option><option value="todo">Todo</option><option value="in-progress">An Kou</option><option value="testing">Tès</option><option value="completed">Fini</option>
+        </select></div>
+        <div><label>Dat limit</label><input type="date" id="projectDeadline"></div>
+      </div>
+      <div>
+        <label>Travay / Checklist</label>
+        <div id="projectTaskList" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+        <button class="btn btn-ghost" id="addProjectTaskBtn" type="button" style="margin-top:8px;"><i data-lucide="plus"></i> Ajoute travay</button>
+      </div>
+      <div>
+        <label>Pwogrè (<span id="projectProgressLbl">0%</span>)</label>
+        <div class="mini-progress"><span id="projectProgressPreview" style="width:0%;background:var(--gradient-life)"></span></div>
+      </div>
+      <div>
+        <label>Fichye</label>
+        <div id="projectFileList" style="margin-top:6px;"></div>
+        <input type="file" id="projectFileInput" multiple style="margin-top:6px;">
+      </div>
+      <div><label>Nòt</label><textarea id="projectNotes" placeholder="Nòt anplis..."></textarea></div>
+      <div style="margin-top:12px;">
+        <label>Objektif Lye <span style="color:var(--text-faint);font-weight:400;">(opsyonèl — estati Pwojè a ap swiv pwogrè Objektif la)</span></label>
+        <select id="projectGoalSelect"><option value="">Okenn Objektif</option></select>
+        <div class="milestone-list" id="projectLinkedGoalInfo" style="margin-top:8px;" hidden></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteProjectBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveProjectBtn" style="margin-left:auto;">Anrejistre Pwojè</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ NOTE MODAL ============ -->
+<div class="modal-overlay" id="noteModalOverlay">
+  <div class="modal wide">
+    <div class="modal-head">
+      <h3 id="noteModalTitle">Nouvo Nòt</h3>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <i data-lucide="pin" id="notePinBtn" title="Epingle nòt la" style="cursor:pointer;color:var(--text-faint);"></i>
+        <button class="icon-btn" id="closeNoteModal"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div><label>Tit</label><input type="text" id="noteTitle" placeholder="Tit nòt la"></div>
+      <div class="form-row">
+        <div><label>Dosye</label><select id="noteFolder"></select></div>
+        <div><label>Tag (separe ak vigil)</label><input type="text" id="noteTags" placeholder="travay, ide, resous"></div>
+      </div>
+      <div>
+        <label>Kontni</label>
+        <div class="rt-toolbar" id="rtToolbar">
+          <button type="button" data-cmd="bold" title="Gra"><i data-lucide="bold"></i></button>
+          <button type="button" data-cmd="italic" title="Italik"><i data-lucide="italic"></i></button>
+          <button type="button" data-cmd="underline" title="Souliye"><i data-lucide="underline"></i></button>
+          <span class="rt-sep"></span>
+          <button type="button" data-cmd="formatBlock" data-val="H2" title="Tit"><i data-lucide="heading"></i></button>
+          <button type="button" data-cmd="insertUnorderedList" title="Lis"><i data-lucide="list"></i></button>
+          <button type="button" data-cmd="insertOrderedList" title="Lis Nimewote"><i data-lucide="list-ordered"></i></button>
+          <button type="button" data-cmd="formatBlock" data-val="BLOCKQUOTE" title="Sitasyon"><i data-lucide="quote"></i></button>
+          <span class="rt-sep"></span>
+          <button type="button" id="rtCodeBtn" title="Bloc kòd"><i data-lucide="code"></i></button>
+          <button type="button" id="rtTableBtn" title="Tablo"><i data-lucide="table"></i></button>
+          <button type="button" id="rtImgBtn" title="Imaj"><i data-lucide="image"></i></button>
+          <input type="file" id="rtImgInput" accept="image/*" hidden>
+        </div>
+        <div class="rt-body" id="noteBody" contenteditable="true" data-placeholder="Ekri nòt ou a... (sipòte tèks anrichi ak markdown)"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteNoteBtn" hidden>Efase</button>
+      <button class="btn btn-ghost" id="archiveNoteBtn" hidden>Achive</button>
+      <button class="btn btn-primary" id="saveNoteBtn" style="margin-left:auto;">Anrejistre Nòt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ JOURNAL MODAL ============ -->
+<div class="modal-overlay" id="journalModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="journalModalTitle">Nouvo Antre</h3><button class="icon-btn" id="closeJournalModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Kijan ou santi w jodi a?</label><div class="mood-picker" id="journalMoodPicker"></div></div>
+      <div><label>Dat</label><input type="date" id="journalDate"></div>
+      <div><label>Panse ou</label><textarea id="journalText" placeholder="Ekri sa k pase jodi a..." style="min-height:140px;"></textarea></div>
+      <div><label>Tags (separe ak vigil)</label><input type="text" id="journalTags" placeholder="Pw. travay, fanmi, refleksyon"></div>
+      <div>
+        <label>Foto</label>
+        <div class="je-photo-input" id="journalPhotoInput"></div>
+        <button class="btn btn-ghost" id="journalAddPhotoBtn" style="margin-top:8px;"><i data-lucide="image-plus"></i> Ajoute Foto</button>
+        <input type="file" id="journalPhotoFile" accept="image/*" multiple hidden>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteJournalBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveJournalBtn" style="margin-left:auto;">Anrejistre Antre</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HEALTH GOALS MODAL ============ -->
+<div class="modal-overlay" id="healthGoalsModalOverlay">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>Objektif Sante</h3><button class="icon-btn" id="closeHealthGoalsModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Objektif Dlo (L)</label><input type="number" id="goalWater" placeholder="2" min="0" step="0.1"></div>
+      <div><label>Objektif Dòmi (èdtan)</label><input type="number" id="goalSleep" placeholder="8" step="0.5"></div>
+      <div><label>Objektif Egzèsis (minit)</label><input type="number" id="goalExercise" placeholder="30"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="saveHealthGoalsBtn" style="margin-left:auto;">Anrejistre Objektif</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GOAL MODAL ============ -->
+<div class="modal-overlay" id="goalDetailsModalOverlay">
+  <div class="modal goal-details-modal">
+    <div class="modal-head"><h3>Detay Objektif</h3><button class="icon-btn" id="closeGoalDetailsModal" aria-label="Fèmen"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="goal-details-summary">
+        <div class="goal-details-summary-top">
+          <div class="goal-details-summary-title" id="goalDetailsSummaryTitle">—</div>
+          <span class="goal-details-summary-status" id="goalDetailsSummaryStatus">—</span>
+        </div>
+        <div class="goal-details-summary-track"><span id="goalDetailsSummaryBar" style="width:0%;"></span></div>
+        <div class="goal-details-summary-bottom">
+          <b id="goalDetailsSummaryPct">0%</b>
+          <span class="goal-details-summary-days"><i data-lucide="calendar-clock" style="width:13px;height:13px;"></i> <span id="goalDetailsSummaryDays">—</span></span>
+        </div>
+      </div>
+
+      <div class="goal-details-section-title">Enfòmasyon Jeneral</div>
+      <div class="goal-details-grid">
+        <div class="goal-details-field"><span class="lbl">Kategori</span><span class="val" id="goalDetailsCategory">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Priyorite</span><span class="pill val" id="goalDetailsPriority" style="width:fit-content;">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Estati Otomatik</span><span class="pill val" id="goalDetailsStatus" style="width:fit-content;">—</span></div>
+        <div class="goal-details-field">
+          <span class="lbl">Pwogrè</span>
+          <div class="goal-progress-row" style="margin-top:2px;">
+            <div class="mini-progress"><span id="goalDetailsProgressBar" style="width:0%;background:var(--green);"></span></div>
+            <b id="goalDetailsProgressPct" class="mono">0%</b>
+          </div>
+        </div>
+      </div>
+
+      <div id="goalDetailsDescWrap">
+        <div class="goal-details-section-title">Deskripsyon</div>
+        <div class="goal-details-notes" id="goalDetailsDesc">—</div>
+      </div>
+
+      <div id="goalDetailsFinanceRow" hidden>
+        <div class="goal-details-section-title">Finans</div>
+        <div class="goal-details-grid">
+          <div class="goal-details-field"><span class="lbl">Valè Estime</span><span class="val mono" id="goalDetailsEstValue">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Sere Deja</span><span class="val mono" id="goalDetailsSavings">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Rete</span><span class="val mono" id="goalDetailsRemaining">—</span></div>
+        </div>
+      </div>
+
+      <div class="goal-details-section-title">Dat</div>
+      <div class="goal-details-grid">
+        <div class="goal-details-field"><span class="lbl">Dat Limit</span><span class="val" id="goalDetailsDeadline">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Jou Ki Rete</span><span class="val" id="goalDetailsDaysRemaining">—</span></div>
+      </div>
+
+      <div class="goal-details-section-title">Modil Konekte</div>
+      <div class="goal-details-modules-grid" id="goalDetailsModulesGrid"></div>
+
+      <div class="goal-details-section-title">Etap (Milestones)</div>
+      <div class="milestone-list" id="goalDetailsMilestonesList"></div>
+
+      <div class="goal-details-section-title">Istwa Objektif</div>
+      <div class="goal-details-history-list" id="goalDetailsHistoryList"></div>
+
+      <div class="goal-details-section-title">Nòt</div>
+      <div class="goal-details-notes" id="goalDetailsNotes">—</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="closeGoalDetailsModalBtn"><i data-lucide="x"></i> Fèmen</button>
+      <div class="goal-details-foot-actions">
+        <button class="btn btn-ghost btn-danger-ghost" id="goalDetailsDeleteBtn"><i data-lucide="trash-2"></i> Efase</button>
+        <button class="btn btn-ghost" id="goalDetailsArchiveBtn"><i data-lucide="archive"></i> <span id="goalDetailsArchiveBtnLbl">Achive</span></button>
+        <button class="btn btn-primary" id="goalDetailsEditBtn"><i data-lucide="pencil"></i> Modifye Objektif</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="goalModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="goalModalTitle">Nouvo Objektif</h3><button class="icon-btn" id="closeGoalModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Tit</label><input type="text" id="goalTitle" placeholder="Pw. Aprann React"></div>
+      <div><label>Deskripsyon</label><textarea id="goalDesc" placeholder="Detay objektif la..."></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div><label>Tip</label><select id="goalType">
+          <option value="short">Kout tèm</option>
+          <option value="medium">Mwayen tèm</option>
+          <option value="long">Long tèm</option>
+        </select></div>
+        <div><label>Priyorite</label><select id="goalPriority">
+          <option value="low">Ba</option>
+          <option value="medium" selected>Mwayen</option>
+          <option value="high">Wo</option>
+          <option value="urgent">Ijan</option>
+        </select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div><label>Kategori</label><select id="goalCategory"></select></div>
+        <div>
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Estati</span>
+            <span class="pill" style="background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);font-weight:400;font-size:10px;">Otomatik</span>
+          </label>
+          <div id="goalStatusDisplay" class="pill" style="width:100%;box-sizing:border-box;padding:9px 10px;font-size:12.5px;font-weight:700;border-radius:10px;display:flex;align-items:center;justify-content:center;">—</div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <button type="button" class="btn btn-ghost" id="goalPauseToggleBtn" style="flex:1;font-size:11px;padding:6px 4px;">Sispann</button>
+            <button type="button" class="btn btn-ghost" id="goalArchiveToggleBtn" style="flex:1;font-size:11px;padding:6px 4px;">Achive</button>
+          </div>
+        </div>
+      </div>
+      <!-- Pati 2/4: Modil Konekte — deplase la a, dirèkteman anba Kategori Prensipal, pou moun
+           nan ka wè/chwazi tout modil Objektif la ka konekte avèk yo depi kòmansman an. -->
+      <div class="goal-links-section">
+        <label>Modil Konekte <span style="color:var(--text-faint);font-weight:400;">(Objektif la ka konekte ak plizyè modil an menm tan)</span></label>
+        <div class="goal-links-grid" id="goalLinksGrid"></div>
+        <div id="goalFinanceAutoNote" class="pill" style="width:fit-content;margin-top:8px;background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);display:flex;align-items:center;gap:5px;" hidden><i data-lucide="wallet" style="width:11px;height:11px;"></i> Finans konekte otomatikman (Kategori: Finans)</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div><label>Dat Limit <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="date" id="goalDeadline"></div>
+        <div><label>Valè Estime <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="number" id="goalEstimatedValue" placeholder="Pw. 50000"></div>
+      </div>
+      <div id="goalDeadlineTrackingRow" class="milestone-list" style="margin-top:4px;" hidden></div>
+      <div class="goal-finance-section" id="goalFinanceSectionWrap">
+        <div id="goalFinanceSectionLbl" class="pill" style="width:fit-content;background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);display:flex;align-items:center;gap:5px;" hidden><i data-lucide="wallet" style="width:11px;height:11px;"></i> Detay Finansye — otomatik (Kategori: Finans)</div>
+        <div id="goalFinancialFields" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;" hidden>
+          <div><label>Kou (Cost) <span style="color:var(--text-faint);font-weight:400;">(= Valè Estime)</span></label><input type="number" id="goalCostDisplay" disabled placeholder="0"></div>
+          <div><label>Sere Deja (Saved)</label><input type="number" id="goalCurrentSavings" placeholder="Pw. 3000"></div>
+          <div><label>Plan Sere pa Mwa <span style="color:var(--text-faint);font-weight:400;">(opsyonèl — pou Bidjè)</span></label><input type="number" id="goalMonthlySavingPlan" placeholder="Pw. 1000"></div>
+        </div>
+        <div id="goalSourceWalletRow" style="margin-top:8px;" hidden>
+          <label>Sous Kòb (Source Wallet) <span style="color:var(--text-faint);font-weight:400;">(referans sèlman — pa deplase lajan)</span></label>
+          <select class="field" id="goalSourceWallet">
+            <option value="">— Pa chwazi —</option>
+          </select>
+        </div>
+        <div id="goalFinancialRemainingRow" style="margin-top:8px;" hidden>
+          <label style="display:block;margin-bottom:6px;">Pwogrè Finansye <span style="color:var(--text-faint);font-weight:400;">(otomatik)</span></label>
+          <div class="goal-progress-row" style="margin-bottom:6px;">
+            <div class="mini-progress"><span id="goalFinancialProgressBar" style="width:0%;background:var(--green);"></span></div>
+            <b id="goalFinancialProgressPct">0%</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span style="color:var(--text-faint);">Sere (Saved): <b id="goalFinancialSaved" style="color:var(--text);">0</b></span>
+            <span style="color:var(--text-faint);">Rete (Remaining): <b id="goalFinancialRemaining">0</b></span>
+          </div>
+        </div>
+        <div id="goalFinanceSyncStatus" style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-soft,rgba(0,0,0,0.03));" hidden>
+          <label style="display:block;margin-bottom:6px;">Estati Koneksyon Finans <span style="color:var(--text-faint);font-weight:400;">(otomatik)</span></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
+            <span style="color:var(--text-faint);">Wallet Konekte: <b id="goalSyncWallet" style="color:var(--text);">—</b></span>
+            <span style="color:var(--text-faint);">Abitid Epay: <b id="goalSyncHabit" style="color:var(--text);">—</b></span>
+            <span style="color:var(--text-faint);">Total Sere: <b id="goalSyncSaved" style="color:var(--text);">0</b></span>
+            <span style="color:var(--text-faint);">Dènye Tranzaksyon: <b id="goalSyncLastTx" style="color:var(--text);">—</b></span>
+            <span style="color:var(--text-faint);grid-column:1 / -1;">Rete: <b id="goalSyncRemaining" style="color:var(--text);">0</b></span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Pwogrè</span>
+          <span class="pill" style="background:var(--green-soft);color:var(--green);font-weight:400;font-size:10px;">Otomatik</span>
+        </label>
+        <div class="goal-progress-row">
+          <div class="mini-progress"><span id="goalProgressBar" style="width:0%;background:var(--green);"></span></div>
+          <b id="goalProgressPct" style="font-family:var(--font-mono);">0%</b>
+        </div>
+        <div style="font-size:10.5px;color:var(--text-faint);margin-top:4px;" id="goalProgressSourceLbl"></div>
+      </div>
+      <div>
+        <label>Etap (Milestones)</label>
+        <div class="milestone-list" id="goalMilestoneList"></div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr 0.7fr;gap:6px;margin-top:8px;">
+          <input type="text" id="msTitleInput" placeholder="Tit etap (obligatwa)">
+          <input type="text" id="msDescInput" placeholder="Deskripsyon (opsyonèl)">
+          <input type="number" id="msContribInput" placeholder="Kontribisyon %" min="0" max="100">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:6px;">
+          <input type="date" id="msDateInput">
+          <button class="btn btn-ghost" id="addMilestoneBtn" type="button"><i data-lucide="plus"></i> Ajoute etap</button>
+        </div>
+      </div>
+      <div><label>Nòt</label><textarea id="goalNotes" placeholder="Nòt adisyonèl..."></textarea></div>
+      <!-- Pati 39/50: GOAL <-> GOAL — Depandans ant Objektif (kouch apa, opsyonèl) -->
+      <div class="goal-links-section">
+        <label>Depandans <span style="color:var(--text-faint);font-weight:400;">(Objektif ki dwe fèt anvan sa a — opsyonèl)</span></label>
+        <div id="goalDependenciesList" class="milestone-list"></div>
+        <div id="goalDependencyProgressRow" class="goal-progress-row" style="margin:8px 0;" hidden>
+          <div class="mini-progress"><span id="goalDependencyProgressBar" style="width:0%;background:var(--orange);"></span></div>
+          <b id="goalDependencyProgressPct">0/0 konplete</b>
+          <span id="goalDependencyBlockedBadge" class="pill" style="background:var(--orange-soft);color:var(--orange);margin-left:6px;" hidden><i data-lucide="lock" style="width:10px;height:10px;vertical-align:-1px;"></i> Bloke</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <select class="field" id="goalDependencySelect" style="flex:1;"></select>
+          <button class="btn btn-ghost" id="goalDependencyAddBtn" type="button"><i data-lucide="link-2"></i> Ajoute</button>
+        </div>
+        <div id="goalDependentsSection" style="margin-top:12px;" hidden>
+          <label style="display:block;">Objektif ki Depann de Sa a <span style="color:var(--text-faint);font-weight:400;">(lekti sèl)</span></label>
+          <div id="goalDependentsList" class="milestone-list"></div>
+        </div>
+      </div>
+      <div class="goal-links-section">
+        <!-- Pati 3/4: Seksyon Abitid — wrap sèlman pou kontwole vizibilite l
+             selon Modil Konekte (checkbox "Abitid" nan goalLinksGrid pi wo).
+             Okenn ID/lojik anndan pa touche — sistèm Abitid la rete menm. -->
+        <div id="goalHabitsSectionWrap">
+        <label>Abitid Lye <span id="goalLinkedHabitsCount" style="color:var(--text-faint);font-weight:400;"></span></label>
+        <div id="goalHabitProgressRow" class="goal-progress-row" style="margin-bottom:8px;" hidden>
+          <div class="mini-progress"><span id="goalHabitProgressBar" style="width:0%;background:var(--green);"></span></div>
+          <b id="goalHabitProgressPct">0%</b>
+        </div>
+        <div class="milestone-list" id="goalLinkedHabitsList"></div>
+        <label style="margin-top:12px;display:block;">Poukisa Chak Abitid Lye <span style="color:var(--text-faint);font-weight:400;">(Objektif → Abitid → Kontribisyon)</span></label>
+        <div class="milestone-list" id="goalHabitWhyLinkedList"></div>
+        <label style="margin-top:12px;display:block;">Rezime Kontribisyon <span style="color:var(--text-faint);font-weight:400;">(total pa Abitid + total jeneral)</span></label>
+        <div class="milestone-list" id="goalContributionSummaryList"></div>
+        <button class="btn btn-ghost" id="goalAddHabitBtn" style="margin-top:8px;" hidden><i data-lucide="plus"></i> Ajoute Abitid</button>
+        <div id="goalLinkExistingHabitWrap" style="margin-top:8px;display:flex;gap:8px;" hidden>
+          <select class="field" id="goalLinkExistingHabitSelect" style="flex:1;"></select>
+          <button class="btn btn-ghost" id="goalLinkExistingHabitBtn" type="button"><i data-lucide="link-2"></i> Lye</button>
+        </div>
+        </div>
+        <!-- Pati 3/4: Seksyon Aprantisaj — vizib si Kategori Prensipal se
+             "Aprantisaj" OSWA si modil Aprantisaj konekte. Okenn ID/lojik
+             anndan pa touche. -->
+        <div id="goalLearningSectionWrap">
+        <label style="margin-top:12px;display:block;">Aprantisaj Lye <span style="color:var(--text-faint);font-weight:400;">(pwogrè soti dirèkteman nan leson konplete)</span></label>
+        <div class="milestone-list" id="goalLearningLinksList"></div>
+        <div id="goalLearningProgressRow" class="goal-progress-row" style="margin:8px 0;" hidden>
+          <div class="mini-progress"><span id="goalLearningProgressBar" style="width:0%;background:var(--blue);"></span></div>
+          <b id="goalLearningProgressPct">0%</b>
+        </div>
+        <button class="btn btn-ghost" id="goalCreateLearningHabitsBtn" style="margin-top:4px;" hidden><i data-lucide="graduation-cap"></i> Kreye Abitid Aprantisaj</button>
+        <label style="margin-top:12px;display:block;">Kontribisyon Aprantisaj Konfime <span style="color:var(--text-faint);font-weight:400;">(dirèkteman soti nan modil Aprantisaj)</span></label>
+        <div class="milestone-list" id="goalLearningContributionList"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteGoalBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveGoalBtn" style="margin-left:auto;">Anrejistre Objektif</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LESSON MODAL ============ -->
+<!-- ================= SECURITY SETUP MODAL ================= -->
+<div class="modal-overlay" id="securitySetupModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="securitySetupTitle">Aktive Aplikasyon Lock</h3><button class="icon-btn" id="closeSecuritySetupModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div id="securitySetupStep1">
+        <label>Chwazi tip kòd</label>
+        <div class="mode-toggle" id="securityModeToggle">
+          <button type="button" data-mode="pin" class="active">Kòd PIN (4 chif)</button>
+          <button type="button" data-mode="password">Modpas</button>
+        </div>
+        <label style="margin-top:10px;">Antre kòd la</label>
+        <input type="password" class="field" id="securityCodeInput1" inputmode="numeric" placeholder="••••" maxlength="20" autocomplete="off">
+        <label>Konfime kòd la</label>
+        <input type="password" class="field" id="securityCodeInput2" inputmode="numeric" placeholder="••••" maxlength="20" autocomplete="off">
+        <label style="margin-top:10px;">Kesyon Sekirite (pou rekiperasyon)</label>
+        <input type="text" class="field" id="securityQuestionInput" placeholder="Pw. Ki non premye lekòl ou?">
+        <label>Repons</label>
+        <input type="text" class="field" id="securityAnswerInput" placeholder="Repons ou">
+        <div class="lock-error" id="securitySetupError" style="text-align:left;"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelSecuritySetup">Anile</button>
+      <button class="btn btn-primary" id="confirmSecuritySetup" style="margin-left:auto;">Aktive Lock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= RECOVERY CODE REVEAL MODAL ================= -->
+<div class="modal-overlay" id="recoveryCodeModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Kòd Rekiperasyon Ou</h3></div>
+    <div class="modal-body">
+      <p style="font-size:12.5px;color:var(--text-dim);">Sove kòd sa a yon kote an sekirite. Se sèl fason pou w reyantre nan OSLIFE si w bliye kòd ou <b>e</b> ou pa ka reponn kesyon sekirite a. Nou pap montre l ankò.</p>
+      <div class="recovery-code-box" id="recoveryCodeDisplay">----</div>
+      <button class="btn btn-ghost" id="copyRecoveryCodeBtn" style="align-self:center;"><i data-lucide="copy"></i> Kopye kòd la</button>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="confirmRecoveryCodeSaved" style="margin-left:auto;">Mwen Sove Li ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CHANGE / DISABLE SECURITY MODAL ================= -->
+<div class="modal-overlay" id="securityChangeModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="securityChangeTitle">Chanje Kòd</h3><button class="icon-btn" id="closeSecurityChangeModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <label>Antre kòd aktyèl ou</label>
+      <input type="password" class="field" id="securityCurrentCodeInput" placeholder="••••" autocomplete="off">
+      <div id="securityChangeNewFields">
+        <label style="margin-top:10px;">Nouvo kòd</label>
+        <input type="password" class="field" id="securityNewCodeInput1" placeholder="••••" autocomplete="off">
+        <label>Konfime nouvo kòd</label>
+        <input type="password" class="field" id="securityNewCodeInput2" placeholder="••••" autocomplete="off">
+      </div>
+      <div class="lock-error" id="securityChangeError" style="text-align:left;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelSecurityChange">Anile</button>
+      <button class="btn btn-primary" id="confirmSecurityChange" style="margin-left:auto;">Konfime</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= LOCK SCREEN (App Lock overlay) ================= -->
+<div class="lock-overlay" id="lockOverlay">
+  <div class="lock-card" id="lockEnterCard">
+    <div class="lock-logo"><i data-lucide="shield-check"></i></div>
+    <h2>OSLIFE Fèmen</h2>
+    <p id="lockSubtitle">Antre kòd PIN ou pou kontinye</p>
+    <div class="lock-pin-dots" id="lockPinDots" hidden></div>
+    <div id="lockPasswordRow" style="display:none;gap:8px;width:100%;max-width:260px;">
+      <input type="password" id="lockPasswordInput" class="field" placeholder="Antre modpas ou" autocomplete="off" style="flex:1;">
+      <button class="btn btn-primary" id="lockPasswordSubmitBtn">OK</button>
+    </div>
+    <div class="lock-keypad" id="lockKeypad" hidden></div>
+    <div class="lock-error" id="lockError"></div>
+    <button class="lock-forgot" id="lockForgotBtn">Bliye kòd ou?</button>
+  </div>
+
+  <div class="lock-card lock-recovery-body" id="lockRecoveryCard" hidden>
+    <div class="lock-logo"><i data-lucide="key-round"></i></div>
+    <h2 style="align-self:center;">Rekipere Aksè</h2>
+    <div id="lockRecoveryQuestionStep">
+      <label style="font-size:11px;color:var(--text-faint);font-weight:600;text-transform:uppercase;">Kesyon Sekirite</label>
+      <p id="lockRecoveryQuestionText" style="font-size:13.5px;font-weight:600;margin:4px 0 10px;"></p>
+      <input type="text" class="field" id="lockRecoveryAnswerInput" placeholder="Repons ou">
+    </div>
+    <details style="margin-top:4px;">
+      <summary style="cursor:pointer;font-size:12px;color:var(--blue);font-weight:600;">Oswa itilize Kòd Rekiperasyon</summary>
+      <input type="text" class="field" id="lockRecoveryCodeInput" placeholder="XXXX-XXXX-XXXX" style="margin-top:8px;text-transform:uppercase;">
+    </details>
+    <div class="lock-error" id="lockRecoveryError"></div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn btn-ghost" id="lockRecoveryBackBtn" style="flex:1;justify-content:center;">Retounen</button>
+      <button class="btn btn-primary" id="lockRecoveryConfirmBtn" style="flex:1;justify-content:center;">Verifye</button>
+    </div>
+  </div>
+
+  <div class="lock-card lock-recovery-body" id="lockResetCard" hidden>
+    <div class="lock-logo"><i data-lucide="lock-open"></i></div>
+    <h2 style="align-self:center;">Mete Nouvo Kòd</h2>
+    <label style="font-size:11px;color:var(--text-faint);font-weight:600;text-transform:uppercase;">Nouvo Kòd</label>
+    <input type="password" class="field" id="lockResetCodeInput1" placeholder="••••" autocomplete="off">
+    <label style="font-size:11px;color:var(--text-faint);font-weight:600;text-transform:uppercase;">Konfime Nouvo Kòd</label>
+    <input type="password" class="field" id="lockResetCodeInput2" placeholder="••••" autocomplete="off">
+    <div class="lock-error" id="lockResetError"></div>
+    <button class="btn btn-primary" id="lockResetConfirmBtn" style="justify-content:center;">Sove Nouvo Kòd</button>
+  </div>
+</div>
+
+<div class="qa-panel" id="qaPanel">
+  <div class="qa-item" data-action="task"><i data-lucide="check-square"></i> Ajoute travay</div>
+  <div class="qa-item" data-action="event"><i data-lucide="calendar-plus"></i> Ajoute evènman</div>
+  <div class="qa-item" data-action="tx"><i data-lucide="wallet"></i> Ajoute depans</div>
+  <div class="qa-item" data-action="project"><i data-lucide="folder-kanban"></i> Ajoute pwojè</div>
+  <div class="qa-item" data-action="note"><i data-lucide="notebook-pen"></i> Ajoute nòt</div>
+  <div class="qa-item" data-action="habit"><i data-lucide="flame"></i> Ajoute abitid</div>
+  <div class="qa-item" data-action="plan"><i data-lucide="wifi"></i> Ajoute plan</div>
+</div>
+<button class="fab" id="fabBtn" aria-label="Aksyon rapid"><i data-lucide="plus"></i></button>
+<div class="toast" id="toast"><i data-lucide="check-circle-2"></i><span id="toastText"></span></div>
+
+<script src="app.js"></script>
+</body>
+</html>
