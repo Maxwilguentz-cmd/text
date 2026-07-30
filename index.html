@@ -2232,6 +2232,16 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
             <span style="color:var(--text-faint);">Rete (Remaining): <b id="goalFinancialRemaining">0</b></span>
           </div>
         </div>
+        <div id="goalFinanceSyncStatus" style="margin-top:8px;padding:10px;border-radius:8px;background:var(--bg-soft,rgba(0,0,0,0.03));" hidden>
+          <label style="display:block;margin-bottom:6px;">Estati Koneksyon Finans <span style="color:var(--text-faint);font-weight:400;">(otomatik)</span></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
+            <span style="color:var(--text-faint);">Wallet Konekte: <b id="goalSyncWallet" style="color:var(--text);">—</b></span>
+            <span style="color:var(--text-faint);">Abitid Epay: <b id="goalSyncHabit" style="color:var(--text);">—</b></span>
+            <span style="color:var(--text-faint);">Total Sere: <b id="goalSyncSaved" style="color:var(--text);">0</b></span>
+            <span style="color:var(--text-faint);">Dènye Tranzaksyon: <b id="goalSyncLastTx" style="color:var(--text);">—</b></span>
+            <span style="color:var(--text-faint);grid-column:1 / -1;">Rete: <b id="goalSyncRemaining" style="color:var(--text);">0</b></span>
+          </div>
+        </div>
       </div>
       <div><label>Pwogrè (%)</label><input type="number" id="goalProgress" min="0" max="100" value="0"></div>
       <div>
