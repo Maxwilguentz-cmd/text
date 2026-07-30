@@ -2222,6 +2222,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div><label>Dat Limit <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="date" id="goalDeadline"></div>
         <div><label>Valè Estime <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="number" id="goalEstimatedValue" placeholder="Pw. 50000"></div>
       </div>
+      <div id="goalDeadlineTrackingRow" class="milestone-list" style="margin-top:4px;" hidden></div>
       <div class="goal-finance-section">
         <label style="display:flex;align-items:center;gap:6px;font-weight:400;"><input type="checkbox" id="goalIsFinancial" style="width:auto;"> Sa se yon Objektif Finansye</label>
         <div id="goalFinancialFields" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;" hidden>
@@ -2261,7 +2262,15 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       <div>
         <label>Etap (Milestones)</label>
         <div class="milestone-list" id="goalMilestoneList"></div>
-        <button class="btn btn-ghost" id="addMilestoneBtn" style="margin-top:8px;"><i data-lucide="plus"></i> Ajoute etap</button>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr 0.7fr;gap:6px;margin-top:8px;">
+          <input type="text" id="msTitleInput" placeholder="Tit etap (obligatwa)">
+          <input type="text" id="msDescInput" placeholder="Deskripsyon (opsyonèl)">
+          <input type="number" id="msContribInput" placeholder="Kontribisyon %" min="0" max="100">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:6px;">
+          <input type="date" id="msDateInput">
+          <button class="btn btn-ghost" id="addMilestoneBtn" type="button"><i data-lucide="plus"></i> Ajoute etap</button>
+        </div>
       </div>
       <div><label>Nòt</label><textarea id="goalNotes" placeholder="Nòt adisyonèl..."></textarea></div>
       <div class="goal-links-section">
@@ -2275,8 +2284,12 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div class="milestone-list" id="goalHabitWhyLinkedList"></div>
         <label style="margin-top:12px;display:block;">Rezime Kontribisyon <span style="color:var(--text-faint);font-weight:400;">(total pa Abitid + total jeneral)</span></label>
         <div class="milestone-list" id="goalContributionSummaryList"></div>
-        <label style="margin-top:12px;display:block;">Istwa Pwogrè <span style="color:var(--text-faint);font-weight:400;">(evolisyon otomatik)</span></label>
+        <label style="margin-top:12px;display:block;">Timeline Objektif <span style="color:var(--text-faint);font-weight:400;">(istwa konplè: pwogrè, etap, leson, kontribisyon)</span></label>
         <div class="milestone-list" id="goalProgressHistoryList"></div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <input type="text" id="goalTimelineNoteInput" placeholder="Ajoute yon nòt/aktyalizasyon enpòtan..." style="flex:1;">
+          <button class="btn btn-ghost" id="addGoalTimelineNoteBtn" type="button"><i data-lucide="plus"></i></button>
+        </div>
         <label style="margin-top:12px;display:block;">Istwa Kontribisyon Finansye <span style="color:var(--text-faint);font-weight:400;">(chak sere anrejistre)</span></label>
         <div class="milestone-list" id="goalFinancialContributionHistoryList"></div>
         <label style="margin-top:12px;display:block;">Lye ak Objektif la <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label>
