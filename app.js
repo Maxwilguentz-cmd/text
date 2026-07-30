@@ -6115,13 +6115,15 @@ function recordGoalMilestoneHistory(goalId, milestone, pctAfter){
   const source = milestone.done ? 'milestone-completed' : 'milestone-uncompleted';
   const already = history.some(r => r.source === source && r.milestoneId === milestone.id && r.date === date);
   if (already) return false;
-  history.push({
+  const record = {
     goalId, date, time: new Date().toISOString(),
     milestoneId: milestone.id, milestoneName: milestone.text,
     source, pct: pctAfter,
     reason: `Etap "${milestone.text}" ${milestone.done ? 'te fin fèt' : 'pa make fèt ankò'}.`
-  });
+  };
+  history.push(record);
   if (history.length > 180) g.habitProgressHistory = history.slice(-180);
+  if (typeof logGoalHistoryToLifeTimeline === 'function') logGoalHistoryToLifeTimeline(goalId, record);
   return true;
 }
 
@@ -6138,12 +6140,14 @@ function recordGoalLearningHistory(goalId){
   const prevDone = last ? last.lessonsDone : 0;
   if (totalDone <= prevDone) return false; // pa gen nouvo leson konplete depi dènye antre a
   const delta = totalDone - prevDone;
-  history.push({
+  const record = {
     goalId, date: todayISO(), time: new Date().toISOString(),
     source: 'learning-lesson-completed', lessonsDone: totalDone, delta, pct: g.progress || 0,
     reason: `${delta} leson konplete nan Aprantisaj lye (total: ${totalDone}).`
-  });
+  };
+  history.push(record);
   if (history.length > 180) g.habitProgressHistory = history.slice(-180);
+  if (typeof logGoalHistoryToLifeTimeline === 'function') logGoalHistoryToLifeTimeline(goalId, record);
   return true;
 }
 
@@ -6152,12 +6156,14 @@ function addGoalTimelineNote(goalId, text){
   if (!g || !text || !text.trim()) return false;
   if (!Array.isArray(g.habitProgressHistory)) g.habitProgressHistory = [];
   const history = g.habitProgressHistory;
-  history.push({
+  const record = {
     goalId, date: todayISO(), time: new Date().toISOString(),
     source: 'manual-note', note: text.trim(), pct: g.progress || 0, reason: text.trim()
-  });
+  };
+  history.push(record);
   if (history.length > 180) g.habitProgressHistory = history.slice(-180);
   persistGoals();
+  if (typeof logGoalHistoryToLifeTimeline === 'function') logGoalHistoryToLifeTimeline(goalId, record);
   return true;
 }
 
@@ -7437,6 +7443,7 @@ function recordGoalHabitProgressHistory(goalId, sourceHabitId, actionSource, hab
   history.push(record);
   if (history.length > 180) g.habitProgressHistory = history.slice(-180);
   persistGoals();
+  if (typeof logGoalHistoryToLifeTimeline === 'function') logGoalHistoryToLifeTimeline(goalId, record);
   return true;
 }
 
@@ -7446,6 +7453,51 @@ function getGoalProgressHistory(goalId){
   const g = goals.find(x => x.id === goalId);
   if (!g || !Array.isArray(g.habitProgressHistory)) return [];
   return g.habitProgressHistory.slice().reverse();
+}
+
+// ==========================================
+// GOAL — Mirwa Istwa Pwogrè nan Istwa Lavi Global (Ajisteman apre Pati 50/50)
+// Ti fenèt "Modifye Objektif" la pa afiche istwa pwogrè ankò (Timeline
+// Objektif + Istwa Kontribisyon Finansye retire) — chak nouvo antre nan
+// g.habitProgressHistory kounye a MIRWA dirèkteman nan Istwa Lavi global la
+// (activityLog / vi "Istwa Lavi") ANPLIS de sa ki te deja la, san touche
+// okenn antre ki egziste deja. Chak evènman toujou parèt anba kategori
+// "Objektif" — epi, si li gen rapò ak Finans (kontribisyon sere) oswa
+// Aprantisaj (leson konplete), li parèt yon FWA anplis anba kategori sa a
+// tou. `goalHistoryKey` la asire NOU PA JANM kreye 2 fwa menm evènman an
+// nan menm kategori a (gad kont doublon pou chak kategori separeman).
+// ==========================================
+function goalHistoryEventKey(goalId, record){
+  const bit = record.habitId || record.milestoneId || record.note || '';
+  return [goalId, record.source, record.date, bit, record.pct].join('|');
+}
+
+function logGoalHistoryToLifeTimeline(goalId, record){
+  if (!record || typeof activityLog === 'undefined') return;
+  const g = goals.find(x => x.id === goalId);
+  const goalTitle = g ? g.title : 'Objektif';
+  const key = goalHistoryEventKey(goalId, record);
+  const alreadyIn = category => activityLog.some(a => a.category === category && a.goalHistoryKey === key);
+  const push = (icon, color, category, text) => {
+    if (alreadyIn(category)) return;
+    activityLog.unshift({ id: uid(), icon, color, text, category, goalHistoryKey: key, ts: new Date().toISOString() });
+  };
+
+  // ---- Toujou nan kategori "Objektif" ----
+  push('target', 'var(--blue)', 'goals', `<b>${escapeHtml(goalTitle)}</b> — ${escapeHtml(record.reason || 'Pwogrè ajou')}`);
+
+  // ---- Anplis, nan kategori "Finans" si se yon kontribisyon finansye ----
+  if (record.source === 'saving-habit-completed'){
+    push('wallet', 'var(--green)', 'finance', `Objektif <b>${escapeHtml(goalTitle)}</b> — ${escapeHtml(record.reason || 'Kontribisyon finansye')}`);
+  }
+
+  // ---- Anplis, nan kategori "Aprantisaj" si se yon pwogrè leson ----
+  if (record.source === 'learning-lesson-completed'){
+    push('graduation-cap', 'var(--orange)', 'learning', `Objektif <b>${escapeHtml(goalTitle)}</b> — ${escapeHtml(record.reason || 'Pwogrè aprantisaj')}`);
+  }
+
+  if (activityLog.length > 300) activityLog.length = 300;
+  if (typeof persistActivity === 'function') persistActivity();
 }
 
 // ==========================================
@@ -7487,6 +7539,7 @@ function recordGoalFinancialContributionHistory(goalId, habitId, amount, unit){
   history.push(record);
   if (history.length > 180) g.habitProgressHistory = history.slice(-180);
   persistGoals();
+  if (typeof logGoalHistoryToLifeTimeline === 'function') logGoalHistoryToLifeTimeline(goalId, record);
   return true;
 }
 
