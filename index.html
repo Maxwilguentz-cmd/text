@@ -2350,8 +2350,10 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 
       <div class="goal-details-section-title">Dat</div>
       <div class="goal-details-grid">
+        <div class="goal-details-field"><span class="lbl">Dat Kòmansman</span><span class="val" id="goalDetailsStartDate">—</span></div>
         <div class="goal-details-field"><span class="lbl">Dat Limit</span><span class="val" id="goalDetailsDeadline">—</span></div>
         <div class="goal-details-field"><span class="lbl">Jou Ki Rete</span><span class="val" id="goalDetailsDaysRemaining">—</span></div>
+        <div class="goal-details-field" id="goalDetailsTrackStatusWrap" hidden><span class="lbl">Estati (Pwogrè vs Tan)</span><span class="val" id="goalDetailsTrackStatus">—</span></div>
       </div>
 
       <div class="goal-details-section-title">Modil Konekte</div>
@@ -2359,9 +2361,6 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 
       <div class="goal-details-section-title">Etap (Milestones)</div>
       <div class="milestone-list" id="goalDetailsMilestonesList"></div>
-
-      <div class="goal-details-section-title">Istwa Objektif</div>
-      <div class="goal-details-history-list" id="goalDetailsHistoryList"></div>
 
       <div class="goal-details-section-title">Nòt</div>
       <div class="goal-details-notes" id="goalDetailsNotes">—</div>
@@ -2403,10 +2402,6 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
             <span class="pill" style="background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);font-weight:400;font-size:10px;">Otomatik</span>
           </label>
           <div id="goalStatusDisplay" class="pill" style="width:100%;box-sizing:border-box;padding:9px 10px;font-size:12.5px;font-weight:700;border-radius:10px;display:flex;align-items:center;justify-content:center;">—</div>
-          <div style="display:flex;gap:6px;margin-top:6px;">
-            <button type="button" class="btn btn-ghost" id="goalPauseToggleBtn" style="flex:1;font-size:11px;padding:6px 4px;">Sispann</button>
-            <button type="button" class="btn btn-ghost" id="goalArchiveToggleBtn" style="flex:1;font-size:11px;padding:6px 4px;">Achive</button>
-          </div>
         </div>
       </div>
       <!-- Pati 2/4: Modil Konekte — deplase la a, dirèkteman anba Kategori Prensipal, pou moun
@@ -2420,7 +2415,6 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div><label>Dat Limit <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="date" id="goalDeadline"></div>
         <div><label>Valè Estime <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="number" id="goalEstimatedValue" placeholder="Pw. 50000"></div>
       </div>
-      <div id="goalDeadlineTrackingRow" class="milestone-list" style="margin-top:4px;" hidden></div>
       <div class="goal-finance-section" id="goalFinanceSectionWrap">
         <div id="goalFinanceSectionLbl" class="pill" style="width:fit-content;background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);display:flex;align-items:center;gap:5px;" hidden><i data-lucide="wallet" style="width:11px;height:11px;"></i> Detay Finansye — otomatik (Kategori: Finans)</div>
         <div id="goalFinancialFields" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;" hidden>
