@@ -6860,7 +6860,154 @@ function renderGoalDetailsModal(){
   // ---- Nòt ----
   document.getElementById('goalDetailsNotes').textContent = g.notes || 'Pa gen nòt.';
 
+  // ---- Modil Konekte / Milestones / Istwa (Pati 2/3) ----
+  renderGoalDetailsModules(g);
+  renderGoalDetailsMilestones(g);
+  renderGoalDetailsHistory(g);
+
   if (window.lucide) lucide.createIcons();
+}
+
+// ---- Modil Konekte (Pati 2/3) — li done ki egziste deja sèlman ----
+// (habits/wallets/events/LEARNING_COURSES/projects), pa gen nouvo chan sove.
+function buildGoalLinkedModules(g){
+  const mods = [];
+  const linkedHabits = getHabitsForGoal(g.id);
+  if (linkedHabits.length){
+    const doneToday = linkedHabits.filter(h => Array.isArray(h.completions) && h.completions.includes(todayISO())).length;
+    mods.push({
+      key:'habits', icon:'flame', label:'Abitid', color:'var(--orange)', bg:'var(--orange-soft)',
+      status:`${linkedHabits.length} abitid lye · ${doneToday}/${linkedHabits.length} fèt jodi a`,
+      onClick: () => { closeGoalDetailsModal(); showView('habits'); },
+    });
+  }
+  if (g.isFinancial || g.walletId){
+    const wallet = g.walletId ? wallets.find(w => w.id === g.walletId) : null;
+    const pct = Number(g.estimatedValue) > 0 ? computeGoalFinancialProgressPct(g) : null;
+    mods.push({
+      key:'finance', icon:'wallet', label:'Finans', color:'var(--green)', bg:'var(--green-soft)',
+      status: [wallet ? escapeHtml(wallet.name) : null, pct != null ? `${pct}% sere` : null].filter(Boolean).join(' · ') || 'Objektif Finansye',
+      onClick: () => { closeGoalDetailsModal(); showView('finance'); },
+    });
+  }
+  const linkedEvents = events.filter(e => e.goalId === g.id);
+  if (linkedEvents.length){
+    mods.push({
+      key:'calendar', icon:'calendar', label:'Kalandriye', color:'var(--blue)', bg:'var(--blue-soft)',
+      status:`${linkedEvents.length} evènman lye`,
+      onClick: () => { closeGoalDetailsModal(); showView('calendar'); },
+    });
+  }
+  if (Array.isArray(g.linkedLearningCourses) && g.linkedLearningCourses.length){
+    const validCourses = g.linkedLearningCourses.filter(k => LEARNING_COURSES[k]);
+    const avgPct = validCourses.length ? Math.round(validCourses.reduce((s,k)=>s+courseProgress(k).pct,0)/validCourses.length) : 0;
+    mods.push({
+      key:'learning', icon:'graduation-cap', label:'Aprantisaj', color:'var(--blue)', bg:'var(--blue-soft)',
+      status:`${validCourses.length} kou lye · ${avgPct}% konplete`,
+      onClick: () => { closeGoalDetailsModal(); showView('learning'); },
+    });
+  }
+  const linkedProject = projects.find(p => p.goalId === g.id);
+  if (linkedProject){
+    const st = PROJECT_STATUSES.find(s => s.key === linkedProject.status);
+    mods.push({
+      key:'projects', icon:'folder', label:'Pwojè', color:'var(--orange)', bg:'var(--orange-soft)',
+      status:`${escapeHtml(linkedProject.name)} · ${st ? st.label : linkedProject.status}`,
+      onClick: () => { closeGoalDetailsModal(); showView('projects'); openProjectModal(linkedProject.id); },
+    });
+  }
+  return mods;
+}
+
+function renderGoalDetailsModules(g){
+  const wrap = document.getElementById('goalDetailsModulesGrid');
+  if (!wrap) return;
+  const mods = buildGoalLinkedModules(g);
+  if (!mods.length){
+    wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Okenn modil lye pou kounye a.</span>';
+    return;
+  }
+  wrap.innerHTML = mods.map(m => `
+    <div class="goal-module-card" data-key="${m.key}">
+      <div class="goal-module-card-ic" style="background:${m.bg};color:${m.color};"><i data-lucide="${m.icon}" style="width:17px;height:17px;"></i></div>
+      <div class="goal-module-card-body"><b>${m.label}</b><span>${m.status}</span></div>
+      <i data-lucide="chevron-right" class="goal-module-card-arrow"></i>
+    </div>`).join('');
+  wrap.querySelectorAll('.goal-module-card').forEach(card => {
+    const mod = mods.find(m => m.key === card.dataset.key);
+    if (mod) card.addEventListener('click', mod.onClick);
+  });
+}
+
+// ---- Milestones — chak Etap nan pwòp kat pa l (lekti sèl), ak Estati
+// Otomatik kalkile apati g.milestones (m.done + m.targetDate), san touche
+// okenn chan ki egziste deja. ----
+function milestoneAutoStatusInfo(m){
+  if (m.done) return { label: GOAL_STATUS.completed, style: GOAL_STATUS_STYLE.completed };
+  if (m.targetDate && m.targetDate < todayISO()) return { label: GOAL_STATUS.delayed, style: GOAL_STATUS_STYLE.delayed };
+  return { label: GOAL_STATUS['in-progress'], style: GOAL_STATUS_STYLE['in-progress'] };
+}
+
+function renderGoalDetailsMilestones(g){
+  const wrap = document.getElementById('goalDetailsMilestonesList');
+  if (!wrap) return;
+  const milestones = g.milestones || [];
+  if (!milestones.length){
+    wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen Etap (Milestones) pou Objektif sa a.</span>';
+    return;
+  }
+  wrap.innerHTML = milestones.map(m => {
+    const st = milestoneAutoStatusInfo(m);
+    return `<div class="milestone-card" style="cursor:default;">
+      <div class="ms-top" style="justify-content:space-between;">
+        <span class="ms-title">${escapeHtml(m.text)}</span>
+        <span class="pill ms-status-badge" style="background:${st.style.bg};color:${st.style.fg};">${st.label}</span>
+      </div>
+      ${m.contribution != null ? `<span class="ms-weight">Pèz: ${m.contribution}%</span>` : ''}
+      <div class="ms-desc"${m.description ? '' : ' style="font-style:italic;"'}>${m.description ? escapeHtml(m.description) : 'San deskripsyon'}</div>
+      <div class="ms-date"><i data-lucide="calendar" style="width:11px;height:11px;"></i> ${m.targetDate ? 'Dat Sib: ' + m.targetDate : 'San dat sib'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ---- Istwa Objektif — REYITILIZE g.habitProgressHistory (getGoalProgressHistory,
+// deja egziste depi Pati 9/50) san kreye okenn nouvo sistèm/dosye paralèl. ----
+const GOAL_HISTORY_EVENT_STYLE = {
+  'habit-completed': { icon:'check-circle-2', color:'var(--green)', bg:'var(--green-soft)' },
+  'habit-uncompleted': { icon:'circle', color:'var(--text-faint)', bg:'var(--surface-2)' },
+  'saving-habit-completed': { icon:'wallet', color:'var(--green)', bg:'var(--green-soft)' },
+  'learning-lesson-completed': { icon:'graduation-cap', color:'var(--blue)', bg:'var(--blue-soft)' },
+  'milestone-completed': { icon:'flag', color:'var(--green)', bg:'var(--green-soft)' },
+  'milestone-uncompleted': { icon:'flag', color:'var(--text-faint)', bg:'var(--surface-2)' },
+  'manual-note': { icon:'sticky-note', color:'var(--orange)', bg:'var(--orange-soft)' },
+};
+function goalHistoryEventText(r){
+  if (r.source === 'saving-habit-completed' && r.amountAdded){
+    return `Lajan sere: ${r.amountAdded}${r.unit ? ' ' + r.unit : ''}${r.habitName ? ' (via ' + r.habitName + ')' : ''}`;
+  }
+  if (r.note) return r.note;
+  if (r.reason) return r.reason;
+  if (r.habitName) return r.habitName;
+  return 'Pwogrè Objektif chanje';
+}
+function renderGoalDetailsHistory(g){
+  const wrap = document.getElementById('goalDetailsHistoryList');
+  if (!wrap) return;
+  const entries = getGoalProgressHistory(g.id).slice(0, 15); // pi resan an premye (deja jan sa nan getGoalProgressHistory)
+  if (!entries.length){
+    wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen istwa pou Objektif sa a.</span>';
+    return;
+  }
+  wrap.innerHTML = entries.map(r => {
+    const style = GOAL_HISTORY_EVENT_STYLE[r.source] || { icon:'activity', color:'var(--blue)', bg:'var(--blue-soft)' };
+    return `<div class="goal-history-row">
+      <div class="goal-history-ic" style="background:${style.bg};color:${style.color};"><i data-lucide="${style.icon}" style="width:13px;height:13px;"></i></div>
+      <div class="goal-history-body">
+        <span class="txt">${escapeHtml(goalHistoryEventText(r))}</span>
+        <span class="meta">${r.date === todayISO() ? 'Jodi a' : escapeHtml(r.date)}${r.pct != null ? ' · ' + r.pct + '%' : ''}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function openGoalDetailsModal(id){
