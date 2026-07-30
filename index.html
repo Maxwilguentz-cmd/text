@@ -391,6 +391,26 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 .milestone-card .ms-desc{font-size:11.5px;color:var(--text-faint);line-height:1.5;}
 .milestone-card .ms-date{font-size:10.5px;color:var(--text-faint);display:flex;align-items:center;gap:4px;}
 
+/* ---- Goal Details View (Pati 1/3: nouvo navigasyon Objektif) ---- */
+.goal-details-summary{padding:20px;border-radius:16px;background:var(--gradient-life, linear-gradient(135deg,var(--blue),var(--green)));color:#fff;display:flex;flex-direction:column;gap:12px;}
+.goal-details-summary-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.goal-details-summary-title{font-family:var(--font-display);font-size:16px;font-weight:700;line-height:1.3;}
+.goal-details-summary-status{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(255,255,255,.22);color:#fff;white-space:nowrap;}
+.goal-details-summary-track{height:14px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden;}
+.goal-details-summary-track span{display:block;height:100%;border-radius:99px;background:#fff;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.goal-details-summary-bottom{display:flex;align-items:center;justify-content:space-between;font-size:12px;}
+.goal-details-summary-bottom b{font-family:var(--font-mono);font-size:18px;}
+.goal-details-summary-days{display:flex;align-items:center;gap:5px;font-size:11.5px;color:rgba(255,255,255,.9);}
+.goal-details-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+@media (max-width:520px){.goal-details-grid{grid-template-columns:1fr;}}
+.goal-details-field{display:flex;flex-direction:column;gap:3px;}
+.goal-details-field .lbl{font-size:10.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.03em;}
+.goal-details-field .val{font-size:13px;color:var(--text);font-weight:600;}
+.goal-details-field .val.mono{font-family:var(--font-mono);}
+.goal-details-section-title{font-size:11.5px;font-weight:700;color:var(--text-dim);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.03em;}
+.goal-details-notes{font-size:12.5px;color:var(--text-dim);line-height:1.6;white-space:pre-wrap;}
+
+
 /* ---- Pati 48/50: klate koneksyon + eksplikasyon pwogrè + apèsi aktivite ---- */
 .goal-progress-row .mini-progress span{transition:width .5s cubic-bezier(.4,0,.2,1);}
 .goal-connection-badges{display:flex;flex-wrap:wrap;gap:6px;animation:rise .4s ease both;}
@@ -2227,6 +2247,65 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 </div>
 
 <!-- ============ GOAL MODAL ============ -->
+<div class="modal-overlay" id="goalDetailsModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Detay Objektif</h3><button class="icon-btn" id="closeGoalDetailsModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="goal-details-summary">
+        <div class="goal-details-summary-top">
+          <div class="goal-details-summary-title" id="goalDetailsSummaryTitle">—</div>
+          <span class="goal-details-summary-status" id="goalDetailsSummaryStatus">—</span>
+        </div>
+        <div class="goal-details-summary-track"><span id="goalDetailsSummaryBar" style="width:0%;"></span></div>
+        <div class="goal-details-summary-bottom">
+          <b id="goalDetailsSummaryPct">0%</b>
+          <span class="goal-details-summary-days"><i data-lucide="calendar-clock" style="width:13px;height:13px;"></i> <span id="goalDetailsSummaryDays">—</span></span>
+        </div>
+      </div>
+
+      <div class="goal-details-section-title">Enfòmasyon Jeneral</div>
+      <div class="goal-details-grid">
+        <div class="goal-details-field"><span class="lbl">Kategori</span><span class="val" id="goalDetailsCategory">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Priyorite</span><span class="pill val" id="goalDetailsPriority" style="width:fit-content;">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Estati Otomatik</span><span class="pill val" id="goalDetailsStatus" style="width:fit-content;">—</span></div>
+        <div class="goal-details-field">
+          <span class="lbl">Pwogrè</span>
+          <div class="goal-progress-row" style="margin-top:2px;">
+            <div class="mini-progress"><span id="goalDetailsProgressBar" style="width:0%;background:var(--green);"></span></div>
+            <b id="goalDetailsProgressPct" class="mono">0%</b>
+          </div>
+        </div>
+      </div>
+
+      <div id="goalDetailsDescWrap">
+        <div class="goal-details-section-title">Deskripsyon</div>
+        <div class="goal-details-notes" id="goalDetailsDesc">—</div>
+      </div>
+
+      <div id="goalDetailsFinanceRow" hidden>
+        <div class="goal-details-section-title">Finans</div>
+        <div class="goal-details-grid">
+          <div class="goal-details-field"><span class="lbl">Valè Estime</span><span class="val mono" id="goalDetailsEstValue">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Sere Deja</span><span class="val mono" id="goalDetailsSavings">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Rete</span><span class="val mono" id="goalDetailsRemaining">—</span></div>
+        </div>
+      </div>
+
+      <div class="goal-details-section-title">Dat</div>
+      <div class="goal-details-grid">
+        <div class="goal-details-field"><span class="lbl">Dat Limit</span><span class="val" id="goalDetailsDeadline">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Jou Ki Rete</span><span class="val" id="goalDetailsDaysRemaining">—</span></div>
+      </div>
+
+      <div class="goal-details-section-title">Nòt</div>
+      <div class="goal-details-notes" id="goalDetailsNotes">—</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="closeGoalDetailsModalBtn">Fèmen</button>
+      <button class="btn btn-primary" id="goalDetailsEditBtn" style="margin-left:auto;"><i data-lucide="pencil"></i> Modifye Objektif</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="goalModalOverlay">
   <div class="modal">
     <div class="modal-head"><h3 id="goalModalTitle">Nouvo Objektif</h3><button class="icon-btn" id="closeGoalModal"><i data-lucide="x"></i></button></div>
