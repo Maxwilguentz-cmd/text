@@ -2091,6 +2091,11 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <input type="file" id="projectFileInput" multiple style="margin-top:6px;">
       </div>
       <div><label>Nòt</label><textarea id="projectNotes" placeholder="Nòt anplis..."></textarea></div>
+      <div style="margin-top:12px;">
+        <label>Objektif Lye <span style="color:var(--text-faint);font-weight:400;">(opsyonèl — estati Pwojè a ap swiv pwogrè Objektif la)</span></label>
+        <select id="projectGoalSelect"><option value="">Okenn Objektif</option></select>
+        <div class="milestone-list" id="projectLinkedGoalInfo" style="margin-top:8px;" hidden></div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="deleteProjectBtn" hidden>Efase</button>
@@ -2279,6 +2284,8 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <b id="goalLearningProgressPct">0%</b>
         </div>
         <button class="btn btn-ghost" id="goalCreateLearningHabitsBtn" style="margin-top:4px;" hidden><i data-lucide="graduation-cap"></i> Kreye Abitid Aprantisaj</button>
+        <label style="margin-top:12px;display:block;">Kontribisyon Aprantisaj Konfime <span style="color:var(--text-faint);font-weight:400;">(dirèkteman soti nan modil Aprantisaj)</span></label>
+        <div class="milestone-list" id="goalLearningContributionList"></div>
       </div>
     </div>
     <div class="modal-foot">
