@@ -6865,6 +6865,14 @@ function renderGoalDetailsModal(){
   renderGoalDetailsMilestones(g);
   renderGoalDetailsHistory(g);
 
+  // ---- Aksyon anba paj la (Pati 3/3) — bouton "Achive" chanje etikèt/ikòn
+  // selon si Objektif la deja Achive oswa non, san touche estati otomatik la. ----
+  const archiveLbl = document.getElementById('goalDetailsArchiveBtnLbl');
+  const archiveIc = document.querySelector('#goalDetailsArchiveBtn i');
+  const isArchived = g.status === 'archived';
+  if (archiveLbl) archiveLbl.textContent = isArchived ? 'Dezachive' : 'Achive';
+  if (archiveIc) archiveIc.setAttribute('data-lucide', isArchived ? 'archive-restore' : 'archive');
+
   if (window.lucide) lucide.createIcons();
 }
 
@@ -7012,11 +7020,19 @@ function renderGoalDetailsHistory(g){
 
 function openGoalDetailsModal(id){
   goalDetailsId = id;
+  const overlay = document.getElementById('goalDetailsModalOverlay');
+  overlay.classList.remove('closing'); // si yon fèmti te an kou, anile l net
   renderGoalDetailsModal();
-  document.getElementById('goalDetailsModalOverlay').classList.add('open');
+  overlay.classList.add('open');
 }
+// Pati 3/3: yon ti animasyon fèmti (fade + descann lejè) anvan nou retire
+// 'open' la nèt — dire a matche @keyframes goalDetailsOverlayOut/ModalOut.
+const GOAL_DETAILS_CLOSE_ANIM_MS = 160;
 function closeGoalDetailsModal(){
-  document.getElementById('goalDetailsModalOverlay').classList.remove('open');
+  const overlay = document.getElementById('goalDetailsModalOverlay');
+  if (!overlay.classList.contains('open') || overlay.classList.contains('closing')) return;
+  overlay.classList.add('closing');
+  setTimeout(() => { overlay.classList.remove('open','closing'); }, GOAL_DETAILS_CLOSE_ANIM_MS);
 }
 document.getElementById('closeGoalDetailsModal').addEventListener('click', closeGoalDetailsModal);
 document.getElementById('closeGoalDetailsModalBtn').addEventListener('click', closeGoalDetailsModal);
@@ -7026,6 +7042,40 @@ document.getElementById('goalDetailsEditBtn').addEventListener('click', () => {
   goalDetailsReturnId = id; // pou n ka retounen sou Detay la apre Edit anrejistre
   closeGoalDetailsModal();
   openGoalModal(id);
+});
+// Aksyon rapid "Achive/Dezachive" dirèkteman sou paj Detay la — reyitilize
+// menm chan/lojik ak modal Edit la (autoStatus + syncGoalAutoStatus), san
+// kreye okenn nouvo sistèm estati paralèl.
+document.getElementById('goalDetailsArchiveBtn').addEventListener('click', () => {
+  const g = goals.find(x => x.id === goalDetailsId);
+  if (!g) return;
+  if (g.status === 'archived'){
+    g.autoStatus = true;
+    syncGoalAutoStatus(g);
+    showToast('Objektif dezachive ✓');
+  } else {
+    g.autoStatus = false;
+    g.status = 'archived';
+    showToast('Objektif achive ✓');
+  }
+  persistGoals();
+  renderGoals();
+  renderGoalDetailsModal();
+});
+// Aksyon rapid "Efase" dirèkteman sou paj Detay la — menm netwayaj ak
+// deleteGoalBtn (Kalandriye + Depandans) pou pa kite done ap trennen.
+document.getElementById('goalDetailsDeleteBtn').addEventListener('click', () => {
+  const g = goals.find(x => x.id === goalDetailsId);
+  if (!g) return;
+  if (!confirm(`Efase objektif "${g.title}"? Aksyon sa a pa ka anile.`)) return;
+  if (typeof removeGoalCalendarEvents === 'function') removeGoalCalendarEvents(g.id);
+  if (typeof removeGoalFromAllDependencies === 'function') removeGoalFromAllDependencies(g.id);
+  goals = goals.filter(x => x.id !== g.id);
+  persistGoals();
+  goalDetailsReturnId = null;
+  closeGoalDetailsModal();
+  renderGoals();
+  showToast('Objektif efase');
 });
 
 function openGoalModal(id){
