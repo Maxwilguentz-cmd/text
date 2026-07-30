@@ -382,6 +382,15 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 .milestone-row.done span{text-decoration:line-through;color:var(--text-faint);}
 .milestone-list{display:flex;flex-direction:column;gap:6px;margin-top:2px;}
 
+/* ---- Pati 48/50: klate koneksyon + eksplikasyon pwogrè + apèsi aktivite ---- */
+.goal-progress-row .mini-progress span{transition:width .5s cubic-bezier(.4,0,.2,1);}
+.goal-connection-badges{display:flex;flex-wrap:wrap;gap:6px;animation:rise .4s ease both;}
+.goal-connection-badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--text-dim);border:1px solid var(--border-soft);}
+.goal-progress-explain{font-size:11px;color:var(--text-faint);font-style:italic;line-height:1.4;}
+.goal-activity-preview{display:flex;flex-direction:column;gap:4px;margin-top:2px;}
+.goal-activity-preview-row{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--text-faint);animation:rise .35s ease both;}
+.goal-activity-preview-row .dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+
 /* ---------------- LEARNING (Duolingo-style) ---------------- */
 .hearts-row{display:flex;gap:3px;}
 .hearts-row svg{width:15px;height:15px;}
