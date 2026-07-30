@@ -79,7 +79,8 @@ const LS = { tasks:'oslife.tasks', templates:'oslife.templates', events:'oslife.
   scoreHistory:'oslife.scoreHistory', activity:'oslife.activity', missions:'oslife.missions',
   missionsHistory:'oslife.missionsHistory', achievements:'oslife.achievements',
   notifications:'oslife.notifications', personalization:'oslife.personalization', security:'oslife.security',
-  autoBackup:'oslife.autoBackup', statsPrefs:'oslife.statsPrefs', waterMigratedV2:'oslife.waterMigratedV2' };
+  autoBackup:'oslife.autoBackup', statsPrefs:'oslife.statsPrefs', waterMigratedV2:'oslife.waterMigratedV2',
+  pendingGoalFinancialActions:'oslife.pendingGoalFinancialActions' };
 // Kle ki kenbe done sansib — yo dwe toujou chifre anvan yo antre nan LocalStorage/IndexedDB.
 const ENCRYPTED_KEYS = new Set([LS.wallets, LS.tx, LS.budgets, LS.plans, LS.notes, LS.noteFolders, LS.journal]);
 // Nòt: LS.security pa chifre paske li dwe li SENKWÒN nan demaraj (anvan lock overlay a),
@@ -395,6 +396,8 @@ function normalizeGoals(arr){
   });
 }
 let goals = normalizeGoals(loadLS(LS.goals, seedGoals()));
+let pendingGoalFinancialActions = loadLS(LS.pendingGoalFinancialActions, []);
+function persistPendingGoalFinancialActions(){ saveLS(LS.pendingGoalFinancialActions, pendingGoalFinancialActions); }
 let learning = loadLS(LS.learning, { xp:0, hearts:5, streak:0, lastStudyDate:null, completed:[], badges:[], startedCourses:[] });
 learning.lessonLog = learning.lessonLog || [];
 learning.startedCourses = learning.startedCourses || learning.startedRoadmaps || [];
@@ -5323,6 +5326,7 @@ function setGoalHabitContribution(goalId, habitId, amount, unit){
   cfg.unit = (unit || '').trim();
   cfg.total = computeGoalHabitContributionTotal(goalId, habitId);
   persistGoals();
+  if (typeof syncGoalSavingsFromHabits === 'function') syncGoalSavingsFromHabits(goalId);
   return cfg;
 }
 
@@ -5398,6 +5402,52 @@ function refreshGoalHabitContributionTotals(goalId){
     if (g.habitContributions[habitId].total !== newTotal){ g.habitContributions[habitId].total = newTotal; changed = true; }
   });
   if (changed) persistGoals();
+  if (typeof syncGoalSavingsFromHabits === 'function') syncGoalSavingsFromHabits(goalId);
+}
+
+// ==========================================
+// GOAL <-> HABIT — sere otomatik apati Abitid konplete (Pati 21/50)
+// Konekte Abitid ki sere ak Sere Deja (g.currentSavings, Pati 16) — pa gen
+// nouvo chan, pa gen tranzaksyon, pa gen deplasman lajan (sa se sèlman yon
+// NIMEWO sou Goal la, pa yon Wallet). Sèvi ak menm total ki soti nan Pati 12
+// (`amount * completions.length`), donk sèlman Abitid ki REYÈLMAN konplete
+// konte (yon dat parèt nan h.completions sèlman lè moun nan make l fèt).
+// Nou sèlman senkronize lè gen omwen yon koneksyon Objektif-Abitid konfigire
+// ak yon `amount` — sa anpeche kraze yon valè "Sere Deja" moun nan te antre
+// manyèlman pou yon Objektif Finansye ki pa itilize Abitid ditou.
+// ==========================================
+function computeGoalTotalHabitSavings(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !g.habitContributions) return { total: 0, hasConfigured: false };
+  const linkedIds = new Set(getHabitsForGoal(goalId).map(h => h.id));
+  let total = 0, hasConfigured = false;
+  Object.keys(g.habitContributions).forEach(habitId => {
+    if (!linkedIds.has(habitId)) return; // Abitid delye pa konte ankò
+    const cfg = g.habitContributions[habitId];
+    if (cfg && Number(cfg.amount) > 0){
+      hasConfigured = true;
+      total += computeGoalHabitContributionTotal(goalId, habitId);
+    }
+  });
+  return { total: Math.round(total * 100) / 100, hasConfigured };
+}
+
+function syncGoalSavingsFromHabits(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !g.isFinancial) return false;
+  const { total, hasConfigured } = computeGoalTotalHabitSavings(goalId);
+  if (!hasConfigured) return false; // pa gen Abitid ki konfigire pou sere — kite valè manyèl la entak
+  if (g.currentSavings !== total){
+    g.currentSavings = total;
+    persistGoals();
+  }
+  // Si moun nan gen Objektif sa a ouvri kounye a, ajou chan afichaj yo tou
+  if (editingGoalId === goalId){
+    const savedInput = document.getElementById('goalCurrentSavings');
+    if (savedInput) savedInput.value = g.currentSavings;
+    if (typeof renderGoalFinancialRemaining === 'function') renderGoalFinancialRemaining();
+  }
+  return true;
 }
 
 // ==========================================
@@ -5546,6 +5596,7 @@ function renderGoalLinkedHabitsList(){
     const habitId = e.currentTarget.dataset.habitId;
     unlinkHabitFromGoal(editingGoalId, habitId);
     if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(editingGoalId, habitId, 'habit-unlinked');
+    if (typeof syncGoalSavingsFromHabits === 'function') syncGoalSavingsFromHabits(editingGoalId);
     renderGoalLinkedHabitsList();
     if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
     if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
@@ -5594,6 +5645,16 @@ function renderGoalLinkedHabitsList(){
       const actionSource = doneNow ? 'habit-completed' : 'habit-uncompleted';
       if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(h.goalId, id, actionSource);
       if (typeof refreshGoalHabitContributionTotals === 'function') refreshGoalHabitContributionTotals(h.goalId);
+      if (doneNow && typeof recordGoalFinancialContributionHistory === 'function'){
+        const g = goals.find(x => x.id === h.goalId);
+        const cfg = g && g.habitContributions ? g.habitContributions[id] : null;
+        if (g && g.isFinancial && cfg && Number(cfg.amount) > 0){
+          recordGoalFinancialContributionHistory(h.goalId, id, Number(cfg.amount), cfg.unit);
+          if (typeof createPendingGoalFinancialAction === 'function' && cfg.walletId){
+            createPendingGoalFinancialAction(h.goalId, id, cfg.walletId, Number(cfg.amount));
+          }
+        }
+      }
     }
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
     if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
@@ -5694,19 +5755,134 @@ function getGoalProgressHistory(goalId){
   return g.habitProgressHistory.slice().reverse();
 }
 
+// ==========================================
+// GOAL FINANSYE — eksplikasyon chak kontribisyon (Pati 22/50)
+// Sèvi ak MENM chan g.habitProgressHistory a (Pati 9/10/11) — pa gen nouvo
+// dosye/sistèm paralèl. Chak fwa yon Abitid ki sere fin konplete e sa ajoute
+// yon kontribisyon reyèl, nou anrejistre yon antre siplemantè ki gen `amountAdded`
+// + `unit`, sou tèt de chan `pct`/`delta` ki deja la — pou moun nan wè EGZAKTMAN
+// sous, kantite, dat, ak Abitid konsène a pou chak chanjman Objektif Finansye.
+// ==========================================
+function recordGoalFinancialContributionHistory(goalId, habitId, amount, unit){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !amount || amount <= 0) return false;
+  const h = habits.find(x => x.id === habitId);
+  const habitName = h ? h.name : null;
+  if (!Array.isArray(g.habitProgressHistory)) g.habitProgressHistory = [];
+  const history = g.habitProgressHistory;
+  const date = todayISO();
+  // Anpeche doublon: yon sèl kontribisyon finansye pou menm Objektif+Abitid+dat
+  // (pa sèlman dènye antre a — pran an kont TOUT istwa a, paske lòt antre ka
+  // enterkale ant de aksyon menm jou a).
+  const alreadyRecorded = history.some(r =>
+    r.source === 'saving-habit-completed' && r.goalId === goalId && r.habitId === habitId && r.date === date
+  );
+  if (alreadyRecorded) return false;
+  const pct = computeGoalFinancialProgressPct(g);
+  const record = {
+    goalId,
+    date,
+    time: new Date().toISOString(),
+    habitId: habitId || null,
+    habitName,
+    source: 'saving-habit-completed',
+    amountAdded: amount,
+    unit: unit || '',
+    pct,
+    reason: `Sere ${amount}${unit ? ' ' + unit : ''} paske Abitid "${habitName || 'Abitid Lye'}" te fin fèt.`
+  };
+  history.push(record);
+  if (history.length > 180) g.habitProgressHistory = history.slice(-180);
+  persistGoals();
+  return true;
+}
+
+// ==========================================
+// GOAL <-> FINANCE — preparasyon aksyon annatant (Pati 24/50)
+// Sèlman yon KE (queue) aksyon "annatant" (pending) — pa gen okenn ekzekisyon,
+// pa touche balans Wallet, pa kreye okenn tranzaksyon Finance reyèl. Objektif
+// Pati sa a se prepare done ki nesesè pou pwochen entegrasyon Finance la
+// (aksyon reyèl la ap trete ke sa a nan yon Pati pita — pa isit la).
+// Chak aksyon annatant genyen: goalId, habitId, walletId, amount, date, epi
+// yon `status` ('pending') pou distenge l de sa ki ta ka trete pita.
+// ==========================================
+function createPendingGoalFinancialAction(goalId, habitId, walletId, amount, date){
+  if (!goalId || !habitId || !walletId || !amount || amount <= 0) return null; // pa gen ase enfòmasyon — pa prepare anyen
+  const actionDate = date || todayISO();
+  // Anpeche doublon: pa kreye 2 aksyon annatant pou menm Objektif+Abitid+dat
+  const alreadyPending = pendingGoalFinancialActions.some(a =>
+    a.goalId === goalId && a.habitId === habitId && a.date === actionDate
+  );
+  if (alreadyPending) return null;
+  const action = {
+    id: uid(),
+    goalId,
+    habitId,
+    walletId,
+    amount,
+    date: actionDate,
+    status: 'pending', // poko trete — pwochen Pati Finance la ap responsab egzekisyon an
+    createdAt: new Date().toISOString()
+  };
+  pendingGoalFinancialActions.push(action);
+  persistPendingGoalFinancialActions();
+  return action;
+}
+
+function getPendingGoalFinancialActions(goalId){
+  return goalId ? pendingGoalFinancialActions.filter(a => a.goalId === goalId) : pendingGoalFinancialActions.slice();
+}
+
+// ==========================================
+// GOAL <-> FINANCE — lis istwa kontribisyon (Pati 23/50)
+// Sèvi ak MENM chan g.habitProgressHistory a (Pati 9/22) — jis yon FILTR pou
+// montre yon lis dedye ki gen sèlman kontribisyon finansye yo (pa mele ak
+// istwa % pwogrè jeneral la). Pa gen nouvo dosye/estrikti.
+// ==========================================
+function getGoalFinancialContributionHistory(goalId){
+  return getGoalProgressHistory(goalId).filter(r => r.source === 'saving-habit-completed' && r.amountAdded);
+}
+
+function renderGoalFinancialContributionHistory(){
+  const wrap = document.getElementById('goalFinancialContributionHistoryList');
+  if (!wrap) return;
+  if (!editingGoalId){ wrap.innerHTML = ''; return; }
+  const entries = getGoalFinancialContributionHistory(editingGoalId).slice(0, 30);
+  if (!entries.length){
+    wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen kontribisyon finansye anrejistre.</span>';
+    return;
+  }
+  wrap.innerHTML = entries.map(r => `<div class="milestone-row" style="justify-content:space-between;">
+      <span style="color:var(--green);font-weight:600;">+${r.amountAdded}${r.unit ? ' ' + escapeHtml(r.unit) : ''}</span>
+      <span style="font-size:11px;color:var(--text-dim);">Sous: ${r.habitName ? escapeHtml(r.habitName) : 'Abitid Lye'}</span>
+      <span class="tag" style="background:var(--surface-2);color:var(--text-dim);">${r.date === todayISO() ? 'Jodi a' : escapeHtml(r.date)}</span>
+    </div>`).join('');
+}
+
 // Afiche istwa evolisyon pwogrè Objektif la nan modal la (li sèlman — pa
 // touche okenn lòt eleman/fonksyon ki egziste deja). Pati 11/50: chak liy
 // kounye a montre fraz `reason` an lekti dirèk anndan detay Objektif la.
 function renderGoalProgressHistory(){
   const wrap = document.getElementById('goalProgressHistoryList');
   if (!wrap) return;
-  if (!editingGoalId){ wrap.innerHTML = ''; return; }
+  if (!editingGoalId){ wrap.innerHTML = ''; if (typeof renderGoalFinancialContributionHistory === 'function') renderGoalFinancialContributionHistory(); return; }
   const entries = getGoalProgressHistory(editingGoalId).slice(0, 20);
   if (!entries.length){
     wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen istwa pwogrè.</span>';
+    if (typeof renderGoalFinancialContributionHistory === 'function') renderGoalFinancialContributionHistory();
     return;
   }
   wrap.innerHTML = entries.map(r => {
+    if (r.source === 'saving-habit-completed' && r.amountAdded){
+      return `<div class="milestone-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+        <span style="font-size:12px;line-height:1.4;"><b>Aktyalizasyon:</b> Abitid Sere Konplete</span>
+        <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span class="tag" style="background:var(--green-soft);color:var(--green);">Kontribisyon: ${r.amountAdded}${r.unit ? ' ' + escapeHtml(r.unit) : ''}</span>
+          <span class="tag" style="background:var(--surface-2);color:var(--text-dim);">${r.date === todayISO() ? 'Jodi a' : escapeHtml(r.date)}</span>
+          ${r.habitName ? `<span class="pill" style="background:var(--blue-soft);color:var(--blue);">Abitid: ${escapeHtml(r.habitName)}</span>` : ''}
+        </span>
+      </div>`;
+    }
     const deltaSign = r.delta > 0 ? '+' : '';
     const deltaColor = r.delta > 0 ? 'var(--green)' : (r.delta < 0 ? 'var(--red, #e5484d)' : 'var(--text-dim)');
     const reasonText = r.reason ? escapeHtml(r.reason) : (r.habitName ? escapeHtml(r.habitName) : 'Chanjman jeneral');
@@ -5719,6 +5895,7 @@ function renderGoalProgressHistory(){
       </span>
     </div>`;
   }).join('');
+  if (typeof renderGoalFinancialContributionHistory === 'function') renderGoalFinancialContributionHistory();
 }
 
 (function initGoalLinkedHabitsList(){
