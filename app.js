@@ -6786,6 +6786,101 @@ function renderGoalDependentsList(){
   });
 })();
 
+// ==========================================
+// GOAL DETAILS VIEW (UI/UX Pati 1/3) — nouvo flux navigasyon.
+// Klike sou yon kat Objektif ouvri KOUNYE A yon paj "Detay" (lekti sèl,
+// pa touche okenn kalkil/estrikti done ki egziste). Bouton "Modifye
+// Objektif" anndan l ouvri fòm Edit ki te egziste deja (openGoalModal),
+// san chanje anyen nan fòm sa a.
+// ==========================================
+let goalDetailsId = null;
+// Si moun nan te ouvri Edit apati Detay, nou sonje ID a pou n ka retounen
+// sou paj Detay la (ajou) apre yo fin anrejistre — san touche saveGoalBtn.
+let goalDetailsReturnId = null;
+
+function goalDetailsDaysRemainingLabel(g){
+  if (!g.deadline) return 'San dat limit';
+  const info = computeGoalDeadlineTracking(g);
+  if (!info) return 'San dat limit';
+  return info.daysRemaining >= 0 ? `${info.daysRemaining} jou rete` : `${Math.abs(info.daysRemaining)} jou an reta`;
+}
+
+function renderGoalDetailsModal(){
+  const g = goals.find(x => x.id === goalDetailsId);
+  if (!g){ closeGoalDetailsModal(); return; }
+  const pct = goalMilestoneProgress(g);
+  const statusStyle = GOAL_STATUS_STYLE[g.status] || GOAL_STATUS_STYLE['not-started'];
+  const daysLbl = goalDetailsDaysRemainingLabel(g);
+  const barColor = priorityColor(g.priority);
+
+  // ---- Summary card (dwe ajou otomatikman — kalkile chak fwa modal ouvri/rafrechi) ----
+  document.getElementById('goalDetailsSummaryTitle').textContent = g.title;
+  const summaryBar = document.getElementById('goalDetailsSummaryBar');
+  summaryBar.style.width = pct + '%';
+  document.getElementById('goalDetailsSummaryPct').textContent = pct + '%';
+  const summaryStatus = document.getElementById('goalDetailsSummaryStatus');
+  summaryStatus.textContent = GOAL_STATUS[g.status] || g.status || '—';
+  document.getElementById('goalDetailsSummaryDays').textContent = daysLbl;
+
+  // ---- Enfòmasyon Jeneral ----
+  document.getElementById('goalDetailsCategory').textContent = GOAL_CATEGORY[g.category] || g.category || '—';
+  const priorityEl = document.getElementById('goalDetailsPriority');
+  priorityEl.textContent = PRIORITY[g.priority] || g.priority || '—';
+  priorityEl.style.background = priorityBg(g.priority);
+  priorityEl.style.color = barColor;
+  const statusEl = document.getElementById('goalDetailsStatus');
+  statusEl.textContent = GOAL_STATUS[g.status] || g.status || '—';
+  statusEl.style.background = statusStyle.bg;
+  statusEl.style.color = statusStyle.fg;
+  document.getElementById('goalDetailsProgressBar').style.width = pct + '%';
+  document.getElementById('goalDetailsProgressPct').textContent = pct + '%';
+
+  // ---- Deskripsyon ----
+  const descWrap = document.getElementById('goalDetailsDescWrap');
+  descWrap.hidden = !g.desc;
+  document.getElementById('goalDetailsDesc').textContent = g.desc || '—';
+
+  // ---- Finans (sèlman si Objektif Finansye) ----
+  const financeRow = document.getElementById('goalDetailsFinanceRow');
+  if (g.isFinancial && Number(g.estimatedValue) > 0){
+    financeRow.hidden = false;
+    const cost = Number(g.estimatedValue) || 0;
+    const saved = Number(g.currentSavings) || 0;
+    document.getElementById('goalDetailsEstValue').textContent = fmtHTG(cost);
+    document.getElementById('goalDetailsSavings').textContent = fmtHTG(saved);
+    document.getElementById('goalDetailsRemaining').textContent = fmtHTG(Math.max(0, cost - saved));
+  } else {
+    financeRow.hidden = true;
+  }
+
+  // ---- Dat ----
+  document.getElementById('goalDetailsDeadline').textContent = g.deadline || 'San dat limit';
+  document.getElementById('goalDetailsDaysRemaining').textContent = daysLbl;
+
+  // ---- Nòt ----
+  document.getElementById('goalDetailsNotes').textContent = g.notes || 'Pa gen nòt.';
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function openGoalDetailsModal(id){
+  goalDetailsId = id;
+  renderGoalDetailsModal();
+  document.getElementById('goalDetailsModalOverlay').classList.add('open');
+}
+function closeGoalDetailsModal(){
+  document.getElementById('goalDetailsModalOverlay').classList.remove('open');
+}
+document.getElementById('closeGoalDetailsModal').addEventListener('click', closeGoalDetailsModal);
+document.getElementById('closeGoalDetailsModalBtn').addEventListener('click', closeGoalDetailsModal);
+document.getElementById('goalDetailsModalOverlay').addEventListener('click', e => { if (e.target.id === 'goalDetailsModalOverlay') closeGoalDetailsModal(); });
+document.getElementById('goalDetailsEditBtn').addEventListener('click', () => {
+  const id = goalDetailsId;
+  goalDetailsReturnId = id; // pou n ka retounen sou Detay la apre Edit anrejistre
+  closeGoalDetailsModal();
+  openGoalModal(id);
+});
+
 function openGoalModal(id){
   editingGoalId = id || null;
   const g = id ? goals.find(x => x.id === id) : null;
@@ -6826,8 +6921,18 @@ function openGoalModal(id){
   if (window.lucide) lucide.createIcons();
 }
 document.getElementById('newGoalBtn').addEventListener('click', () => openGoalModal(null));
-document.getElementById('closeGoalModal').addEventListener('click', () => document.getElementById('goalModalOverlay').classList.remove('open'));
-document.getElementById('goalModalOverlay').addEventListener('click', e => { if (e.target.id === 'goalModalOverlay') document.getElementById('goalModalOverlay').classList.remove('open'); });
+// Si Edit te ouvri apati paj Detay la (goalDetailsReturnId), fèmen Edit
+// retounen sou Detay la (ajou) olye de jis fèmen tout bagay.
+function closeGoalModalAndMaybeReturnToDetails(){
+  document.getElementById('goalModalOverlay').classList.remove('open');
+  if (goalDetailsReturnId){
+    const returnId = goalDetailsReturnId;
+    goalDetailsReturnId = null;
+    if (goals.some(x => x.id === returnId)) openGoalDetailsModal(returnId);
+  }
+}
+document.getElementById('closeGoalModal').addEventListener('click', closeGoalModalAndMaybeReturnToDetails);
+document.getElementById('goalModalOverlay').addEventListener('click', e => { if (e.target.id === 'goalModalOverlay') closeGoalModalAndMaybeReturnToDetails(); });
 
 document.getElementById('saveGoalBtn').addEventListener('click', () => {
   const title = document.getElementById('goalTitle').value.trim();
@@ -6900,6 +7005,11 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
   document.getElementById('goalModalOverlay').classList.remove('open');
   renderGoals();
   showToast('Objektif anrejistre ✓');
+  if (goalDetailsReturnId){
+    const returnId = goalDetailsReturnId;
+    goalDetailsReturnId = null;
+    if (goals.some(x => x.id === returnId)) openGoalDetailsModal(returnId);
+  }
 });
 document.getElementById('deleteGoalBtn').addEventListener('click', () => {
   if (typeof removeGoalCalendarEvents === 'function') removeGoalCalendarEvents(editingGoalId);
@@ -6907,6 +7017,7 @@ document.getElementById('deleteGoalBtn').addEventListener('click', () => {
   goals = goals.filter(x => x.id !== editingGoalId);
   persistGoals();
   document.getElementById('goalModalOverlay').classList.remove('open');
+  goalDetailsReturnId = null; // Objektif la efase — pa gen Detay pou retounen
   renderGoals();
   showToast('Objektif efase');
 });
@@ -8078,7 +8189,7 @@ function renderGoals(){
         ${progressExplanation ? `<div class="goal-progress-explain">"${escapeHtml(progressExplanation)}"</div>` : ''}
         ${activityPreview.length ? `<div class="goal-activity-preview">${activityPreview.map(a => `<div class="goal-activity-preview-row"><span class="dot"></span>${a.date} — ${escapeHtml(a.reason)}</div>`).join('')}</div>` : ''}
       `;
-      el.addEventListener('click', () => openGoalModal(g.id));
+      el.addEventListener('click', () => openGoalDetailsModal(g.id));
       list.appendChild(el);
     });
     if (window.lucide) lucide.createIcons();
