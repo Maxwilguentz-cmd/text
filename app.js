@@ -7346,6 +7346,44 @@ document.getElementById('habitModalOverlay').addEventListener('click', e => {
   if (e.target.id === 'habitModalOverlay') pendingGoalIdForNewHabit = null;
 });
 
+// ==========================================
+// GOAL <-> HABIT <-> FINANCE — bouton rapid "Ajoute yon Abitid" (Pati 4/4)
+// Nan seksyon Finans Edit Goal la (anba Wallet de Depa), yon fòm minimal —
+// SÈLMAN yon montan — kreye yon Abitid ki pote menm non ak Objektif la,
+// lye l otomatikman, konfigire kontribisyon an (menm sistèm ak Pati 12/19),
+// epi itilize Wallet de Depa a kòm sous. Chak fwa Abitid sa a make fèt,
+// mekanis ki deja egziste a (hookHabitToggleForGoalProgress + pending
+// financial action) fè transfè reyèl la.
+// ==========================================
+document.getElementById('goalQuickAddHabitBtn')?.addEventListener('click', () => {
+  if (!editingGoalId) return;
+  const sourceWalletId = document.getElementById('goalSourceWallet').value;
+  if (!sourceWalletId){ showToast('Chwazi yon Wallet de Depa anvan'); return; }
+  document.getElementById('goalQuickAddHabitAmount').value = '';
+  document.getElementById('goalQuickAddHabitModalOverlay').classList.add('open');
+});
+document.getElementById('closeGoalQuickAddHabitModal').addEventListener('click', () => document.getElementById('goalQuickAddHabitModalOverlay').classList.remove('open'));
+document.getElementById('goalQuickAddHabitModalOverlay').addEventListener('click', e => { if (e.target.id === 'goalQuickAddHabitModalOverlay') document.getElementById('goalQuickAddHabitModalOverlay').classList.remove('open'); });
+document.getElementById('saveGoalQuickAddHabitBtn').addEventListener('click', () => {
+  const goalId = editingGoalId;
+  const g = goals.find(x => x.id === goalId);
+  const sourceWalletId = document.getElementById('goalSourceWallet').value;
+  const amount = parseFloat(document.getElementById('goalQuickAddHabitAmount').value);
+  if (!g || !sourceWalletId){ showToast('Chwazi yon Wallet de Depa anvan'); return; }
+  if (!isFinite(amount) || amount <= 0){ showToast('Mete yon kantite kòb valab'); return; }
+  const habitId = uid();
+  habits.push({ id: habitId, name: g.title, description:'', frequency:'daily', category:'', goal:'', reminder:false, completions:[], createdAt: new Date().toISOString() });
+  persistHabits();
+  linkHabitToGoal(goalId, habitId);
+  setGoalHabitContribution(goalId, habitId, amount, 'HTG');
+  setGoalHabitContributionWallet(goalId, habitId, sourceWalletId);
+  ensureGoalSavingsWallet(g);
+  document.getElementById('goalQuickAddHabitModalOverlay').classList.remove('open');
+  renderGoalLinkedHabitsList();
+  renderGoals();
+  showToast('Abitid ajoute ✓');
+});
+
 // Kouri APRE handler anrejistreman Abitid ki egziste deja (òdinal ajout aditif, pa yon ranplasman)
 document.getElementById('saveHabitBtn').addEventListener('click', () => {
   if (!pendingGoalIdForNewHabit) return;
@@ -7757,7 +7795,7 @@ function renderGoalLinkedHabitsList(){
     const contribWallet = contribWalletId ? wallets.find(w => w.id === contribWalletId) : null;
     const walletOptions = goalObj && goalObj.isFinancial
       ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text-dim);margin-top:2px;">
-          <span>Sous Kòb (sere):</span>
+          <span>Wallet de Depa:</span>
           <select class="field goalHabitContribWallet" data-habit-id="${h.id}" style="width:140px;padding:2px 6px;font-size:11px;">
             <option value="">— Pa chwazi —</option>
             ${wallets.map(w => `<option value="${w.id}" ${w.id === contribWalletId ? 'selected' : ''}>${escapeHtml(w.name)}</option>`).join('')}
@@ -8175,6 +8213,27 @@ function cancelGoalFinancialAction(action, reason){
   persistPendingGoalFinancialActions();
 }
 
+// ==========================================
+// GOAL <-> FINANCE — kont depa Objektif la (Pati 4/4)
+// Chak Objektif Finansye gen pwòp "kont" nan Finans (Wallet), ki pote menm
+// non ak Objektif la — se la kòb kontribisyon Abitid yo ateri reyèlman,
+// pa jis yon chif sou g.currentSavings. Find-or-create — pa dupliye si l
+// deja egziste (g.savingsWalletId oswa yon Wallet ki gen menm non an).
+// ==========================================
+function ensureGoalSavingsWallet(g){
+  if (!g) return null;
+  let w = g.savingsWalletId ? wallets.find(x => x.id === g.savingsWalletId) : null;
+  if (w) return w;
+  w = wallets.find(x => x.name === g.title);
+  if (!w){
+    w = { id: uid(), name: g.title, type: 'savings', balance: 0, currency: 'HTG' };
+    wallets.push(w);
+    persistWallets();
+  }
+  if (g.savingsWalletId !== w.id){ g.savingsWalletId = w.id; persistGoals(); }
+  return w;
+}
+
 function executeGoalFinancialAction(action){
   if (!action || action.status !== 'ready') return null; // pa validé ankò, oswa deja trete — pa fè anyen (pa gen chanjman)
   const check = canExecuteGoalFinancialAction(action);
@@ -8190,12 +8249,13 @@ function executeGoalFinancialAction(action){
   action.status = 'done';
   action.executedAt = new Date().toISOString();
   const reason = `Sere ${amount}${walletCurrency(w) ? ' ' + walletCurrency(w) : ''} pou Objektif "${g.title || 'San tit'}" apati Abitid "${h.name || 'San non'}"`;
+  const category = g.title || 'Custom';
   const txRecord = {
     id: uid(),
     type: 'expense',
     amount,
     description: reason,
-    category: 'Custom',
+    category,
     walletId: action.walletId,
     date: action.date || todayISO(),
     time: new Date().toTimeString().slice(0,5),
@@ -8204,8 +8264,29 @@ function executeGoalFinancialAction(action){
     reason,
   };
   tx.push(txRecord);
+  // Pati 4/4: kòb la fèk soti nan Wallet de Depa a — kounye a li dwe reyèlman
+  // antre nan pwòp kont Objektif la nan Finans (pa jis yon chif kalkile).
+  const destWallet = ensureGoalSavingsWallet(g);
+  let incomeTxRecord = null;
+  if (destWallet && destWallet.id !== action.walletId){
+    incomeTxRecord = {
+      id: uid(),
+      type: 'income',
+      amount,
+      description: reason,
+      category,
+      walletId: destWallet.id,
+      date: action.date || todayISO(),
+      time: new Date().toTimeString().slice(0,5),
+      goalId: action.goalId,
+      habitId: action.habitId,
+      reason,
+    };
+    tx.push(incomeTxRecord);
+  }
   persistTx();
   action.transactionId = txRecord.id;
+  if (incomeTxRecord) action.incomeTransactionId = incomeTxRecord.id;
   persistPendingGoalFinancialActions();
   return txRecord;
 }
