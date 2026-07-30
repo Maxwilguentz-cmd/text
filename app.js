@@ -1,4 +1,3 @@
-
 const MONTHS = ["Janvye","Fevriye","Mas","Avril","Me","Jen","Jiyè","Out","Septanm","Oktòb","Novanm","Desanm"];
 const DAYS = ["Dimanch","Lendi","Madi","Mèkredi","Jedi","Vandredi","Samdi"];
 const DAYS_SHORT = ["Dim","Len","Mad","Mèk","Jed","Van","Sam"];
@@ -495,13 +494,47 @@ function goalIsFinancialFromCategory(){
   return !!catEl && catEl.value === 'finance';
 }
 
+// ==========================================
+// GOAL — ENÈFAS DINAMIK (Pati 3/4)
+// Montre/kache Seksyon Objektif yo selon (1) Kategori Prensipal ak (2)
+// Modil Konekte, san touche okenn lojik/done ki egziste deja. Sa a se
+// SÈLMAN pou AFICHAJ (DOM `hidden`) — chan `isFinancial` ki sove nan done
+// a rete kontwole SÈLMAN pa Kategori Prensipal (goalIsFinancialFromCategory,
+// pa chanje), e sistèm Abitid/Aprantisaj yo rete menm jan an, san rebati.
+// ==========================================
+function isGoalFinanceSectionVisible(){
+  return goalIsFinancialFromCategory() || !!(goalLinksDraft && (goalLinksDraft.financeIds||[]).length);
+}
+function isGoalHabitsSectionVisible(){
+  // Habits: vizibilite kontwole SÈLMAN pa Modil Konekte (pa Kategori).
+  return !!(goalLinksDraft && (goalLinksDraft.habitIds||[]).length);
+}
+function isGoalLearningSectionVisible(){
+  const catEl = document.getElementById('goalCategory');
+  const isLearningCategory = !!catEl && catEl.value === 'learning';
+  return isLearningCategory || !!(goalLinksDraft && (goalLinksDraft.learningIds||[]).length);
+}
+
 function updateGoalFinancialFieldsVisibility(){
-  const isFinancial = goalIsFinancialFromCategory();
+  const isFinancial = isGoalFinanceSectionVisible();
   document.getElementById('goalFinancialFields').hidden = !isFinancial;
   document.getElementById('goalFinancialRemainingRow').hidden = !isFinancial;
   document.getElementById('goalSourceWalletRow').hidden = !isFinancial;
   const lbl = document.getElementById('goalFinanceSectionLbl');
   if (lbl) lbl.hidden = !isFinancial;
+  const wrap = document.getElementById('goalFinanceSectionWrap');
+  if (wrap) wrap.hidden = !isFinancial;
+}
+
+// Rafrechi tout Seksyon dinamik yo an menm kou (Finans/Abitid/Aprantisaj) —
+// rele sa a chak fwa Kategori Prensipal la OSWA Modil Konekte yo chanje,
+// pou enèfas la mete ajou imedyatman san rafrechi paj.
+function updateGoalDynamicSectionsVisibility(){
+  updateGoalFinancialFieldsVisibility();
+  const habitsWrap = document.getElementById('goalHabitsSectionWrap');
+  if (habitsWrap) habitsWrap.hidden = !isGoalHabitsSectionVisible();
+  const learningWrap = document.getElementById('goalLearningSectionWrap');
+  if (learningWrap) learningWrap.hidden = !isGoalLearningSectionVisible();
 }
 
 // Pati 2/4: Si Kategori Prensipal la se "Finans", konekte Objektif la
@@ -543,7 +576,7 @@ function renderGoalFinancialRemaining(){
 }
 
 document.getElementById('goalCategory').addEventListener('change', () => {
-  updateGoalFinancialFieldsVisibility();
+  updateGoalDynamicSectionsVisibility();
   renderGoalFinancialRemaining();
   syncGoalFinanceModuleAutoLink();
   renderGoalLinksGrid();
@@ -6442,6 +6475,8 @@ function renderGoalLinksGrid(){
     const key = e.target.dataset.key;
     goalLinksDraft[key] = e.target.checked ? ['__linked__'] : [];
     renderGoalLinksGrid();
+    // Pati 3/4: Enèfas Dinamik — Seksyon yo mete ajou imedyatman, san rafrechi paj.
+    updateGoalDynamicSectionsVisibility();
   }));
   if (window.lucide) lucide.createIcons();
 }
@@ -7129,7 +7164,6 @@ function openGoalModal(id){
   document.getElementById('goalCurrentSavings').value = g && g.currentSavings != null ? g.currentSavings : '';
   document.getElementById('goalMonthlySavingPlan').value = g && g.monthlySavingPlan != null ? g.monthlySavingPlan : '';
   renderGoalSourceWalletOptions(g ? g.walletId : null);
-  updateGoalFinancialFieldsVisibility();
   renderGoalFinancialRemaining();
   if (typeof renderGoalFinanceSyncStatus === 'function') renderGoalFinanceSyncStatus();
   renderGoalDeadlineTracking();
@@ -7140,6 +7174,7 @@ function openGoalModal(id){
   goalDependencyDraft = g && Array.isArray(g.dependsOn) ? g.dependsOn.slice() : [];
   renderMilestoneDraft();
   renderGoalLinksGrid();
+  updateGoalDynamicSectionsVisibility();
   if (typeof renderGoalLearningLinksList === 'function') renderGoalLearningLinksList();
   if (typeof renderGoalLearningContribution === 'function') renderGoalLearningContribution();
   renderGoalDependencySelect();
