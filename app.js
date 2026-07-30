@@ -7841,6 +7841,25 @@ document.getElementById('deleteHabitBtn').addEventListener('click', () => {
 
 const GOAL_TYPE_LABEL = { short:'Kout tèm', medium:'Mwayen tèm', long:'Long tèm' };
 let _goalRenderSig = '';
+// ---- Pati 48/50: done pou amelyore konpreyansyon (badge koneksyon, ----
+// eksplikasyon pwogrè, apèsi aktivite). Fonksyon PUR — li done ki egziste
+// deja sèlman (isFinancial, getHabitsForGoal, linkedLearningCourses,
+// projects, g.deadline, g.habitProgressHistory) — pa gen nouvo chan sove.
+function goalUxHighlights(g){
+  const connections = [];
+  if (g.isFinancial) connections.push({ icon:'💰', label:'Finans' });
+  if (getHabitsForGoal(g.id).length) connections.push({ icon:'✓', label:'Abitid' });
+  if (g.deadline) connections.push({ icon:'📅', label:'Kalandriye' });
+  if (projects.some(p => p.goalId === g.id)) connections.push({ icon:'📁', label:'Pwojè' });
+  if (Array.isArray(g.linkedLearningCourses) && g.linkedLearningCourses.length) connections.push({ icon:'🎓', label:'Aprantisaj' });
+
+  const history = getGoalProgressHistory(g.id); // deja egziste (Pati 9/50), pi resan an premye
+  const progressExplanation = history.length ? history[0].reason : null;
+  const activityPreview = history.slice(0, 3).map(r => ({ date:r.date, reason:r.reason }));
+
+  return { connections, progressExplanation, activityPreview };
+}
+
 function renderGoals(){
   const list = document.getElementById('goalList');
   const q = document.getElementById('goalSearch').value.toLowerCase();
@@ -7864,6 +7883,8 @@ function renderGoals(){
       const pct = goalMilestoneProgress(g);
       // Pati 39/50: ti maak depandans sou kat la, san chanje ankenn lòt kalkil
       const depStatus = (g.dependsOn && g.dependsOn.length) ? computeGoalDependencyStatus(g.id) : null;
+      // Pati 48/50: badge koneksyon + eksplikasyon pwogrè + apèsi aktivite (done sèlman, pa gen nouvo sove)
+      const { connections, progressExplanation, activityPreview } = goalUxHighlights(g);
       const el = document.createElement('div');
       el.className = 'card goal-card';
       el.innerHTML = `
@@ -7880,7 +7901,10 @@ function renderGoals(){
           <span>${(g.milestones||[]).filter(m=>m.done).length}/${(g.milestones||[]).length} etap</span>
           ${depStatus ? `<span class="pill" style="background:${depStatus.blocked?'var(--orange-soft)':'var(--green-soft)'};color:${depStatus.blocked?'var(--orange)':'var(--green)'};" title="Depandans"><i data-lucide="${depStatus.blocked?'lock':'unlock'}" style="width:10px;height:10px;vertical-align:-1px;"></i> ${depStatus.completedCount}/${depStatus.total} depandans</span>` : ''}
         </div>
+        ${connections.length ? `<div class="goal-connection-badges">${connections.map(c => `<span class="goal-connection-badge">${c.icon} ${c.label}</span>`).join('')}</div>` : ''}
         <div class="goal-progress-row"><div class="mini-progress"><span style="width:${pct}%;background:${priorityColor(g.priority)}"></span></div><b>${pct}%</b></div>
+        ${progressExplanation ? `<div class="goal-progress-explain">"${escapeHtml(progressExplanation)}"</div>` : ''}
+        ${activityPreview.length ? `<div class="goal-activity-preview">${activityPreview.map(a => `<div class="goal-activity-preview-row"><span class="dot"></span>${a.date} — ${escapeHtml(a.reason)}</div>`).join('')}</div>` : ''}
       `;
       el.addEventListener('click', () => openGoalModal(g.id));
       list.appendChild(el);
