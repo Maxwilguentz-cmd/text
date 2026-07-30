@@ -1121,6 +1121,10 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
             <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:10px;">Bidjè Mwa a</h4>
             <div id="budgetSummary"></div>
           </div>
+          <div class="card" style="padding:18px;" id="budgetGoalConnectionsCard" hidden>
+            <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:10px;">Objektif Finansye Lye <span style="color:var(--text-faint);font-weight:400;font-size:11px;">(preparasyon — pa gen kalkil bidjè touche)</span></h4>
+            <div id="budgetGoalConnections"></div>
+          </div>
           <div class="card chart-card">
             <h4>Depans pa Kategori</h4>
             <div id="pieChartWrap"></div>
@@ -1970,6 +1974,10 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <option value="monthly">Mansyèl</option><option value="weekly">Semenèl</option>
       </select></div>
       <div id="budgetsManageList"></div>
+      <div style="margin-top:12px;">
+        <label style="display:block;margin-bottom:6px;">Objektif Finansye Lye <span style="color:var(--text-faint);font-weight:400;">(preparasyon koneksyon — pa gen kalkil bidjè touche)</span></label>
+        <div class="milestone-list" id="budgetsManageGoalList"></div>
+      </div>
       <div class="form-row" style="align-items:end;margin-top:2px;">
         <div><label>Non Bidjè (tape oswa chwazi)</label>
           <input type="text" id="budgetAddCatInput" list="budgetAddCatList" placeholder="Pw. Manje, oswa non ou vle">
@@ -2219,6 +2227,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div id="goalFinancialFields" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;" hidden>
           <div><label>Kou (Cost) <span style="color:var(--text-faint);font-weight:400;">(= Valè Estime)</span></label><input type="number" id="goalCostDisplay" disabled placeholder="0"></div>
           <div><label>Sere Deja (Saved)</label><input type="number" id="goalCurrentSavings" placeholder="Pw. 3000"></div>
+          <div><label>Plan Sere pa Mwa <span style="color:var(--text-faint);font-weight:400;">(opsyonèl — pou Bidjè)</span></label><input type="number" id="goalMonthlySavingPlan" placeholder="Pw. 1000"></div>
         </div>
         <div id="goalSourceWalletRow" style="margin-top:8px;" hidden>
           <label>Sous Kòb (Source Wallet) <span style="color:var(--text-faint);font-weight:400;">(referans sèlman — pa deplase lajan)</span></label>
