@@ -373,9 +373,11 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
 .goal-links-section{display:flex;flex-direction:column;gap:8px;}
 .goal-links-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
 @media (max-width:520px){.goal-links-grid{grid-template-columns:1fr;}}
-.goal-link-chip{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12.5px;color:var(--text-dim);}
+.goal-link-chip{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12.5px;color:var(--text-dim);transition:border-color .15s,background-color .15s;}
 .goal-link-chip.active{border-color:var(--blue);color:var(--text);background:var(--blue-soft);}
+.goal-link-chip.locked{cursor:default;}
 .goal-link-chip input{accent-color:var(--blue);}
+.goal-link-chip input:disabled{cursor:default;}
 .goal-category-tag{font-size:11px;padding:2px 8px;border-radius:6px;background:var(--surface-2);color:var(--text-dim);}
 .milestone-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);}
 .milestone-row input[type=checkbox]{width:auto;}
@@ -2407,13 +2409,20 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           </div>
         </div>
       </div>
+      <!-- Pati 2/4: Modil Konekte — deplase la a, dirèkteman anba Kategori Prensipal, pou moun
+           nan ka wè/chwazi tout modil Objektif la ka konekte avèk yo depi kòmansman an. -->
+      <div class="goal-links-section">
+        <label>Modil Konekte <span style="color:var(--text-faint);font-weight:400;">(Objektif la ka konekte ak plizyè modil an menm tan)</span></label>
+        <div class="goal-links-grid" id="goalLinksGrid"></div>
+        <div id="goalFinanceAutoNote" class="pill" style="width:fit-content;margin-top:8px;background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);display:flex;align-items:center;gap:5px;" hidden><i data-lucide="wallet" style="width:11px;height:11px;"></i> Finans konekte otomatikman (Kategori: Finans)</div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div><label>Dat Limit <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="date" id="goalDeadline"></div>
         <div><label>Valè Estime <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label><input type="number" id="goalEstimatedValue" placeholder="Pw. 50000"></div>
       </div>
       <div id="goalDeadlineTrackingRow" class="milestone-list" style="margin-top:4px;" hidden></div>
       <div class="goal-finance-section">
-        <label style="display:flex;align-items:center;gap:6px;font-weight:400;"><input type="checkbox" id="goalIsFinancial" style="width:auto;"> Sa se yon Objektif Finansye</label>
+        <div id="goalFinanceSectionLbl" class="pill" style="width:fit-content;background:var(--blue-soft, rgba(59,130,246,.14));color:var(--blue);display:flex;align-items:center;gap:5px;" hidden><i data-lucide="wallet" style="width:11px;height:11px;"></i> Detay Finansye — otomatik (Kategori: Finans)</div>
         <div id="goalFinancialFields" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;" hidden>
           <div><label>Kou (Cost) <span style="color:var(--text-faint);font-weight:400;">(= Valè Estime)</span></label><input type="number" id="goalCostDisplay" disabled placeholder="0"></div>
           <div><label>Sere Deja (Saved)</label><input type="number" id="goalCurrentSavings" placeholder="Pw. 3000"></div>
@@ -2501,8 +2510,6 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div class="milestone-list" id="goalHabitWhyLinkedList"></div>
         <label style="margin-top:12px;display:block;">Rezime Kontribisyon <span style="color:var(--text-faint);font-weight:400;">(total pa Abitid + total jeneral)</span></label>
         <div class="milestone-list" id="goalContributionSummaryList"></div>
-        <label style="margin-top:12px;display:block;">Lye ak Objektif la <span style="color:var(--text-faint);font-weight:400;">(opsyonèl)</span></label>
-        <div class="goal-links-grid" id="goalLinksGrid"></div>
         <button class="btn btn-ghost" id="goalAddHabitBtn" style="margin-top:8px;" hidden><i data-lucide="plus"></i> Ajoute Abitid</button>
         <div id="goalLinkExistingHabitWrap" style="margin-top:8px;display:flex;gap:8px;" hidden>
           <select class="field" id="goalLinkExistingHabitSelect" style="flex:1;"></select>
