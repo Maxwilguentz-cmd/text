@@ -496,11 +496,29 @@ function computeGoalFinancialProgressPct(g){
   return Math.max(0, Math.min(100, Math.round((saved / cost) * 100)));
 }
 
+// Pati 2/4: "Objektif Finansye" pa yon chwa manyèl ankò — li vin OTOMATIK
+// depi Kategori Prensipal la se "Finans". Chan `isFinancial` la rete menm
+// jan an nan done a (pa gen chanjman estrikti), sèlman sous valè a chanje.
+function goalIsFinancialFromCategory(){
+  const catEl = document.getElementById('goalCategory');
+  return !!catEl && catEl.value === 'finance';
+}
+
 function updateGoalFinancialFieldsVisibility(){
-  const isFinancial = document.getElementById('goalIsFinancial').checked;
+  const isFinancial = goalIsFinancialFromCategory();
   document.getElementById('goalFinancialFields').hidden = !isFinancial;
   document.getElementById('goalFinancialRemainingRow').hidden = !isFinancial;
   document.getElementById('goalSourceWalletRow').hidden = !isFinancial;
+  const lbl = document.getElementById('goalFinanceSectionLbl');
+  if (lbl) lbl.hidden = !isFinancial;
+}
+
+// Pati 2/4: Si Kategori Prensipal la se "Finans", konekte Objektif la
+// otomatikman ak modil Finans (menm chan goalLinksDraft.financeIds ki
+// egziste deja — pa gen nouvo sistèm koneksyon kreye).
+function syncGoalFinanceModuleAutoLink(){
+  if (typeof goalLinksDraft === 'undefined') return;
+  if (goalIsFinancialFromCategory()) goalLinksDraft.financeIds = ['__linked__'];
 }
 
 // ==========================================
@@ -533,7 +551,13 @@ function renderGoalFinancialRemaining(){
   document.getElementById('goalFinancialProgressBar').style.width = pct + '%';
 }
 
-document.getElementById('goalIsFinancial').addEventListener('change', updateGoalFinancialFieldsVisibility);
+document.getElementById('goalCategory').addEventListener('change', () => {
+  updateGoalFinancialFieldsVisibility();
+  renderGoalFinancialRemaining();
+  syncGoalFinanceModuleAutoLink();
+  renderGoalLinksGrid();
+  renderGoalAutoStatusPreview();
+});
 ['goalEstimatedValue','goalCurrentSavings'].forEach(id => {
   document.getElementById(id).addEventListener('input', renderGoalFinancialRemaining);
 });
@@ -6407,15 +6431,23 @@ let goalStatusOverride = null;
 function renderGoalLinksGrid(){
   const grid = document.getElementById('goalLinksGrid');
   const sourceMap = { habitIds: habits, financeIds: wallets, calendarIds: events, learningIds: [], projectIds: projects };
+  // Pati 2/4: si Kategori Prensipal la se "Finans", modil Finans la
+  // otomatikman konekte e li vin "bloke" (moun nan pa ka dekoche l — se
+  // Kategori a ki kontwole l, li pa bezwen okenn lòt chwa).
+  const financeLocked = goalIsFinancialFromCategory();
+  if (financeLocked) goalLinksDraft.financeIds = ['__linked__'];
+  const financeNote = document.getElementById('goalFinanceAutoNote');
+  if (financeNote) financeNote.hidden = !financeLocked;
   grid.innerHTML = GOAL_LINK_TYPES.map(t => {
     const count = (sourceMap[t.key]||[]).length;
-    const active = (goalLinksDraft[t.key]||[]).length > 0;
-    return `<label class="goal-link-chip${active?' active':''}" data-key="${t.key}">
-      <input type="checkbox" ${active?'checked':''} data-key="${t.key}">
-      <i data-lucide="${t.icon}" style="width:13px;height:13px;"></i> ${t.label}${count?` <span style="color:var(--text-faint);">(${count})</span>`:''}
+    const locked = financeLocked && t.key === 'financeIds';
+    const active = locked || (goalLinksDraft[t.key]||[]).length > 0;
+    return `<label class="goal-link-chip${active?' active':''}${locked?' locked':''}" data-key="${t.key}">
+      <input type="checkbox" ${active?'checked':''} ${locked?'disabled':''} data-key="${t.key}">
+      <i data-lucide="${t.icon}" style="width:13px;height:13px;"></i> ${t.label}${locked?' <span style="color:var(--blue);font-weight:700;">(Otomatik)</span>':(count?` <span style="color:var(--text-faint);">(${count})</span>`:'')}
     </label>`;
   }).join('');
-  grid.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', e => {
+  grid.querySelectorAll('input[type=checkbox]:not([disabled])').forEach(cb => cb.addEventListener('change', e => {
     const key = e.target.dataset.key;
     goalLinksDraft[key] = e.target.checked ? ['__linked__'] : [];
     renderGoalLinksGrid();
@@ -6510,7 +6542,7 @@ function computeGoalDraftProgress(){
   const existing = editingGoalId ? goals.find(x => x.id === editingGoalId) : null;
   const draft = {
     milestones: goalMilestoneDraft,
-    isFinancial: document.getElementById('goalIsFinancial').checked,
+    isFinancial: goalIsFinancialFromCategory(),
     estimatedValue: document.getElementById('goalEstimatedValue').value ? parseFloat(document.getElementById('goalEstimatedValue').value) : null,
     currentSavings: document.getElementById('goalCurrentSavings').value ? parseFloat(document.getElementById('goalCurrentSavings').value) : null,
     progress: existing ? (existing.progress || 0) : 0,
@@ -6613,7 +6645,7 @@ function buildGoalDraftForAutoStatus(){
     deadline: document.getElementById('goalDeadline').value,
     progress: computeGoalDraftProgress(),
     milestones: goalMilestoneDraft,
-    isFinancial: document.getElementById('goalIsFinancial').checked,
+    isFinancial: goalIsFinancialFromCategory(),
     currentSavings: document.getElementById('goalCurrentSavings').value ? parseFloat(document.getElementById('goalCurrentSavings').value) : null,
     estimatedValue: document.getElementById('goalEstimatedValue').value ? parseFloat(document.getElementById('goalEstimatedValue').value) : null,
   };
@@ -6634,7 +6666,7 @@ function renderGoalProgressPreview(){
     let source = 'Baze sou valè aktyèl Objektif la';
     if (goalLearningDraft && goalLearningDraft.filter(k => LEARNING_COURSES[k]).length) source = 'Baze sou Kou Aprantisaj lye yo';
     else if (goalMilestoneDraft && goalMilestoneDraft.length) source = 'Baze sou Etap (Milestones) yo';
-    else if (document.getElementById('goalIsFinancial').checked && document.getElementById('goalEstimatedValue').value) source = 'Baze sou Sere/Kou Finansye';
+    else if (goalIsFinancialFromCategory() && document.getElementById('goalEstimatedValue').value) source = 'Baze sou Sere/Kou Finansye';
     srcLbl.textContent = source;
   }
 }
@@ -6659,7 +6691,9 @@ function renderGoalAutoStatusPreview(){
   const el = document.getElementById(id);
   if (el){ el.addEventListener('input', renderGoalAutoStatusPreview); el.addEventListener('change', renderGoalAutoStatusPreview); }
 });
-document.getElementById('goalIsFinancial')?.addEventListener('change', renderGoalAutoStatusPreview);
+// Pati 2/4: renderGoalAutoStatusPreview deja deklanche pa listener
+// 'change' sou #goalCategory (pi wo), ki ranplase ansyen checkbox
+// #goalIsFinancial la nèt.
 document.getElementById('goalPauseToggleBtn')?.addEventListener('click', () => {
   goalStatusOverride = goalStatusOverride === 'paused' ? null : 'paused';
   renderGoalAutoStatusPreview();
@@ -7099,7 +7133,8 @@ function openGoalModal(id){
   // sove deja kòm 'paused' oswa 'archived' (chwa manyèl sèlman — Pati 41).
   goalStatusOverride = (g && !g.autoStatus && (g.status === 'paused' || g.status === 'archived')) ? g.status : null;
   document.getElementById('goalEstimatedValue').value = g && g.estimatedValue != null ? g.estimatedValue : '';
-  document.getElementById('goalIsFinancial').checked = g ? !!g.isFinancial : false;
+  // Pati 2/4: pa gen checkbox "Objektif Finansye" ankò — Kategori Prensipal
+  // la (deja mete pi wo) detèmine sa otomatikman.
   document.getElementById('goalCurrentSavings').value = g && g.currentSavings != null ? g.currentSavings : '';
   document.getElementById('goalMonthlySavingPlan').value = g && g.monthlySavingPlan != null ? g.monthlySavingPlan : '';
   renderGoalSourceWalletOptions(g ? g.walletId : null);
@@ -7153,7 +7188,7 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
     category: document.getElementById('goalCategory').value,
     status: 'not-started', // valè tanporè — ranplase pi ba a
     estimatedValue: document.getElementById('goalEstimatedValue').value ? parseFloat(document.getElementById('goalEstimatedValue').value) : null,
-    isFinancial: document.getElementById('goalIsFinancial').checked,
+    isFinancial: goalIsFinancialFromCategory(),
     currentSavings: document.getElementById('goalCurrentSavings').value ? parseFloat(document.getElementById('goalCurrentSavings').value) : null,
     monthlySavingPlan: document.getElementById('goalMonthlySavingPlan').value ? parseFloat(document.getElementById('goalMonthlySavingPlan').value) : null,
     walletId: document.getElementById('goalSourceWallet').value || null,
