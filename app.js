@@ -5081,6 +5081,7 @@ document.getElementById('saveHabitBtn').addEventListener('click', () => {
   if (habitId){
     linkHabitToGoal(goalId, habitId);
     if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(goalId, habitId, 'habit-linked');
+    if (typeof refreshGoalHabitContributionTotals === 'function') refreshGoalHabitContributionTotals(goalId);
     renderGoals();
     if (typeof renderLinkExistingHabitSelect === 'function') renderLinkExistingHabitSelect();
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
@@ -5132,6 +5133,7 @@ function renderLinkExistingHabitSelect(){
     if (!editingGoalId || !habitId) return;
     linkHabitToGoal(editingGoalId, habitId); // itilize ID ki egziste deja — pa kreye/dupliye okenn abitid
     if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(editingGoalId, habitId, 'habit-linked');
+    if (typeof refreshGoalHabitContributionTotals === 'function') refreshGoalHabitContributionTotals(editingGoalId);
     renderLinkExistingHabitSelect();
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
     if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
@@ -5145,6 +5147,41 @@ function renderLinkExistingHabitSelect(){
 // Lòt kouch obsèvasyon apa — pa touche Goal/Habit modil yo, ni kod Pati 1/2/3 la.
 // ==========================================
 const HABIT_FREQ_LABEL = { daily:'Chak jou', weekly:'Chak semèn', monthly:'Chak mwa' };
+
+// ==========================================
+// GOAL <-> HABIT — senkronizasyon estati (Pati 14/50)
+// Estati a pa janm sove kòm yon chan separe sou Goal ni sou Habit — li toujou
+// KALKILE an dirèk apati vrè done Habit la (h.completions, h.frequency).
+// Konsa Goal ak Habit pa ka janm dezenkwonize (pa gen "doublon done" pou
+// jere): si Habit la chanje, estati a chanje otomatikman pwochèn fwa Goal la
+// afiche. Habit modil la pa gen okenn konsèp "an poz" natif — nou dedwi sa
+// lè yon Abitid rete twò lontan san okenn konplete (relatif ak frekans li).
+// ==========================================
+const HABIT_LINK_STATUS_LABEL = { completed:'Fèt jodi a', active:'Aktif', paused:'An Poz', deleted:'Efase' };
+const HABIT_LINK_STATUS_STYLE = {
+  completed: { bg:'var(--green-soft)', fg:'var(--green)' },
+  active:    { bg:'var(--surface-2)',  fg:'var(--text-dim)' },
+  paused:    { bg:'var(--orange-soft)',fg:'var(--orange)' },
+  deleted:   { bg:'var(--red-soft, rgba(229,72,77,.14))', fg:'var(--red, #e5484d)' }
+};
+
+// Konbyen jou san aktivite pou konsidere yon Abitid "An Poz", selon frekans li
+function habitStaleThresholdDays(frequency){
+  if (frequency === 'weekly') return 10;
+  if (frequency === 'monthly') return 35;
+  return 2; // daily (default)
+}
+
+function computeHabitLinkStatus(h){
+  if (!h) return 'deleted';
+  const today = todayISO();
+  if ((h.completions||[]).includes(today)) return 'completed';
+  const sorted = (h.completions||[]).slice().sort();
+  const last = sorted[sorted.length - 1];
+  if (!last) return 'paused'; // pa gen okenn konplete ditou — konsidere l San Aktivite
+  const daysSince = Math.floor((new Date(today) - new Date(last)) / 86400000);
+  return daysSince > habitStaleThresholdDays(h.frequency) ? 'paused' : 'active';
+}
 
 // ==========================================
 // GOAL <-> HABIT — pwogrè Objektif ki soti nan Abitid Lye (Pati 8/50)
@@ -5161,6 +5198,108 @@ function computeGoalHabitProgress(goalId){
   });
   const pct = Math.round(perHabit.reduce((s,x) => s + x.rate, 0) / perHabit.length);
   return { pct, perHabit };
+}
+
+// ==========================================
+// GOAL <-> HABIT — swivi kontribisyon (Pati 12/50)
+// Nouvo chan APA sou Goal la (g.habitContributions) — pa touche goal.progress,
+// pa touche computeGoalHabitProgress (pousantaj/pwogrè, Pati 8) ki rete
+// entak, ni Habit modil la (pa gen okenn nouvo chan sou objè Habit la). Isit
+// la nou swiv "valè reyèl" chak Abitid kontribye bay Objektif la — pa egzanp
+// Abitid "Sere 25 HTG chak jou" ki kontribye 25 HTG chak fwa li fèt, pou yon
+// total kimilatif. Valè pa fwa a (`amount` + `unit`) konfigirab pou chak
+// koneksyon Objektif-Abitid; total la kalkile apati kantite fwa Abitid la
+// fin fèt (h.completions.length), donk li toujou an senk ak vrè done a — pa
+// gen dosye separe pou anpeche dezenkwonizasyon.
+// ==========================================
+function ensureGoalHabitContribution(g, habitId){
+  if (!g.habitContributions || typeof g.habitContributions !== 'object') g.habitContributions = {};
+  if (!g.habitContributions[habitId]) g.habitContributions[habitId] = { amount: 0, unit: '', total: 0 };
+  return g.habitContributions[habitId];
+}
+
+function computeGoalHabitContributionTotal(goalId, habitId){
+  const g = goals.find(x => x.id === goalId);
+  const h = habits.find(x => x.id === habitId);
+  if (!g || !h) return 0;
+  const cfg = g.habitContributions && g.habitContributions[habitId];
+  const amount = cfg ? (Number(cfg.amount) || 0) : 0;
+  const count = Array.isArray(h.completions) ? h.completions.length : 0;
+  return Math.round(amount * count * 100) / 100;
+}
+
+// Mete ajou konfigirasyon "valè pa fwa" pou yon koneksyon Objektif-Abitid,
+// epi rekalkile total kimilatif la imedyatman
+function setGoalHabitContribution(goalId, habitId, amount, unit){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return null;
+  const cfg = ensureGoalHabitContribution(g, habitId);
+  const n = parseFloat(amount);
+  cfg.amount = isFinite(n) ? n : 0;
+  cfg.unit = (unit || '').trim();
+  cfg.total = computeGoalHabitContributionTotal(goalId, habitId);
+  persistGoals();
+  return cfg;
+}
+
+// Rekalkile tout total kontribisyon yo pou yon Objektif (deklanche apre
+// make/demake yon Abitid, oswa lye/delye), san touche konfigirasyon `amount`/`unit` moun nan te antre
+function refreshGoalHabitContributionTotals(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !g.habitContributions) return;
+  let changed = false;
+  Object.keys(g.habitContributions).forEach(habitId => {
+    const newTotal = computeGoalHabitContributionTotal(goalId, habitId);
+    if (g.habitContributions[habitId].total !== newTotal){ g.habitContributions[habitId].total = newTotal; changed = true; }
+  });
+  if (changed) persistGoals();
+}
+
+// ==========================================
+// GOAL <-> HABIT — rezime kontribisyon (Pati 13/50)
+// Sèvi ak menm done g.habitContributions ki soti nan Pati 12 (pa gen nouvo
+// chan sou Goal/Habit) — isit la nou rasanble yo: chak Abitid ki gen yon
+// valè konfigire afiche apa ("Sere 25 HTG chak jou → 500 HTG"), epi total
+// jeneral la kalkile pa gwoupe pa `unit` (paske ou pa ka jis adisyone HTG ak
+// èdtan san konfizyon). Si tout Abitid yo pataje menm inite a, yon sèl total
+// senp afiche; si gen plizyè inite diferan, chak gwoup afiche apa.
+// ==========================================
+function computeGoalContributionSummary(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g) return { list: [], totalsByUnit: [] };
+  const linked = getHabitsForGoal(goalId);
+  const list = [];
+  const totalsByUnitMap = {};
+  linked.forEach(h => {
+    const cfg = g.habitContributions && g.habitContributions[h.id];
+    if (!cfg || !cfg.amount) return; // Abitid san valè konfigire pa fè pati rezime a
+    const unit = cfg.unit || '';
+    const total = computeGoalHabitContributionTotal(goalId, h.id);
+    list.push({ habitId: h.id, habitName: h.name, amount: cfg.amount, unit, total });
+    totalsByUnitMap[unit] = Math.round(((totalsByUnitMap[unit] || 0) + total) * 100) / 100;
+  });
+  const totalsByUnit = Object.keys(totalsByUnitMap).map(unit => ({ unit, total: totalsByUnitMap[unit] }));
+  return { list, totalsByUnit };
+}
+
+function renderGoalContributionSummary(){
+  const wrap = document.getElementById('goalContributionSummaryList');
+  if (!wrap) return;
+  if (!editingGoalId){ wrap.innerHTML = ''; return; }
+  const { list, totalsByUnit } = computeGoalContributionSummary(editingGoalId);
+  if (!list.length){
+    wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen kontribisyon konfigire pou Abitid yo.</span>';
+    return;
+  }
+  const rows = list.map(x => `<div class="milestone-row" style="justify-content:space-between;">
+      <span>${escapeHtml(x.habitName)} <span style="color:var(--text-faint);">(${x.amount}${x.unit ? ' ' + escapeHtml(x.unit) : ''} pa fwa)</span></span>
+      <span class="pill" style="background:var(--blue-soft);color:var(--blue);">${x.total}${x.unit ? ' ' + escapeHtml(x.unit) : ''}</span>
+    </div>`).join('');
+  const totalLine = totalsByUnit.map(t => `${t.total}${t.unit ? ' ' + escapeHtml(t.unit) : ''}`).join(' · ');
+  wrap.innerHTML = rows + `<div class="milestone-row" style="justify-content:space-between;border-top:1px solid var(--border);margin-top:4px;padding-top:8px;">
+      <b>Total kontribisyon</b>
+      <b style="color:var(--green);">${totalLine}</b>
+    </div>`;
 }
 
 function renderGoalLinkedHabitsList(){
@@ -5184,18 +5323,31 @@ function renderGoalLinkedHabitsList(){
   }
   const rateByHabit = Object.fromEntries(perHabit.map(x => [x.habitId, x.rate]));
   wrap.innerHTML = linked.map(h => {
-    const doneToday = (h.completions||[]).includes(todayISO());
-    const statusLabel = doneToday ? 'Fèt jodi a' : 'An atant';
-    const statusBg = doneToday ? 'var(--green-soft)' : 'var(--surface-2)';
-    const statusColor = doneToday ? 'var(--green)' : 'var(--text-dim)';
+    const linkStatus = computeHabitLinkStatus(h);
+    const statusLabel = HABIT_LINK_STATUS_LABEL[linkStatus];
+    const statusStyle = HABIT_LINK_STATUS_STYLE[linkStatus];
+    const statusBg = statusStyle.bg, statusColor = statusStyle.fg;
     const contrib = rateByHabit[h.id] ?? 0;
-    return `<div class="milestone-row" style="justify-content:space-between;" data-habit-id="${h.id}">
-      <span><b>${escapeHtml(h.name)}</b>
-        <span class="tag" style="background:var(--surface-2);color:var(--text-dim);margin-left:6px;">${HABIT_FREQ_LABEL[h.frequency]||h.frequency}</span>
-        <span class="pill" style="background:${statusBg};color:${statusColor};margin-left:6px;">${statusLabel}</span>
-        <span class="tag" style="background:var(--blue-soft);color:var(--blue);margin-left:6px;" title="Kontribisyon endepandan abitid sa a nan pwogrè objektif la">${contrib}%</span>
-      </span>
-      <i data-lucide="x" class="goalUnlinkHabit" data-habit-id="${h.id}" title="Delye ${escapeHtml(h.name)} (pa efase abitid la)" aria-label="Delye abitid" role="button" style="width:13px;height:13px;cursor:pointer;color:var(--text-faint);padding:3px;"></i>
+    const goalObj = goals.find(x => x.id === editingGoalId);
+    const contribCfg = goalObj && goalObj.habitContributions ? goalObj.habitContributions[h.id] : null;
+    const contribAmount = contribCfg ? contribCfg.amount : '';
+    const contribUnit = contribCfg ? contribCfg.unit : '';
+    const contribTotal = contribCfg ? contribCfg.total : 0;
+    return `<div class="milestone-row" style="flex-direction:column;align-items:stretch;gap:6px;" data-habit-id="${h.id}">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span><b>${escapeHtml(h.name)}</b>
+          <span class="tag" style="background:var(--surface-2);color:var(--text-dim);margin-left:6px;">${HABIT_FREQ_LABEL[h.frequency]||h.frequency}</span>
+          <span class="pill" style="background:${statusBg};color:${statusColor};margin-left:6px;">${statusLabel}</span>
+          <span class="tag" style="background:var(--blue-soft);color:var(--blue);margin-left:6px;" title="Kontribisyon endepandan abitid sa a nan pwogrè objektif la">${contrib}%</span>
+        </span>
+        <i data-lucide="x" class="goalUnlinkHabit" data-habit-id="${h.id}" title="Delye ${escapeHtml(h.name)} (pa efase abitid la)" aria-label="Delye abitid" role="button" style="width:13px;height:13px;cursor:pointer;color:var(--text-faint);padding:3px;"></i>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text-dim);">
+        <span>Kontribisyon pa fwa:</span>
+        <input type="number" class="field goalHabitContribAmount" data-habit-id="${h.id}" value="${contribAmount}" placeholder="Valè" step="any" style="width:72px;padding:2px 6px;font-size:11px;">
+        <input type="text" class="field goalHabitContribUnit" data-habit-id="${h.id}" value="${escapeHtml(contribUnit)}" placeholder="inite (Pw. HTG)" style="width:100px;padding:2px 6px;font-size:11px;">
+        ${contribCfg && contribCfg.amount > 0 ? `<span class="tag" style="background:var(--green-soft);color:var(--green);" title="Total kimilatif kontribisyon abitid sa a bay objektif la">Total: ${contribTotal}${contribUnit ? ' ' + escapeHtml(contribUnit) : ''}</span>` : ''}
+      </div>
     </div>`;
   }).join('');
   wrap.querySelectorAll('.goalUnlinkHabit').forEach(ic => ic.addEventListener('click', e => {
@@ -5209,7 +5361,21 @@ function renderGoalLinkedHabitsList(){
     renderGoals();
     showToast('Abitid delye ✓');
   }));
+  const applyContribChange = e => {
+    const habitId = e.currentTarget.dataset.habitId;
+    const row = wrap.querySelector(`.milestone-row[data-habit-id="${habitId}"]`);
+    if (!row || !editingGoalId) return;
+    const amountInput = row.querySelector('.goalHabitContribAmount');
+    const unitInput = row.querySelector('.goalHabitContribUnit');
+    setGoalHabitContribution(editingGoalId, habitId, amountInput.value, unitInput.value);
+    renderGoalLinkedHabitsList();
+  };
+  wrap.querySelectorAll('.goalHabitContribAmount, .goalHabitContribUnit').forEach(inp => {
+    inp.addEventListener('change', applyContribChange);
+    inp.addEventListener('click', e => e.stopPropagation());
+  });
   if (window.lucide) lucide.createIcons();
+  if (typeof renderGoalContributionSummary === 'function') renderGoalContributionSummary();
 }
 
 // Lè yon abitid make fèt/pa fèt jodi a, kontribisyon ak pwogrè a ka chanje —
@@ -5226,6 +5392,7 @@ function renderGoalLinkedHabitsList(){
       const doneNow = Array.isArray(h.completions) && h.completions.includes(todayISO());
       const actionSource = doneNow ? 'habit-completed' : 'habit-uncompleted';
       if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(h.goalId, id, actionSource);
+      if (typeof refreshGoalHabitContributionTotals === 'function') refreshGoalHabitContributionTotals(h.goalId);
     }
     if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
     if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
@@ -5270,12 +5437,14 @@ function buildGoalProgressReason(actionSource, habitName, delta){
       return `Pwogrè ${direction} (${deltaTxt}) paske Abitid: ${name} te lye ak Objektif la.`;
     case 'habit-unlinked':
       return `Pwogrè ${direction} (${deltaTxt}) paske Abitid: ${name} te delye ak Objektif la.`;
+    case 'habit-deleted':
+      return `Pwogrè ${direction} (${deltaTxt}) paske Abitid: ${name} te efase.`;
     default:
       return `Pwogrè ${direction} (${deltaTxt}).`;
   }
 }
 
-function recordGoalHabitProgressHistory(goalId, sourceHabitId, actionSource){
+function recordGoalHabitProgressHistory(goalId, sourceHabitId, actionSource, habitNameOverride){
   const g = goals.find(x => x.id === goalId);
   if (!g) return false;
   const { pct } = computeGoalHabitProgress(goalId);
@@ -5290,6 +5459,8 @@ function recordGoalHabitProgressHistory(goalId, sourceHabitId, actionSource){
 
   const habitId = sourceHabitId || null;
   const habit = habitId ? habits.find(h => h.id === habitId) : null;
+  // Si Abitid la deja efase (pa egziste ankò nan habits[]), sèvi ak non li te bay davans (habitNameOverride)
+  const resolvedHabitName = habit ? habit.name : (habitNameOverride || null);
   const source = actionSource || 'manual';
   const delta = Math.round((pct - prevPct) * 10) / 10; // kantite ogmantasyon (ka negatif si pwogrè bese)
   const now = new Date();
@@ -5298,11 +5469,11 @@ function recordGoalHabitProgressHistory(goalId, sourceHabitId, actionSource){
     date: todayISO(),        // dat chanjman an (YYYY-MM-DD)
     time: now.toISOString(), // maren egzat pou triye/distenge plizyè chanjman menm jou a
     habitId: habitId,        // Abitid sous ki lakòz chanjman an (null si se yon aksyon jeneral)
-    habitName: habit ? habit.name : null,
+    habitName: resolvedHabitName,
     source,                  // kòd machin pou kalite aksyon an ('habit-completed', 'habit-linked', ...)
     delta,                   // kantite chanjman (ka negatif si pwogrè bese)
     pct,                     // pousantaj total pwogrè Objektif la apre chanjman an
-    reason: buildGoalProgressReason(source, habit ? habit.name : null, delta) // fraz lizib pou detay Objektif la
+    reason: buildGoalProgressReason(source, resolvedHabitName, delta) // fraz lizib pou detay Objektif la
   };
 
   // Gad siplemantè kont doublon: menm dat + menm Abitid sous + menm pct kòm dènye antre a
@@ -5411,6 +5582,48 @@ document.getElementById('deleteHabitBtn').addEventListener('click', () => {
 });
 document.getElementById('deleteGoalBtn').addEventListener('click', () => {
   pruneBrokenGoalHabitLinks();
+});
+
+// ==========================================
+// GOAL <-> HABIT — senkronizasyon lè yon Abitid efase (Pati 14/50)
+// Habit modil la efase Abitid la KONPLETMAN (retire l nan habits[]) anvan
+// kouch nou an ka reyaji, donk nou pèdi non/goalId li si nou pa kaptire yo
+// AVAN sa. Nou anvlope openHabitModal() (san chanje konpòtman orijinal li)
+// pou kenbe yon ti "snapshot" chak fwa moun nan louvri yon Abitid pou
+// modifye/efase l; si se menm Abitid la ki efase apre, nou itilize snapshot
+// sa a pou: (1) anrejistre yon antre istwa pwogrè lizib sou Objektif la
+// (si li te lye), (2) netwaye antre kontribisyon òfelen an (Pati 12) pou
+// pa gen done ki rete ap trennen san rezon.
+// ==========================================
+let lastOpenedHabitSnapshot = null;
+(function hookOpenHabitModalForGoalSync(){
+  if (typeof openHabitModal !== 'function') return;
+  const originalOpenHabitModal = openHabitModal;
+  openHabitModal = function(id){
+    if (id){
+      const h = habits.find(x => x.id === id);
+      if (h) lastOpenedHabitSnapshot = { id: h.id, name: h.name, goalId: h.goalId || null };
+    }
+    return originalOpenHabitModal(id);
+  };
+})();
+
+document.getElementById('deleteHabitBtn').addEventListener('click', () => {
+  const snap = lastOpenedHabitSnapshot;
+  if (!snap || snap.id !== editingHabitId) return; // pa menm Abitid la — pa gen anyen pou senkwonize
+  if (snap.goalId){
+    if (typeof recordGoalHabitProgressHistory === 'function'){
+      recordGoalHabitProgressHistory(snap.goalId, snap.id, 'habit-deleted', snap.name);
+    }
+    const g = goals.find(x => x.id === snap.goalId);
+    if (g && g.habitContributions && g.habitContributions[snap.id]){
+      delete g.habitContributions[snap.id]; // retire antre kontribisyon òfelen an — pa kite done trennen
+      persistGoals();
+    }
+  }
+  lastOpenedHabitSnapshot = null;
+  if (typeof renderGoalLinkedHabitsList === 'function') renderGoalLinkedHabitsList();
+  if (typeof renderGoalProgressHistory === 'function') renderGoalProgressHistory();
 });
 
 const GOAL_TYPE_LABEL = { short:'Kout tèm', medium:'Mwayen tèm', long:'Long tèm' };
