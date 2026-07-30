@@ -5,7 +5,7 @@ const MONTHS = ["Janvye","Fevriye","Mas","Avril","Me","Jen","Jiyè","Out","Septa
 const DAYS = ["Dimanch","Lendi","Madi","Mèkredi","Jedi","Vandredi","Samdi"];
 const DAYS_SHORT = ["Dim","Len","Mad","Mèk","Jed","Van","Sam"];
 
-const STATUSES = [
+const STATUSES = [ 
   {key:'inbox', label:'Resepsyon'},
   {key:'planned', label:'Planifye'},
   {key:'in-progress', label:'An Kou'},
