@@ -6576,31 +6576,9 @@ function computeGoalDraftProgress(){
   return goalMilestoneProgress(draft);
 }
 
-function renderGoalDeadlineTracking(){
-  const row = document.getElementById('goalDeadlineTrackingRow');
-  if (!row) return;
-  const g = editingGoalId ? goals.find(x => x.id === editingGoalId) : null;
-  const deadlineVal = document.getElementById('goalDeadline').value;
-  const draft = g ? { ...g, deadline: deadlineVal } : { createdAt: todayISO(), deadline: deadlineVal, progress: computeGoalDraftProgress() };
-  const info = computeGoalDeadlineTracking(draft);
-  if (!info){ row.hidden = true; row.innerHTML = ''; return; }
-  row.hidden = false;
-  const statusColor = info.status === 'An Reta' ? 'var(--red)' : info.status === 'Deyè' ? 'var(--orange)' : 'var(--green)';
-  row.innerHTML = `
-    <div class="milestone-row" style="justify-content:space-between;">
-      <span>Dat Kòmansman</span><b>${info.start}</b>
-    </div>
-    <div class="milestone-row" style="justify-content:space-between;">
-      <span>Dat Sib</span><b>${info.target}</b>
-    </div>
-    <div class="milestone-row" style="justify-content:space-between;">
-      <span>Jou Ki Rete</span><b>${info.daysRemaining >= 0 ? info.daysRemaining + ' jou' : Math.abs(info.daysRemaining) + ' jou an reta'}</b>
-    </div>
-    <div class="milestone-row" style="justify-content:space-between;border-top:1px solid var(--border);margin-top:4px;padding-top:8px;">
-      <span>Estati (pwogrè vs tan)</span><b style="color:${statusColor};">${info.status}</b>
-    </div>`;
-}
-document.getElementById('goalDeadline').addEventListener('change', renderGoalDeadlineTracking);
+// Pati 4/4: afichaj detaye a (Dat Kòmansman/Jou Ki Rete/Estati) deplase
+// nan Goal Details (renderGoalDetailsModal) — Edit Goal sèlman kenbe chan
+// ki modifyab yo (Dat Limit).
 
 // ==========================================
 // GOAL — ESTATI OTOMATIK (Pati 41/50)
@@ -6920,17 +6898,29 @@ function renderGoalDetailsModal(){
     financeRow.hidden = true;
   }
 
-  // ---- Dat ----
+  // ---- Dat (Pati 4/4: Dat Kòmansman ak Estati vs Tan deplase soti Edit Goal) ----
+  const trackInfo = g.deadline ? computeGoalDeadlineTracking(g) : null;
+  document.getElementById('goalDetailsStartDate').textContent = trackInfo ? trackInfo.start : (g.createdAt || '').slice(0,10) || '—';
   document.getElementById('goalDetailsDeadline').textContent = g.deadline || 'San dat limit';
   document.getElementById('goalDetailsDaysRemaining').textContent = daysLbl;
+  const trackWrap = document.getElementById('goalDetailsTrackStatusWrap');
+  if (trackInfo){
+    trackWrap.hidden = false;
+    const trackEl = document.getElementById('goalDetailsTrackStatus');
+    trackEl.textContent = trackInfo.status;
+    trackEl.style.color = trackInfo.status === 'An Reta' ? 'var(--red)' : trackInfo.status === 'Deyè' ? 'var(--orange)' : 'var(--green)';
+  } else {
+    trackWrap.hidden = true;
+  }
 
   // ---- Nòt ----
   document.getElementById('goalDetailsNotes').textContent = g.notes || 'Pa gen nòt.';
 
-  // ---- Modil Konekte / Milestones / Istwa (Pati 2/3) ----
+  // ---- Modil Konekte / Milestones (Pati 2/3). Istwa Objektif pa afiche
+  // ankò nan UI a (Pati 4/4) — done a (g.habitProgressHistory, elt.) rete
+  // entak, jis pa gen seksyon vizyèl ankò.
   renderGoalDetailsModules(g);
   renderGoalDetailsMilestones(g);
-  renderGoalDetailsHistory(g);
 
   // ---- Aksyon anba paj la (Pati 3/3) — bouton "Achive" chanje etikèt/ikòn
   // selon si Objektif la deja Achive oswa non, san touche estati otomatik la. ----
@@ -7166,7 +7156,6 @@ function openGoalModal(id){
   renderGoalSourceWalletOptions(g ? g.walletId : null);
   renderGoalFinancialRemaining();
   if (typeof renderGoalFinanceSyncStatus === 'function') renderGoalFinanceSyncStatus();
-  renderGoalDeadlineTracking();
   document.getElementById('goalNotes').value = g ? (g.notes || '') : '';
   goalMilestoneDraft = g ? JSON.parse(JSON.stringify(g.milestones || [])) : [];
   goalLinksDraft = g && g.links ? JSON.parse(JSON.stringify(g.links)) : { habitIds:[], financeIds:[], calendarIds:[], learningIds:[], projectIds:[] };
