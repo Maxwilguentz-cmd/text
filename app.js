@@ -3235,11 +3235,17 @@ function renderBudgetGoalConnections(){
   wrap.innerHTML = list.map(g => {
     const remaining = computeGoalFinancialRemaining(g);
     const plan = g.monthlySavingPlan != null ? g.monthlySavingPlan : null;
+    const saved = g.currentSavings || 0;
+    const pct = computeGoalFinancialProgressPct(g);
     return `<div class="milestone-row" style="flex-direction:column;align-items:stretch;gap:2px;">
       <span><b>${escapeHtml(g.name)}</b></span>
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:2px;">
         <span style="color:var(--text-faint);">Plan Kontribisyon: <b style="color:var(--text);">${plan!=null ? fmtHTG(plan)+'/mwa' : '—'}</b></span>
+        <span style="color:var(--text-faint);">Sere Deja: <b style="color:var(--text);">${fmtHTG(saved)}</b></span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;">
         <span style="color:var(--text-faint);">Rete: <b style="color:var(--text);">${fmtHTG(remaining)}</b></span>
+        <span style="color:var(--text-faint);">Pwogrè: <b style="color:var(--green);">${pct}%</b></span>
       </div>
     </div>`;
   }).join('');
@@ -3252,9 +3258,11 @@ function renderBudgetsManageGoalList(){
   wrap.innerHTML = list.map(g => {
     const remaining = computeGoalFinancialRemaining(g);
     const plan = g.monthlySavingPlan != null ? g.monthlySavingPlan : null;
+    const saved = g.currentSavings || 0;
+    const pct = computeGoalFinancialProgressPct(g);
     return `<div class="milestone-row" style="justify-content:space-between;">
-      <span>${escapeHtml(g.name)} <span style="color:var(--text-faint);">(${plan!=null ? fmtHTG(plan)+'/mwa' : 'pa gen plan'})</span></span>
-      <span class="pill" style="background:var(--blue-soft);color:var(--blue);">Rete ${fmtHTG(remaining)}</span>
+      <span>${escapeHtml(g.name)} <span style="color:var(--text-faint);">(${plan!=null ? fmtHTG(plan)+'/mwa' : 'pa gen plan'} · Sere ${fmtHTG(saved)})</span></span>
+      <span class="pill" style="background:var(--blue-soft);color:var(--blue);">Rete ${fmtHTG(remaining)} · ${pct}%</span>
     </div>`;
   }).join('');
 }
@@ -5432,8 +5440,86 @@ function refreshDashboardLearningWidget(){
   document.getElementById('dashLearnStreak').textContent = (learning.streak||0) + ' jou';
 }
 
+// Pati 37/50: chak etap kounye a ka gen yon "kontribisyon" (%) endividyèl.
+// Si okenn etap pa gen kontribisyon defini, nou tonbe sou ansyen konpòtman
+// egal-pou-egal (done/total) — pa gen brize pou Objektif ki egziste deja.
+// ==========================================
+// GOAL — Timeline konplè (Pati 38/50)
+// Toujou SOU MENM chan g.habitProgressHistory a (pa gen dosye/sistèm paralèl,
+// pa gen chanjman sou Estatistik ki egziste deja) — nou jis ajoute 3 nouvo
+// kalite `source` ki manke: 'milestone-completed'/'milestone-uncompleted',
+// 'learning-lesson-completed', ak 'manual-note' (Aktyalizasyon Enpòtan).
+// Chak fonksyon gen pwòp gad kont doublon, menm jan ak Pati 9/22.
+// ==========================================
+function recordGoalMilestoneHistory(goalId, milestone, pctAfter){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !milestone) return false;
+  if (!Array.isArray(g.habitProgressHistory)) g.habitProgressHistory = [];
+  const history = g.habitProgressHistory;
+  const date = todayISO();
+  const source = milestone.done ? 'milestone-completed' : 'milestone-uncompleted';
+  const already = history.some(r => r.source === source && r.milestoneId === milestone.id && r.date === date);
+  if (already) return false;
+  history.push({
+    goalId, date, time: new Date().toISOString(),
+    milestoneId: milestone.id, milestoneName: milestone.text,
+    source, pct: pctAfter,
+    reason: `Etap "${milestone.text}" ${milestone.done ? 'te fin fèt' : 'pa make fèt ankò'}.`
+  });
+  if (history.length > 180) g.habitProgressHistory = history.slice(-180);
+  return true;
+}
+
+function recordGoalLearningHistory(goalId){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !Array.isArray(g.linkedLearningCourses) || !g.linkedLearningCourses.length) return false;
+  const validCourses = g.linkedLearningCourses.filter(k => LEARNING_COURSES[k]);
+  if (!validCourses.length) return false;
+  const totalDone = validCourses.reduce((s,k) => s + courseProgress(k).done, 0);
+  if (!Array.isArray(g.habitProgressHistory)) g.habitProgressHistory = [];
+  const history = g.habitProgressHistory;
+  const learningEntries = history.filter(r => r.source === 'learning-lesson-completed');
+  const last = learningEntries[learningEntries.length - 1];
+  const prevDone = last ? last.lessonsDone : 0;
+  if (totalDone <= prevDone) return false; // pa gen nouvo leson konplete depi dènye antre a
+  const delta = totalDone - prevDone;
+  history.push({
+    goalId, date: todayISO(), time: new Date().toISOString(),
+    source: 'learning-lesson-completed', lessonsDone: totalDone, delta, pct: g.progress || 0,
+    reason: `${delta} leson konplete nan Aprantisaj lye (total: ${totalDone}).`
+  });
+  if (history.length > 180) g.habitProgressHistory = history.slice(-180);
+  return true;
+}
+
+function addGoalTimelineNote(goalId, text){
+  const g = goals.find(x => x.id === goalId);
+  if (!g || !text || !text.trim()) return false;
+  if (!Array.isArray(g.habitProgressHistory)) g.habitProgressHistory = [];
+  const history = g.habitProgressHistory;
+  history.push({
+    goalId, date: todayISO(), time: new Date().toISOString(),
+    source: 'manual-note', note: text.trim(), pct: g.progress || 0, reason: text.trim()
+  });
+  if (history.length > 180) g.habitProgressHistory = history.slice(-180);
+  persistGoals();
+  return true;
+}
+
 function goalMilestoneProgress(g){
   if (!g.milestones || !g.milestones.length) return g.progress || 0;
+  const hasContrib = g.milestones.some(m => m.contribution != null && m.contribution > 0);
+  if (hasContrib){
+    const totalDefined = g.milestones.reduce((s,m) => s + (m.contribution != null ? Number(m.contribution)||0 : 0), 0);
+    const undefinedCount = g.milestones.filter(m => m.contribution == null).length;
+    const remaining = Math.max(0, 100 - totalDefined);
+    const perUndefined = undefinedCount ? remaining / undefinedCount : 0;
+    const pct = g.milestones.reduce((s,m) => {
+      const w = m.contribution != null ? Number(m.contribution)||0 : perUndefined;
+      return s + (m.done ? w : 0);
+    }, 0);
+    return Math.round(Math.max(0, Math.min(100, pct)));
+  }
   const done = g.milestones.filter(m => m.done).length;
   return Math.round((done / g.milestones.length) * 100);
 }
@@ -5477,9 +5563,20 @@ function renderMilestoneDraft(){
   goalMilestoneDraft.forEach((m, idx) => {
     const row = document.createElement('div');
     row.className = 'milestone-row' + (m.done ? ' done' : '');
-    row.innerHTML = `<input type="checkbox" ${m.done?'checked':''} data-idx="${idx}" class="msDone">
-      <span>${escapeHtml(m.text)}</span>
-      <i data-lucide="x" class="msRemove" data-idx="${idx}" style="width:13px;height:13px;cursor:pointer;color:var(--text-faint);margin-left:auto;"></i>`;
+    row.style.flexDirection = 'column';
+    row.style.alignItems = 'stretch';
+    row.style.gap = '4px';
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" ${m.done?'checked':''} data-idx="${idx}" class="msDone">
+        <span style="flex:1;">${escapeHtml(m.text)}</span>
+        ${m.contribution != null ? `<span class="pill" style="background:var(--blue-soft);color:var(--blue);font-size:11px;">${m.contribution}%</span>` : ''}
+        <i data-lucide="x" class="msRemove" data-idx="${idx}" style="width:13px;height:13px;cursor:pointer;color:var(--text-faint);"></i>
+      </div>
+      ${(m.description || m.targetDate) ? `<div style="font-size:11px;color:var(--text-faint);padding-left:22px;">
+        ${m.description ? escapeHtml(m.description) : ''}${m.description && m.targetDate ? ' · ' : ''}${m.targetDate ? 'Dat Sib: ' + m.targetDate : ''}
+      </div>` : ''}
+    `;
     wrap.appendChild(row);
   });
   wrap.querySelectorAll('.msDone').forEach(cb => cb.addEventListener('change', e => {
@@ -5491,9 +5588,73 @@ function renderMilestoneDraft(){
   if (window.lucide) lucide.createIcons();
 }
 document.getElementById('addMilestoneBtn').addEventListener('click', () => {
-  const text = prompt('Tèks etap la (Pw. "Fini premye vèsyon"):');
-  if (text && text.trim()){ goalMilestoneDraft.push({ id: uid(), text: text.trim(), done:false }); renderMilestoneDraft(); }
+  const titleInput = document.getElementById('msTitleInput');
+  const descInput = document.getElementById('msDescInput');
+  const dateInput = document.getElementById('msDateInput');
+  const contribInput = document.getElementById('msContribInput');
+  const text = titleInput.value.trim();
+  if (!text){ showToast('Mete yon tit pou etap la'); return; }
+  goalMilestoneDraft.push({
+    id: uid(),
+    text,
+    description: descInput.value.trim(),
+    targetDate: dateInput.value || null,
+    contribution: contribInput.value ? Math.max(0, Math.min(100, parseFloat(contribInput.value))) : null,
+    done: false,
+  });
+  titleInput.value = ''; descInput.value = ''; dateInput.value = ''; contribInput.value = '';
+  renderMilestoneDraft();
 });
+
+// ==========================================
+// GOAL — swiv Dat Limit (Pati 36/50)
+// Lekti sèl, itilize dat ki egziste deja (g.createdAt kòm Dat Kòmansman,
+// g.deadline kòm Dat Sib — menm chan ki sèvi pou senkwonize Kalandriye,
+// Pati 21/50). Pa kreye notifikasyon, pa touche Kalandriye.
+// ==========================================
+function computeGoalDeadlineTracking(g){
+  if (!g || !g.deadline) return null;
+  const start = (g.createdAt || todayISO()).slice(0,10);
+  const target = g.deadline;
+  const today = todayISO();
+  const daysRemaining = daysBetween(today, target);
+  const totalSpan = Math.max(1, daysBetween(start, target));
+  const elapsed = Math.max(0, daysBetween(start, today));
+  const timePct = Math.max(0, Math.min(100, Math.round((elapsed / totalSpan) * 100)));
+  const progressPct = g.progress || 0;
+  let status;
+  if (progressPct >= 100) status = 'Konplete';
+  else if (daysRemaining < 0) status = 'An Reta';
+  else if (progressPct + 10 >= timePct) status = 'Sou Wout';
+  else status = 'Deyè';
+  return { start, target, daysRemaining, timePct, progressPct, status };
+}
+function renderGoalDeadlineTracking(){
+  const row = document.getElementById('goalDeadlineTrackingRow');
+  if (!row) return;
+  const g = editingGoalId ? goals.find(x => x.id === editingGoalId) : null;
+  const deadlineVal = document.getElementById('goalDeadline').value;
+  const draft = g ? { ...g, deadline: deadlineVal } : { createdAt: todayISO(), deadline: deadlineVal, progress: parseInt(document.getElementById('goalProgress').value)||0 };
+  const info = computeGoalDeadlineTracking(draft);
+  if (!info){ row.hidden = true; row.innerHTML = ''; return; }
+  row.hidden = false;
+  const statusColor = info.status === 'An Reta' ? 'var(--red)' : info.status === 'Deyè' ? 'var(--orange)' : 'var(--green)';
+  row.innerHTML = `
+    <div class="milestone-row" style="justify-content:space-between;">
+      <span>Dat Kòmansman</span><b>${info.start}</b>
+    </div>
+    <div class="milestone-row" style="justify-content:space-between;">
+      <span>Dat Sib</span><b>${info.target}</b>
+    </div>
+    <div class="milestone-row" style="justify-content:space-between;">
+      <span>Jou Ki Rete</span><b>${info.daysRemaining >= 0 ? info.daysRemaining + ' jou' : Math.abs(info.daysRemaining) + ' jou an reta'}</b>
+    </div>
+    <div class="milestone-row" style="justify-content:space-between;border-top:1px solid var(--border);margin-top:4px;padding-top:8px;">
+      <span>Estati (pwogrè vs tan)</span><b style="color:${statusColor};">${info.status}</b>
+    </div>`;
+}
+document.getElementById('goalDeadline').addEventListener('change', renderGoalDeadlineTracking);
+document.getElementById('goalProgress').addEventListener('input', renderGoalDeadlineTracking);
 
 function openGoalModal(id){
   editingGoalId = id || null;
@@ -5515,6 +5676,7 @@ function openGoalModal(id){
   updateGoalFinancialFieldsVisibility();
   renderGoalFinancialRemaining();
   if (typeof renderGoalFinanceSyncStatus === 'function') renderGoalFinanceSyncStatus();
+  renderGoalDeadlineTracking();
   document.getElementById('goalNotes').value = g ? (g.notes || '') : '';
   goalMilestoneDraft = g ? JSON.parse(JSON.stringify(g.milestones || [])) : [];
   goalLinksDraft = g && g.links ? JSON.parse(JSON.stringify(g.links)) : { habitIds:[], financeIds:[], calendarIds:[], learningIds:[], projectIds:[] };
@@ -5534,6 +5696,7 @@ document.getElementById('goalModalOverlay').addEventListener('click', e => { if 
 document.getElementById('saveGoalBtn').addEventListener('click', () => {
   const title = document.getElementById('goalTitle').value.trim();
   if (!title){ showToast('Mete yon tit pou objektif la'); return; }
+  const oldMilestones = editingGoalId ? JSON.parse(JSON.stringify((goals.find(x=>x.id===editingGoalId)||{}).milestones || [])) : [];
   const payload = {
     title,
     desc: document.getElementById('goalDesc').value.trim(),
@@ -5574,6 +5737,18 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
   persistGoals();
   const _savedGoal = editingGoalId ? goals.find(x => x.id === editingGoalId) : goals[goals.length - 1];
   if (_savedGoal && typeof syncGoalCalendarEvents === 'function') syncGoalCalendarEvents(_savedGoal.id);
+  if (_savedGoal){
+    let historyChanged = false;
+    const pctAfter = goalMilestoneProgress(_savedGoal);
+    (_savedGoal.milestones || []).forEach(m => {
+      const old = oldMilestones.find(o => o.id === m.id);
+      if (!old || old.done !== m.done){
+        if (typeof recordGoalMilestoneHistory === 'function' && recordGoalMilestoneHistory(_savedGoal.id, m, pctAfter)) historyChanged = true;
+      }
+    });
+    if (typeof recordGoalLearningHistory === 'function' && recordGoalLearningHistory(_savedGoal.id)) historyChanged = true;
+    if (historyChanged) persistGoals();
+  }
   document.getElementById('goalModalOverlay').classList.remove('open');
   renderGoals();
   showToast('Objektif anrejistre ✓');
@@ -6477,7 +6652,7 @@ function renderGoalProgressHistory(){
   wrap.innerHTML = entries.map(r => {
     if (r.source === 'saving-habit-completed' && r.amountAdded){
       return `<div class="milestone-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
-        <span style="font-size:12px;line-height:1.4;"><b>Aktyalizasyon:</b> Abitid Sere Konplete</span>
+        <span style="font-size:12px;line-height:1.4;">📅 <b>Aktyalizasyon:</b> Abitid Sere Konplete</span>
         <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <span class="tag" style="background:var(--green-soft);color:var(--green);">Kontribisyon: ${r.amountAdded}${r.unit ? ' ' + escapeHtml(r.unit) : ''}</span>
           <span class="tag" style="background:var(--surface-2);color:var(--text-dim);">${r.date === todayISO() ? 'Jodi a' : escapeHtml(r.date)}</span>
@@ -6485,11 +6660,36 @@ function renderGoalProgressHistory(){
         </span>
       </div>`;
     }
+    if (r.source === 'milestone-completed' || r.source === 'milestone-uncompleted'){
+      return `<div class="milestone-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+        <span style="font-size:12px;line-height:1.4;">📅 ${escapeHtml(r.reason)}</span>
+        <span style="display:flex;align-items:center;gap:6px;">
+          <span class="tag" style="background:var(--surface-2);color:var(--text-dim);">${escapeHtml(r.date)}</span>
+          <span class="pill" style="background:${r.source==='milestone-completed'?'var(--green-soft)':'var(--surface-2)'};color:${r.source==='milestone-completed'?'var(--green)':'var(--text-dim)'};">${r.pct}%</span>
+        </span>
+      </div>`;
+    }
+    if (r.source === 'learning-lesson-completed'){
+      return `<div class="milestone-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+        <span style="font-size:12px;line-height:1.4;">📅 ${escapeHtml(r.reason)}</span>
+        <span style="display:flex;align-items:center;gap:6px;">
+          <span class="tag" style="background:var(--surface-2);color:var(--text-dim);">${escapeHtml(r.date)}</span>
+          <span class="tag" style="color:var(--green);">+${r.delta} leson</span>
+          <span class="pill" style="background:var(--blue-soft);color:var(--blue);">${r.pct}%</span>
+        </span>
+      </div>`;
+    }
+    if (r.source === 'manual-note'){
+      return `<div class="milestone-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+        <span style="font-size:12px;line-height:1.4;">📅 <b>Nòt:</b> ${escapeHtml(r.note)}</span>
+        <span class="tag" style="background:var(--surface-2);color:var(--text-dim);">${escapeHtml(r.date)}</span>
+      </div>`;
+    }
     const deltaSign = r.delta > 0 ? '+' : '';
     const deltaColor = r.delta > 0 ? 'var(--green)' : (r.delta < 0 ? 'var(--red, #e5484d)' : 'var(--text-dim)');
     const reasonText = r.reason ? escapeHtml(r.reason) : (r.habitName ? escapeHtml(r.habitName) : 'Chanjman jeneral');
     return `<div class="milestone-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
-      <span style="font-size:12px;line-height:1.4;">${reasonText}</span>
+      <span style="font-size:12px;line-height:1.4;">📅 ${reasonText}</span>
       <span style="display:flex;align-items:center;gap:6px;">
         <span class="tag" style="background:var(--surface-2);color:var(--text-dim);">${escapeHtml(r.date)}</span>
         <span class="tag" style="color:${deltaColor};">${deltaSign}${r.delta}%</span>
@@ -6499,6 +6699,15 @@ function renderGoalProgressHistory(){
   }).join('');
   if (typeof renderGoalFinancialContributionHistory === 'function') renderGoalFinancialContributionHistory();
 }
+document.getElementById('addGoalTimelineNoteBtn')?.addEventListener('click', () => {
+  if (!editingGoalId) return;
+  const input = document.getElementById('goalTimelineNoteInput');
+  if (!input || !input.value.trim()) return;
+  if (addGoalTimelineNote(editingGoalId, input.value)){
+    input.value = '';
+    renderGoalProgressHistory();
+  }
+});
 
 (function initGoalLinkedHabitsList(){
   const overlay = document.getElementById('goalModalOverlay');
