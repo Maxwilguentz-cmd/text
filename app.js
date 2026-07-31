@@ -486,6 +486,25 @@ function computeGoalFinancialProgressPct(g){
   return Math.max(0, Math.min(100, Math.round((saved / cost) * 100)));
 }
 
+// ==========================================
+// GOAL FINANSYE — Etap (Milestones) otomatik
+// Pou Kategori Finans, Etap yo pa antre manyèlman ankò — yo jenere
+// otomatikman sou 7 pousantaj fiks, e chak "done" kalkile an dirèk kont
+// computeGoalFinancialProgressPct(g) (pa gen chan estoke pou "done").
+// ==========================================
+const GOAL_FINANCE_MILESTONE_THRESHOLDS = [20, 25, 35, 50, 60, 70, 100];
+function computeGoalFinanceMilestones(g){
+  const pct = computeGoalFinancialProgressPct(g);
+  return GOAL_FINANCE_MILESTONE_THRESHOLDS.map(t => ({
+    id: 'fin-ms-' + t,
+    text: `${t}% konplete`,
+    description: '',
+    targetDate: null,
+    contribution: null,
+    done: pct >= t
+  }));
+}
+
 // Pati 2/4: "Objektif Finansye" pa yon chwa manyèl ankò — li vin OTOMATIK
 // depi Kategori Prensipal la se "Finans". Chan `isFinancial` la rete menm
 // jan an nan done a (pa gen chanjman estrikti), sèlman sous valè a chanje.
@@ -578,12 +597,13 @@ function renderGoalFinancialRemaining(){
 document.getElementById('goalCategory').addEventListener('change', () => {
   updateGoalDynamicSectionsVisibility();
   renderGoalFinancialRemaining();
+  renderMilestoneDraft();
   syncGoalFinanceModuleAutoLink();
   renderGoalLinksGrid();
   renderGoalAutoStatusPreview();
 });
 ['goalEstimatedValue','goalCurrentSavings'].forEach(id => {
-  document.getElementById(id).addEventListener('input', renderGoalFinancialRemaining);
+  document.getElementById(id).addEventListener('input', () => { renderGoalFinancialRemaining(); renderMilestoneDraft(); });
 });
 
 // ==========================================
@@ -1010,9 +1030,45 @@ function syncProjectStatusFromGoal(p){
   if (p.status !== newStatus){ p.status = newStatus; return true; }
   return false;
 }
+// ==========================================
+// GOAL FINANSYE <-> PWOJE — tach "Achte"
+// Pou yon Objektif Finansye, tach espesyal "Achte" la parèt nan cheklis
+// Pwojè ki lye a SÈLMAN si Abitid + Finans + Pwojè (3 chip lyen jeneral yo)
+// tout koche, e gen yon Pwojè reyèl (p.goalId) ki gen menm non ak Objektif
+// la. Kaz la disabled toutan kòb la pa sifi (Sere Deja < Valè Estime).
+// ==========================================
+function isGoalPurchaseReady(g){
+  if (!g || !g.isFinancial) return false;
+  const links = g.links || {};
+  const hasHabit = (links.habitIds||[]).length > 0;
+  const hasFinance = (links.financeIds||[]).length > 0;
+  const hasProjectLink = (links.projectIds||[]).length > 0;
+  if (!hasHabit || !hasFinance || !hasProjectLink) return false;
+  const linkedProject = projects.find(p => p.goalId === g.id);
+  return !!linkedProject && linkedProject.name === g.title;
+}
+function ensureGoalPurchaseTask(p){
+  if (!p || !p.goalId) return false;
+  const g = goals.find(x => x.id === p.goalId);
+  const ready = !!g && isGoalPurchaseReady(g);
+  const idx = (p.tasks||[]).findIndex(t => t.id === 'achte-' + p.goalId);
+  if (ready && idx === -1){
+    if (!p.tasks) p.tasks = [];
+    p.tasks.push({ id:'achte-'+p.goalId, text:'Achte', done:false, isPurchaseTask:true });
+    return true;
+  }
+  if (!ready && idx !== -1 && !p.tasks[idx].done){
+    p.tasks.splice(idx, 1);
+    return true;
+  }
+  return false;
+}
 function syncAllProjectStatusesFromGoals(){
   let changed = false;
-  projects.forEach(p => { if (syncProjectStatusFromGoal(p)) changed = true; });
+  projects.forEach(p => {
+    if (syncProjectStatusFromGoal(p)) changed = true;
+    if (ensureGoalPurchaseTask(p)) changed = true;
+  });
   if (changed) persistProjects();
 }
 function persistNoteFolders(){ secureSave(LS.noteFolders, noteFolders); }
@@ -5277,18 +5333,41 @@ function updateProjectProgressPreview(){
   document.getElementById('projectProgressLbl').textContent = pct + '%';
 }
 
+function currentProjectDraftLinkedGoal(){
+  const goalId = document.getElementById('projectGoalSelect')?.value || '';
+  return goalId ? goals.find(x => x.id === goalId) : null;
+}
 function renderProjectTaskDraft(){
   const wrap = document.getElementById('projectTaskList');
   wrap.innerHTML = '';
+  const linkedGoal = currentProjectDraftLinkedGoal();
+  const moneyNotReady = !linkedGoal || computeGoalFinancialRemaining(linkedGoal) > 0;
   projectTaskDraft.forEach((t,i) => {
     const row = document.createElement('div');
     row.className = 'subtask-row';
-    row.innerHTML = `<input type="checkbox" ${t.done?'checked':''} data-i="${i}" class="pt-chk">
-      <input type="text" value="${escapeHtml(t.text)}" data-i="${i}" class="pt-text" placeholder="Travay...">
-      <i data-lucide="x" class="rm" data-i="${i}"></i>`;
+    const chkLocked = t.isPurchaseTask && !t.done && moneyNotReady;
+    row.innerHTML = `<input type="checkbox" ${t.done?'checked':''} ${chkLocked?'disabled':''} data-i="${i}" class="pt-chk">
+      <input type="text" value="${escapeHtml(t.text)}" data-i="${i}" class="pt-text" placeholder="Travay..." ${t.isPurchaseTask?'disabled':''}>
+      ${t.isPurchaseTask?'':`<i data-lucide="x" class="rm" data-i="${i}"></i>`}`;
     wrap.appendChild(row);
   });
-  wrap.querySelectorAll('.pt-chk').forEach(c => c.addEventListener('change', e => { projectTaskDraft[+e.target.dataset.i].done = e.target.checked; updateProjectProgressPreview(); }));
+  wrap.querySelectorAll('.pt-chk').forEach(c => c.addEventListener('change', e => {
+    const idx = +e.target.dataset.i;
+    const t = projectTaskDraft[idx];
+    t.done = e.target.checked;
+    if (t.isPurchaseTask && e.target.checked){
+      const g = currentProjectDraftLinkedGoal();
+      if (g){
+        g.status = 'completed';
+        g.autoStatus = false;
+        // Pwojè a konplete tou, sof si gen yon lòt Objektif ki lye ak menm Pwojè a.
+        const otherGoalLinked = editingProjectId && goals.some(og => og.id !== g.id && projects.some(pp => pp.id === editingProjectId && pp.goalId === og.id));
+        if (!otherGoalLinked && document.getElementById('projectStatus')) document.getElementById('projectStatus').value = 'completed';
+        persistGoals();
+      }
+    }
+    updateProjectProgressPreview();
+  }));
   wrap.querySelectorAll('.pt-text').forEach(c => c.addEventListener('input', e => { projectTaskDraft[+e.target.dataset.i].text = e.target.value; }));
   wrap.querySelectorAll('.rm').forEach(c => c.addEventListener('click', e => { projectTaskDraft.splice(+e.currentTarget.dataset.i, 1); renderProjectTaskDraft(); updateProjectProgressPreview(); }));
   updateProjectProgressPreview();
@@ -5314,7 +5393,7 @@ document.getElementById('projectFileInput').addEventListener('change', e => {
 function openProjectModal(id){
   editingProjectId = id || null;
   const p = id ? projects.find(x => x.id === id) : null;
-  if (p) syncProjectStatusFromGoal(p);
+  if (p){ syncProjectStatusFromGoal(p); if (ensureGoalPurchaseTask(p)) persistProjects(); }
   document.getElementById('projectModalTitle').textContent = p ? 'Modifye Pwojè' : 'Nouvo Pwojè';
   document.getElementById('projectName').value = p?.name || '';
   document.getElementById('projectDesc').value = p?.description || '';
@@ -5362,7 +5441,8 @@ function renderProjectLinkedGoalInfo(p){
 }
 document.getElementById('projectGoalSelect')?.addEventListener('change', () => {
   renderProjectLinkedGoalInfo(editingProjectId ? projects.find(x=>x.id===editingProjectId) : null);
-  if (typeof updateProjectProgressPreview === 'function') updateProjectProgressPreview();
+  if (typeof renderProjectTaskDraft === 'function') renderProjectTaskDraft();
+  else if (typeof updateProjectProgressPreview === 'function') updateProjectProgressPreview();
 });
 function closeProjectModal(){ document.getElementById('projectModalOverlay').classList.remove('open'); editingProjectId = null; }
 
@@ -6514,6 +6594,17 @@ function renderGoalLinksGrid(){
 
 function renderMilestoneDraft(){
   const wrap = document.getElementById('goalMilestoneList');
+  const manualInputs = document.getElementById('goalMilestoneManualInputs');
+  const isFinance = goalIsFinancialFromCategory();
+  if (manualInputs) manualInputs.hidden = isFinance;
+  if (isFinance){
+    const costInput = document.getElementById('goalEstimatedValue');
+    const savedInput = document.getElementById('goalCurrentSavings');
+    goalMilestoneDraft = computeGoalFinanceMilestones({
+      estimatedValue: parseFloat(costInput.value) || 0,
+      currentSavings: parseFloat(savedInput.value) || 0
+    });
+  }
   wrap.innerHTML = '';
   if (!goalMilestoneDraft.length){
     wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen etap ajoute.</span>';
@@ -6524,9 +6615,9 @@ function renderMilestoneDraft(){
     // Lòd afichaj mande: Tit anvan → Pèz (%) anba l → Deskripsyon menm jan → Dat menm jan.
     row.innerHTML = `
       <div class="ms-top">
-        <input type="checkbox" ${m.done?'checked':''} data-idx="${idx}" class="msDone">
+        <input type="checkbox" ${m.done?'checked':''} ${isFinance?'disabled':''} data-idx="${idx}" class="msDone">
         <span class="ms-title">${escapeHtml(m.text)}</span>
-        <i data-lucide="x" class="msRemove" data-idx="${idx}"></i>
+        ${isFinance?'':`<i data-lucide="x" class="msRemove" data-idx="${idx}"></i>`}
       </div>
       ${m.contribution != null ? `<span class="ms-weight">Pèz: ${m.contribution}%</span>` : ''}
       ${m.description ? `<div class="ms-desc">${escapeHtml(m.description)}</div>` : ''}
@@ -6534,12 +6625,14 @@ function renderMilestoneDraft(){
     `;
     wrap.appendChild(row);
   });
-  wrap.querySelectorAll('.msDone').forEach(cb => cb.addEventListener('change', e => {
-    goalMilestoneDraft[+e.target.dataset.idx].done = e.target.checked; renderMilestoneDraft();
-  }));
-  wrap.querySelectorAll('.msRemove').forEach(ic => ic.addEventListener('click', e => {
-    goalMilestoneDraft.splice(+e.currentTarget.dataset.idx, 1); renderMilestoneDraft();
-  }));
+  if (!isFinance){
+    wrap.querySelectorAll('.msDone').forEach(cb => cb.addEventListener('change', e => {
+      goalMilestoneDraft[+e.target.dataset.idx].done = e.target.checked; renderMilestoneDraft();
+    }));
+    wrap.querySelectorAll('.msRemove').forEach(ic => ic.addEventListener('click', e => {
+      goalMilestoneDraft.splice(+e.currentTarget.dataset.idx, 1); renderMilestoneDraft();
+    }));
+  }
   if (window.lucide) lucide.createIcons();
 }
 document.getElementById('addMilestoneBtn').addEventListener('click', () => {
@@ -7290,6 +7383,7 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
     if (typeof recordGoalLearningHistory === 'function' && recordGoalLearningHistory(_savedGoal.id)) historyChanged = true;
     if (historyChanged) persistGoals();
   }
+  if (typeof syncAllProjectStatusesFromGoals === 'function') syncAllProjectStatusesFromGoals();
   document.getElementById('goalModalOverlay').classList.remove('open');
   renderGoals();
   showToast('Objektif anrejistre ✓');
