@@ -900,6 +900,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
   .topbar{gap:10px;}
   .greeting h1{font-size:21px;}
   .card{overflow-wrap:break-word;}
+  .notif-panel{position:fixed;top:64px;left:12px;right:12px;width:auto;max-width:none;}
 }
 
 /* ---------------- MOBILE BOTTOM NAV (5 items) ---------------- */
@@ -2348,7 +2349,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div class="goal-details-section-title">Finans</div>
         <div class="goal-details-grid">
           <div class="goal-details-field"><span class="lbl">Valè Estime</span><span class="val mono" id="goalDetailsEstValue">—</span></div>
-          <div class="goal-details-field"><span class="lbl">Sere Deja</span><span class="val mono" id="goalDetailsSavings">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Bidje</span><span class="val mono" id="goalDetailsSavings">—</span></div>
           <div class="goal-details-field"><span class="lbl">Rete</span><span class="val mono" id="goalDetailsRemaining">—</span></div>
         </div>
         <div id="goalFinanceSyncStatus" style="margin-top:10px;padding:10px;border-radius:8px;background:var(--bg-soft,rgba(0,0,0,0.03));" hidden>
@@ -2436,8 +2437,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
             <div><label>Valè Estime</label><input type="number" id="goalEstimatedValue" placeholder="Pw. 50000"></div>
             <div><label>Kou Final</label><input type="number" id="goalCostDisplay" disabled placeholder="0"></div>
           </div>
-          <input type="hidden" id="goalCurrentSavings">
-          <div style="margin-top:10px;"><label>Bidjè <span style="color:var(--text-faint);font-weight:400;">(opsyonèl — kreye Bidjè reyèl nan Finans)</span></label><input type="number" id="goalMonthlySavingPlan" placeholder="Pw. 1000"></div>
+          <div style="margin-top:10px;"><label>Bidje <span style="color:var(--text-faint);font-weight:400;">(kreye Bidjè reyèl nan Finans)</span></label><input type="number" id="goalCurrentSavings" placeholder="Pw. 1000"></div>
         </div>
         <div id="goalSourceWalletRow" style="margin-top:8px;" hidden>
           <label>Wallet de Depa <span style="color:var(--text-faint);font-weight:400;">(kote kòb la soti)</span></label>
@@ -2447,13 +2447,8 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <button type="button" class="btn btn-ghost" id="goalQuickAddHabitBtn" style="width:100%;margin-top:6px;">+ Ajoute yon Abitid</button>
         </div>
         <div id="goalFinancialRemainingRow" style="margin-top:8px;" hidden>
-          <label style="display:block;margin-bottom:6px;">Pwogrè Finansye <span style="color:var(--text-faint);font-weight:400;">(otomatik)</span></label>
-          <div class="goal-progress-row" style="margin-bottom:6px;">
-            <div class="mini-progress"><span id="goalFinancialProgressBar" style="width:0%;background:var(--green);"></span></div>
-            <b id="goalFinancialProgressPct">0%</b>
-          </div>
           <div style="display:flex;justify-content:space-between;font-size:12px;">
-            <span style="color:var(--text-faint);">Sere (Saved): <b id="goalFinancialSaved" style="color:var(--text);">0</b></span>
+            <span style="color:var(--text-faint);">Bidje: <b id="goalFinancialSaved" style="color:var(--text);">0</b></span>
             <span style="color:var(--text-faint);">Rete (Remaining): <b id="goalFinancialRemaining">0</b></span>
           </div>
         </div>
@@ -2472,14 +2467,16 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       <div>
         <label>Etap (Milestones)</label>
         <div class="milestone-list" id="goalMilestoneList"></div>
-        <div style="display:grid;grid-template-columns:1.4fr 1fr 0.7fr;gap:6px;margin-top:8px;">
-          <input type="text" id="msTitleInput" placeholder="Tit etap (obligatwa)">
-          <input type="text" id="msDescInput" placeholder="Deskripsyon (opsyonèl)">
-          <input type="number" id="msContribInput" placeholder="Kontribisyon %" min="0" max="100">
-        </div>
-        <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:6px;">
-          <input type="date" id="msDateInput">
-          <button class="btn btn-ghost" id="addMilestoneBtn" type="button"><i data-lucide="plus"></i> Ajoute etap</button>
+        <div id="goalMilestoneManualInputs">
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 0.7fr;gap:6px;margin-top:8px;">
+            <input type="text" id="msTitleInput" placeholder="Tit etap (obligatwa)">
+            <input type="text" id="msDescInput" placeholder="Deskripsyon (opsyonèl)">
+            <input type="number" id="msContribInput" placeholder="Kontribisyon %" min="0" max="100">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:6px;">
+            <input type="date" id="msDateInput">
+            <button class="btn btn-ghost" id="addMilestoneBtn" type="button"><i data-lucide="plus"></i> Ajoute etap</button>
+          </div>
         </div>
       </div>
       <div><label>Nòt</label><textarea id="goalNotes" placeholder="Nòt adisyonèl..."></textarea></div>
