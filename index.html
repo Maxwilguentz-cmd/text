@@ -2331,13 +2331,8 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div class="goal-details-field"><span class="lbl">Kategori</span><span class="val" id="goalDetailsCategory">—</span></div>
         <div class="goal-details-field"><span class="lbl">Priyorite</span><span class="pill val" id="goalDetailsPriority" style="width:fit-content;">—</span></div>
         <div class="goal-details-field"><span class="lbl">Estati Otomatik</span><span class="pill val" id="goalDetailsStatus" style="width:fit-content;">—</span></div>
-        <div class="goal-details-field">
-          <span class="lbl">Pwogrè</span>
-          <div class="goal-progress-row" style="margin-top:2px;">
-            <div class="mini-progress"><span id="goalDetailsProgressBar" style="width:0%;background:var(--green);"></span></div>
-            <b id="goalDetailsProgressPct" class="mono">0%</b>
-          </div>
-        </div>
+        <div class="goal-details-field" id="goalDetailsWalletWrap" hidden><span class="lbl">Wallet Konekte</span><span class="val" id="goalDetailsWallet">—</span></div>
+        <div class="goal-details-field" id="goalDetailsHabitWrap" hidden><span class="lbl">Abitid Epay</span><span class="val" id="goalDetailsHabit">—</span></div>
       </div>
 
       <div id="goalDetailsDescWrap">
@@ -2352,16 +2347,6 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <div class="goal-details-field"><span class="lbl">Bidje</span><span class="val mono" id="goalDetailsSavings">—</span></div>
           <div class="goal-details-field"><span class="lbl">Rete</span><span class="val mono" id="goalDetailsRemaining">—</span></div>
         </div>
-        <div id="goalFinanceSyncStatus" style="margin-top:10px;padding:10px;border-radius:8px;background:var(--bg-soft,rgba(0,0,0,0.03));" hidden>
-          <label style="display:block;margin-bottom:6px;">Estati Koneksyon Finans <span style="color:var(--text-faint);font-weight:400;">(otomatik)</span></label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;">
-            <span style="color:var(--text-faint);">Wallet Konekte: <b id="goalSyncWallet" style="color:var(--text);">—</b></span>
-            <span style="color:var(--text-faint);">Abitid Epay: <b id="goalSyncHabit" style="color:var(--text);">—</b></span>
-            <span style="color:var(--text-faint);">Total Sere: <b id="goalSyncSaved" style="color:var(--text);">0</b></span>
-            <span style="color:var(--text-faint);">Dènye Tranzaksyon: <b id="goalSyncLastTx" style="color:var(--text);">—</b></span>
-            <span style="color:var(--text-faint);grid-column:1 / -1;">Rete: <b id="goalSyncRemaining" style="color:var(--text);">0</b></span>
-          </div>
-        </div>
       </div>
 
       <div class="goal-details-section-title">Dat</div>
@@ -2370,6 +2355,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <div class="goal-details-field"><span class="lbl">Dat Limit</span><span class="val" id="goalDetailsDeadline">—</span></div>
         <div class="goal-details-field"><span class="lbl">Jou Ki Rete</span><span class="val" id="goalDetailsDaysRemaining">—</span></div>
         <div class="goal-details-field" id="goalDetailsTrackStatusWrap" hidden><span class="lbl">Estati (Pwogrè vs Tan)</span><span class="val" id="goalDetailsTrackStatus">—</span></div>
+        <div class="goal-details-field" id="goalDetailsLastTxWrap" hidden><span class="lbl">Dènye Tranzaksyon</span><span class="val" id="goalDetailsLastTx">—</span></div>
       </div>
 
       <div class="goal-details-section-title">Modil Konekte</div>
@@ -2452,17 +2438,6 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
             <span style="color:var(--text-faint);">Rete (Remaining): <b id="goalFinancialRemaining">0</b></span>
           </div>
         </div>
-      </div>
-      <div>
-        <label style="display:flex;align-items:center;justify-content:space-between;">
-          <span>Pwogrè</span>
-          <span class="pill" style="background:var(--green-soft);color:var(--green);font-weight:400;font-size:10px;">Otomatik</span>
-        </label>
-        <div class="goal-progress-row">
-          <div class="mini-progress"><span id="goalProgressBar" style="width:0%;background:var(--green);"></span></div>
-          <b id="goalProgressPct" style="font-family:var(--font-mono);">0%</b>
-        </div>
-        <div style="font-size:10.5px;color:var(--text-faint);margin-top:4px;" id="goalProgressSourceLbl"></div>
       </div>
       <div>
         <label>Etap (Milestones)</label>
