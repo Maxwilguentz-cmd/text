@@ -587,11 +587,9 @@ function renderGoalFinancialRemaining(){
   };
   const remaining = computeGoalFinancialRemaining(draft);
   document.getElementById('goalCostDisplay').value = costInput.value ? remaining : '';
-  const pct = computeGoalFinancialProgressPct(draft);
   document.getElementById('goalFinancialRemaining').textContent = remaining;
   document.getElementById('goalFinancialSaved').textContent = draft.currentSavings;
-  document.getElementById('goalFinancialProgressPct').textContent = pct + '%';
-  document.getElementById('goalFinancialProgressBar').style.width = pct + '%';
+  if (typeof renderGoalProgressPreview === 'function') renderGoalProgressPreview();
 }
 
 document.getElementById('goalCategory').addEventListener('change', () => {
@@ -2426,8 +2424,8 @@ const GOAL_SYNC_MODULES = {
     // Pa gen fonksyon Budget<->Goal ki egziste ankò — nou SÈLMAN prepare yon
     // apèsi (pa gen chan nouvo sou `budgets`, pa gen ekriti okenn kote)
     owns: null,
-    read: g => (g.isFinancial && g.monthlySavingPlan) ? {
-      suggestedMonthlyAmount: Number(g.monthlySavingPlan) || 0,
+    read: g => (g.isFinancial && g.currentSavings) ? {
+      suggestedMonthlyAmount: Number(g.currentSavings) || 0,
       remaining: computeGoalFinancialRemaining(g)
     } : null
   },
@@ -4016,7 +4014,7 @@ function syncGoalMonthlyBudgetToFinance(g, prevTitle){
   if (!g) return;
   if (!budgets.limits) budgets.limits = {};
   if (prevTitle && prevTitle !== g.title && budgets.limits[prevTitle] != null) delete budgets.limits[prevTitle];
-  const plan = g.isFinancial ? (Number(g.monthlySavingPlan) || 0) : 0;
+  const plan = g.isFinancial ? (Number(g.currentSavings) || 0) : 0;
   if (plan > 0) budgets.limits[g.title] = plan;
   else if (budgets.limits[g.title] != null) delete budgets.limits[g.title];
   persistBudgets();
@@ -4034,17 +4032,15 @@ function renderBudgetGoalConnections(){
   if (!list.length){ wrap.innerHTML = ''; return; }
   wrap.innerHTML = list.map(g => {
     const remaining = computeGoalFinancialRemaining(g);
-    const plan = g.monthlySavingPlan != null ? g.monthlySavingPlan : null;
     const saved = g.currentSavings || 0;
     const pct = computeGoalFinancialProgressPct(g);
     return `<div class="milestone-row" style="flex-direction:column;align-items:stretch;gap:2px;">
       <span><b>${escapeHtml(g.title)}</b></span>
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:2px;">
-        <span style="color:var(--text-faint);">Bidjè pa Mwa: <b style="color:var(--text);">${plan!=null ? fmtHTG(plan)+'/mwa' : '—'}</b></span>
-        <span style="color:var(--text-faint);">Sere Deja: <b style="color:var(--text);">${fmtHTG(saved)}</b></span>
+        <span style="color:var(--text-faint);">Bidje: <b style="color:var(--text);">${fmtHTG(saved)}</b></span>
+        <span style="color:var(--text-faint);">Rete: <b style="color:var(--text);">${fmtHTG(remaining)}</b></span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:12px;">
-        <span style="color:var(--text-faint);">Rete: <b style="color:var(--text);">${fmtHTG(remaining)}</b></span>
         <span style="color:var(--text-faint);">Pwogrè: <b style="color:var(--green);">${pct}%</b></span>
       </div>
     </div>`;
@@ -4057,11 +4053,10 @@ function renderBudgetsManageGoalList(){
   if (!list.length){ wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen Objektif Finansye kreye.</span>'; return; }
   wrap.innerHTML = list.map(g => {
     const remaining = computeGoalFinancialRemaining(g);
-    const plan = g.monthlySavingPlan != null ? g.monthlySavingPlan : null;
     const saved = g.currentSavings || 0;
     const pct = computeGoalFinancialProgressPct(g);
     return `<div class="milestone-row" style="justify-content:space-between;">
-      <span>${escapeHtml(g.title)} <span style="color:var(--text-faint);">(${plan!=null ? fmtHTG(plan)+'/mwa' : 'pa gen plan'} · Sere ${fmtHTG(saved)})</span></span>
+      <span>${escapeHtml(g.title)} <span style="color:var(--text-faint);">(Bidje ${fmtHTG(saved)})</span></span>
       <span class="pill" style="background:var(--blue-soft);color:var(--blue);">Rete ${fmtHTG(remaining)} · ${pct}%</span>
     </div>`;
   }).join('');
@@ -4641,9 +4636,9 @@ document.getElementById('saveBudgetsBtn').addEventListener('click', () => {
   goals.forEach(g => {
     if (!g.isFinancial) return;
     if (Object.prototype.hasOwnProperty.call(limits, g.title)){
-      if (g.monthlySavingPlan !== limits[g.title]){ g.monthlySavingPlan = limits[g.title]; goalsChanged = true; }
-    } else if (Object.prototype.hasOwnProperty.call(prevLimits, g.title) && g.monthlySavingPlan != null){
-      g.monthlySavingPlan = null; goalsChanged = true;
+      if (g.currentSavings !== limits[g.title]){ g.currentSavings = limits[g.title]; goalsChanged = true; }
+    } else if (Object.prototype.hasOwnProperty.call(prevLimits, g.title) && g.currentSavings != null){
+      g.currentSavings = null; goalsChanged = true;
     }
   });
   budgets = { period: document.getElementById('budgetPeriod').value, limits };
@@ -7277,7 +7272,6 @@ function openGoalModal(id){
   // Pati 2/4: pa gen checkbox "Objektif Finansye" ankò — Kategori Prensipal
   // la (deja mete pi wo) detèmine sa otomatikman.
   document.getElementById('goalCurrentSavings').value = g && g.currentSavings != null ? g.currentSavings : '';
-  document.getElementById('goalMonthlySavingPlan').value = g && g.monthlySavingPlan != null ? g.monthlySavingPlan : '';
   renderGoalSourceWalletOptions(g ? g.walletId : null);
   renderGoalFinancialRemaining();
   if (typeof renderGoalFinanceSyncStatus === 'function') renderGoalFinanceSyncStatus();
@@ -7331,7 +7325,6 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
     estimatedValue: document.getElementById('goalEstimatedValue').value ? parseFloat(document.getElementById('goalEstimatedValue').value) : null,
     isFinancial: goalIsFinancialFromCategory(),
     currentSavings: document.getElementById('goalCurrentSavings').value ? parseFloat(document.getElementById('goalCurrentSavings').value) : null,
-    monthlySavingPlan: document.getElementById('goalMonthlySavingPlan').value ? parseFloat(document.getElementById('goalMonthlySavingPlan').value) : null,
     walletId: document.getElementById('goalSourceWallet').value || null,
     notes: document.getElementById('goalNotes').value.trim(),
     links: goalLinksDraft,
