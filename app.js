@@ -4061,12 +4061,17 @@ function renderBudgetSummary(){
 function syncGoalMonthlyBudgetToFinance(g, prevTitle){
   if (!g) return;
   if (!budgets.limits) budgets.limits = {};
-  if (prevTitle && prevTitle !== g.title && budgets.limits[prevTitle] != null) delete budgets.limits[prevTitle];
-  const plan = g.isFinancial ? (Number(g.currentSavings) || 0) : 0;
-  if (plan > 0) budgets.limits[g.title] = plan;
-  else if (budgets.limits[g.title] != null) delete budgets.limits[g.title];
+  // Bidjè yon Objektif Finansye PA dwe monte nan Bidjè jeneral ou a (Finans >
+  // Bidjè, `renderBudgetSummary`) — sa te fè l parèt tankou yon kategori depans
+  // nòmal ki toujou rete "0 HTG / 0 HTG" (paske pa gen okenn tranzaksyon depans
+  // ki gen menm non ak Objektif la). Bidjè Objektif Finansye a rete SÈLMAN nan
+  // kaz Objektif Finansye a lye a (kat "Objektif Finansye" yo pi ba a).
+  if (prevTitle && budgets.limits[prevTitle] != null) delete budgets.limits[prevTitle];
+  if (budgets.limits[g.title] != null) delete budgets.limits[g.title];
   persistBudgets();
   if (typeof renderBudgetSummary === 'function') renderBudgetSummary();
+  if (typeof renderBudgetGoalConnections === 'function') renderBudgetGoalConnections();
+  if (typeof renderBudgetsManageGoalList === 'function') renderBudgetsManageGoalList();
 }
 function financialGoalsForBudgetDisplay(){
   return goals.filter(g => g.isFinancial);
@@ -4079,18 +4084,15 @@ function renderBudgetGoalConnections(){
   card.hidden = !list.length;
   if (!list.length){ wrap.innerHTML = ''; return; }
   wrap.innerHTML = list.map(g => {
-    const remaining = computeGoalFinancialRemaining(g);
     const saved = g.currentSavings || 0;
     const pct = computeGoalFinancialProgressPct(g);
     return `<div class="milestone-row" style="flex-direction:column;align-items:stretch;gap:2px;">
       <span><b>${escapeHtml(g.title)}</b></span>
       <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:2px;">
         <span style="color:var(--text-faint);">Bidje: <b style="color:var(--text);">${fmtHTG(saved)}</b></span>
-        <span style="color:var(--text-faint);">Rete: <b style="color:var(--text);">${fmtHTG(remaining)}</b></span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;">
         <span style="color:var(--text-faint);">Pwogrè: <b style="color:var(--green);">${pct}%</b></span>
       </div>
+      <div class="mini-progress"><span style="width:${pct}%;background:var(--green)"></span></div>
     </div>`;
   }).join('');
 }
@@ -4100,12 +4102,14 @@ function renderBudgetsManageGoalList(){
   const list = financialGoalsForBudgetDisplay();
   if (!list.length){ wrap.innerHTML = '<span style="font-size:11.5px;color:var(--text-faint);">Poko gen Objektif Finansye kreye.</span>'; return; }
   wrap.innerHTML = list.map(g => {
-    const remaining = computeGoalFinancialRemaining(g);
     const saved = g.currentSavings || 0;
     const pct = computeGoalFinancialProgressPct(g);
-    return `<div class="milestone-row" style="justify-content:space-between;">
-      <span>${escapeHtml(g.title)} <span style="color:var(--text-faint);">(Bidje ${fmtHTG(saved)})</span></span>
-      <span class="pill" style="background:var(--blue-soft);color:var(--blue);">Rete ${fmtHTG(remaining)} · ${pct}%</span>
+    return `<div class="milestone-row" style="flex-direction:column;align-items:stretch;gap:4px;">
+      <div style="display:flex;justify-content:space-between;">
+        <span>${escapeHtml(g.title)} <span style="color:var(--text-faint);">(Bidje ${fmtHTG(saved)})</span></span>
+        <span class="pill" style="background:var(--blue-soft);color:var(--blue);">${pct}%</span>
+      </div>
+      <div class="mini-progress"><span style="width:${pct}%;background:var(--blue)"></span></div>
     </div>`;
   }).join('');
 }
