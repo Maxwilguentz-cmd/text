@@ -1945,10 +1945,22 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       <div><label>Deskripsyon</label><textarea id="habitDesc" placeholder="Detay (opsyonèl)"></textarea></div>
       <div class="form-row three">
         <div><label>Frekans</label><select id="habitFrequency">
-          <option value="daily">Chak jou</option><option value="weekly">Chak semèn</option><option value="monthly">Chak mwa</option>
+          <option value="daily">Chak jou</option><option value="weekly">Chak semèn</option><option value="monthly">Chak mwa</option><option value="weekdays">Lendi ak Vandredi</option><option value="custom">Pèsonalize</option>
         </select></div>
         <div><label>Kategori</label><input type="text" id="habitCategory" placeholder="Pw. Sante"></div>
         <div><label>Objektif</label><input type="text" id="habitGoal" placeholder="Pw. 30 jou"></div>
+      </div>
+      <div id="habitCustomDaysWrap" hidden>
+        <label>Ki Jou</label>
+        <div class="form-row" style="display:flex;flex-wrap:wrap;gap:6px;">
+          <label class="chk"><input type="checkbox" class="habitCustomDay" value="mon"> Lendi</label>
+          <label class="chk"><input type="checkbox" class="habitCustomDay" value="tue"> Madi</label>
+          <label class="chk"><input type="checkbox" class="habitCustomDay" value="wed"> Mèkredi</label>
+          <label class="chk"><input type="checkbox" class="habitCustomDay" value="thu"> Jedi</label>
+          <label class="chk"><input type="checkbox" class="habitCustomDay" value="fri"> Vandredi</label>
+          <label class="chk"><input type="checkbox" class="habitCustomDay" value="sat"> Samdi</label>
+          <label class="chk"><input type="checkbox" class="habitCustomDay" value="sun"> Dimanch</label>
+        </div>
       </div>
       <div id="habitGoalSavingsWrap" hidden>
         <label>Epay pou Objektif la</label>
