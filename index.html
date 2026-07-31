@@ -2080,6 +2080,18 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
   </div>
 </div>
 
+<!-- ============ AJOUTE LAJAN (Kont Epay Objektif) ============ -->
+<div class="modal-overlay" id="addMoneyToWalletModalOverlay">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>Ajoute Lajan nan <span id="addMoneyWalletName">—</span></h3><button class="icon-btn" id="closeAddMoneyModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Soti nan ki Kont</label><select id="addMoneySourceWallet"><option value="">— Chwazi —</option></select></div>
+      <div><label>Kantite Lajan</label><input type="number" id="addMoneyAmount" placeholder="Pw. 1000" step="any"></div>
+      <button class="btn btn-primary" id="saveAddMoneyBtn" style="justify-content:center;width:100%;margin-top:6px;"><i data-lucide="piggy-bank"></i> Ajoute Lajan</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ BUDGETS MODAL ============ -->
 <div class="modal-overlay" id="budgetsModalOverlay">
   <div class="modal narrow">
