@@ -3675,7 +3675,7 @@ function buildHabitCard(h){
       <div class="ic" style="background:${iconInfo.bg};color:${iconInfo.col}"><i data-lucide="${iconInfo.ic}"></i></div>
       <div class="info">
         <b>${escapeHtml(h.name)}</b>
-        <span>${escapeHtml(h.category||'Jeneral')} · ${h.frequency==='daily'?'Chak jou':h.frequency==='weekly'?'Chak semèn':'Chak mwa'}${h.goal ? ' · '+escapeHtml(h.goal) : ''}</span>
+        <span>${escapeHtml(h.category||'Jeneral')} · ${HABIT_FREQ_LABEL[h.frequency]||h.frequency}${h.frequency==='custom' && (h.customDays||[]).length ? ' ('+h.customDays.map(d=>HABIT_CUSTOM_DAY_LABEL[d]||d).join(', ')+')' : ''}${h.goal ? ' · '+escapeHtml(h.goal) : ''}</span>
       </div>
       <div class="habit-check ${doneToday?'checked':''}" data-id="${h.id}"><i data-lucide="check"></i></div>
     </div>
@@ -3757,20 +3757,32 @@ function openHabitModal(id){
   document.getElementById('habitGoal').value = h?.goal || '';
   document.getElementById('habitReminder').checked = !!h?.reminder;
   document.getElementById('deleteHabitBtn').hidden = !h;
+  const savedCustomDays = Array.isArray(h?.customDays) ? h.customDays : [];
+  document.querySelectorAll('.habitCustomDay').forEach(cb => { cb.checked = savedCustomDays.includes(cb.value); });
+  updateHabitCustomDaysVisibility();
   document.getElementById('habitModalOverlay').classList.add('open');
 }
+function updateHabitCustomDaysVisibility(){
+  const wrap = document.getElementById('habitCustomDaysWrap');
+  if (wrap) wrap.hidden = document.getElementById('habitFrequency').value !== 'custom';
+}
+document.getElementById('habitFrequency').addEventListener('change', updateHabitCustomDaysVisibility);
 document.getElementById('newHabitBtn').addEventListener('click', () => openHabitModal(null));
 document.getElementById('closeHabitModal').addEventListener('click', () => document.getElementById('habitModalOverlay').classList.remove('open'));
 document.getElementById('habitModalOverlay').addEventListener('click', e => { if (e.target.id === 'habitModalOverlay') document.getElementById('habitModalOverlay').classList.remove('open'); });
 document.getElementById('saveHabitBtn').addEventListener('click', () => {
   const name = document.getElementById('habitName').value.trim();
   if (!name){ showToast('Mete yon non pou abitid la'); return; }
+  const frequency = document.getElementById('habitFrequency').value;
+  const customDaysChecked = Array.from(document.querySelectorAll('.habitCustomDay:checked')).map(cb => cb.value);
+  if (frequency === 'custom' && !customDaysChecked.length){ showToast('Chwazi omwen yon jou pou Frekans Pèsonalize a'); return; }
   const data = {
     name, description: document.getElementById('habitDesc').value.trim(),
-    frequency: document.getElementById('habitFrequency').value,
+    frequency,
     category: document.getElementById('habitCategory').value.trim(),
     goal: document.getElementById('habitGoal').value.trim(),
     reminder: document.getElementById('habitReminder').checked,
+    customDays: frequency === 'custom' ? customDaysChecked : undefined,
   };
   if (editingHabitId) Object.assign(habits.find(x => x.id === editingHabitId), data);
   else habits.push({ id: uid(), completions: [], createdAt: new Date().toISOString(), ...data });
@@ -7697,7 +7709,8 @@ function renderLinkExistingHabitSelect(){
 // GOAL <-> HABIT — afiche Abitid Lye yo (Pati 4/50)
 // Lòt kouch obsèvasyon apa — pa touche Goal/Habit modil yo, ni kod Pati 1/2/3 la.
 // ==========================================
-const HABIT_FREQ_LABEL = { daily:'Chak jou', weekly:'Chak semèn', monthly:'Chak mwa' };
+const HABIT_FREQ_LABEL = { daily:'Chak jou', weekly:'Chak semèn', monthly:'Chak mwa', weekdays:'Lendi ak Vandredi', custom:'Pèsonalize' };
+const HABIT_CUSTOM_DAY_LABEL = { mon:'Lendi', tue:'Madi', wed:'Mèkredi', thu:'Jedi', fri:'Vandredi', sat:'Samdi', sun:'Dimanch' };
 
 // ==========================================
 // GOAL <-> HABIT — senkronizasyon estati (Pati 14/50)
@@ -7717,9 +7730,14 @@ const HABIT_LINK_STATUS_STYLE = {
 };
 
 // Konbyen jou san aktivite pou konsidere yon Abitid "An Poz", selon frekans li
-function habitStaleThresholdDays(frequency){
+function habitStaleThresholdDays(frequency, customDays){
   if (frequency === 'weekly') return 10;
   if (frequency === 'monthly') return 35;
+  if (frequency === 'weekdays') return 4; // Lendi-Vandredi — kouvri wikenn lan san konsidere l "An Poz"
+  if (frequency === 'custom'){
+    const n = Array.isArray(customDays) && customDays.length ? customDays.length : 1;
+    return Math.max(2, Math.ceil(7 / n) + 1); // laj apwoksimatif ant 2 jou chwazi yo, + 1 jou mago
+  }
   return 2; // daily (default)
 }
 
@@ -7731,7 +7749,7 @@ function computeHabitLinkStatus(h){
   const last = sorted[sorted.length - 1];
   if (!last) return 'paused'; // pa gen okenn konplete ditou — konsidere l San Aktivite
   const daysSince = Math.floor((new Date(today) - new Date(last)) / 86400000);
-  return daysSince > habitStaleThresholdDays(h.frequency) ? 'paused' : 'active';
+  return daysSince > habitStaleThresholdDays(h.frequency, h.customDays) ? 'paused' : 'active';
 }
 
 // ==========================================
