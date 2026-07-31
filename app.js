@@ -650,17 +650,21 @@ function computeGoalFinanceSyncStatus(goalId){
 }
 
 function renderGoalFinanceSyncStatus(){
-  const box = document.getElementById('goalFinanceSyncStatus');
-  if (!box) return;
-  if (!goalDetailsId){ box.hidden = true; return; } // box la kounye a nan Detay Objektif la, pa nan Modifye Objektif
+  const walletWrap = document.getElementById('goalDetailsWalletWrap');
+  const habitWrap = document.getElementById('goalDetailsHabitWrap');
+  const lastTxWrap = document.getElementById('goalDetailsLastTxWrap');
+  if (!walletWrap || !habitWrap || !lastTxWrap) return;
+  if (!goalDetailsId){ walletWrap.hidden = true; habitWrap.hidden = true; lastTxWrap.hidden = true; return; }
   const status = computeGoalFinanceSyncStatus(goalDetailsId);
-  if (!status){ box.hidden = true; return; }
-  box.hidden = false;
-  document.getElementById('goalSyncWallet').textContent = status.walletNames.length ? status.walletNames.join(', ') : '— Pa gen —';
-  document.getElementById('goalSyncHabit').textContent = status.habitNames.length ? status.habitNames.join(', ') : '— Pa gen —';
-  document.getElementById('goalSyncSaved').textContent = fmtNum(status.totalSaved);
-  document.getElementById('goalSyncLastTx').textContent = status.lastTransactionDate || '— Poko gen —';
-  document.getElementById('goalSyncRemaining').textContent = fmtNum(status.remaining);
+  if (!status){ walletWrap.hidden = true; habitWrap.hidden = true; lastTxWrap.hidden = true; return; }
+  // Total Sere ak Rete pa parèt isit ankò — yo deja nan gwoup "Finans" pi wo a
+  // (Bidje / Rete), pa gen rezon pou gen 2 kote ki montre menm valè a.
+  walletWrap.hidden = !status.walletNames.length;
+  if (status.walletNames.length) document.getElementById('goalDetailsWallet').textContent = status.walletNames.join(', ');
+  habitWrap.hidden = !status.habitNames.length;
+  if (status.habitNames.length) document.getElementById('goalDetailsHabit').textContent = status.habitNames.join(', ');
+  lastTxWrap.hidden = !status.lastTransactionDate;
+  if (status.lastTransactionDate) document.getElementById('goalDetailsLastTx').textContent = status.lastTransactionDate;
 }
 
 // ==========================================
@@ -7065,8 +7069,6 @@ function renderGoalDetailsModal(){
   statusEl.textContent = GOAL_STATUS[g.status] || g.status || '—';
   statusEl.style.background = statusStyle.bg;
   statusEl.style.color = statusStyle.fg;
-  document.getElementById('goalDetailsProgressBar').style.width = pct + '%';
-  document.getElementById('goalDetailsProgressPct').textContent = pct + '%';
 
   // ---- Deskripsyon ----
   const descWrap = document.getElementById('goalDetailsDescWrap');
