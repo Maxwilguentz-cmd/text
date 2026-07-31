@@ -3977,7 +3977,11 @@ function renderWalletStrip(){
     const el = document.createElement('div');
     el.className = 'card wallet-card';
     el.innerHTML = `<span class="wname"><i data-lucide="${WALLET_ICONS[w.type]||'wallet'}" style="width:12px;height:12px;vertical-align:-2px;margin-right:4px"></i>${escapeHtml(w.name)}</span><span class="wbal">${fmtMoney(walletBalance(w), walletCurrency(w))}</span>`;
-    el.addEventListener('click', openWalletsModal);
+    // Kont Epay ki lye ak yon Objektif Finansye (piggy-bank) ouvri dirèkteman
+    // fòm "Ajoute Lajan" — lòt kont yo kenbe ansyen konpòtman an (Jere Kont).
+    const linkedGoal = goals.find(g => g.savingsWalletId === w.id);
+    if (w.type === 'savings' && linkedGoal) el.addEventListener('click', () => openAddMoneyModal(w.id));
+    else el.addEventListener('click', openWalletsModal);
     strip.appendChild(el);
   });
   if (window.lucide) lucide.createIcons();
@@ -7434,6 +7438,9 @@ document.getElementById('saveGoalBtn').addEventListener('click', () => {
   persistGoals();
   const _savedGoal = editingGoalId ? goals.find(x => x.id === editingGoalId) : goals[goals.length - 1];
   if (_savedGoal && typeof syncGoalMonthlyBudgetToFinance === 'function') syncGoalMonthlyBudgetToFinance(_savedGoal, prevTitle);
+  // Chak Objektif Kategori Finans dwe toujou gen yon Kont Epay (piggy-bank)
+  // ki pote non l — kreye l otomatikman kounye a, pa sèlman lè yon Abitid ajoute.
+  if (_savedGoal && _savedGoal.isFinancial && typeof ensureGoalSavingsWallet === 'function') ensureGoalSavingsWallet(_savedGoal);
   if (_savedGoal && typeof syncGoalCalendarEvents === 'function') syncGoalCalendarEvents(_savedGoal.id);
   if (_savedGoal){
     let historyChanged = false;
@@ -8451,17 +8458,72 @@ function cancelGoalFinancialAction(action, reason){
 // ==========================================
 function ensureGoalSavingsWallet(g){
   if (!g) return null;
+  const desiredName = 'Epay ' + g.title;
   let w = g.savingsWalletId ? wallets.find(x => x.id === g.savingsWalletId) : null;
-  if (w) return w;
-  w = wallets.find(x => x.name === g.title);
+  if (w){
+    if (w.name !== desiredName){ w.name = desiredName; persistWallets(); }
+    return w;
+  }
+  w = wallets.find(x => x.name === desiredName || x.name === g.title);
   if (!w){
-    w = { id: uid(), name: g.title, type: 'savings', balance: 0, currency: 'HTG' };
+    w = { id: uid(), name: desiredName, type: 'savings', balance: 0, currency: 'HTG' };
     wallets.push(w);
     persistWallets();
+  } else if (w.name !== desiredName){
+    w.name = desiredName; persistWallets();
   }
   if (g.savingsWalletId !== w.id){ g.savingsWalletId = w.id; persistGoals(); }
   return w;
 }
+
+// ==========================================
+// KONT EPAY OBJEKTIF FINANSYE — "Ajoute Lajan" manyèl (klike sou kont la)
+// Kreye menm pè tranzaksyon (depans + revni, tag goalId) ak sistèm Abitid
+// la deja itilize (executeGoalFinancialAction), men san bezwen yon Abitid —
+// yon aksyon dirèk moun nan fè lè l klike sou kont Epay Objektif la.
+// ==========================================
+let addMoneyTargetWalletId = null;
+function openAddMoneyModal(walletId){
+  const w = wallets.find(x => x.id === walletId);
+  if (!w) return;
+  addMoneyTargetWalletId = walletId;
+  document.getElementById('addMoneyWalletName').textContent = w.name;
+  const sel = document.getElementById('addMoneySourceWallet');
+  sel.innerHTML = '<option value="">— Chwazi —</option>' + wallets.filter(x => x.id !== walletId).map(x => `<option value="${x.id}">${escapeHtml(x.name)}</option>`).join('');
+  document.getElementById('addMoneyAmount').value = '';
+  document.getElementById('addMoneyToWalletModalOverlay').classList.add('open');
+}
+document.getElementById('closeAddMoneyModal').addEventListener('click', () => document.getElementById('addMoneyToWalletModalOverlay').classList.remove('open'));
+document.getElementById('addMoneyToWalletModalOverlay').addEventListener('click', e => { if (e.target.id === 'addMoneyToWalletModalOverlay') document.getElementById('addMoneyToWalletModalOverlay').classList.remove('open'); });
+document.getElementById('saveAddMoneyBtn').addEventListener('click', () => {
+  const dest = wallets.find(x => x.id === addMoneyTargetWalletId);
+  const sourceId = document.getElementById('addMoneySourceWallet').value;
+  const source = wallets.find(x => x.id === sourceId);
+  const amount = parseFloat(document.getElementById('addMoneyAmount').value);
+  if (!dest) return;
+  if (!source){ showToast('Chwazi kont kote lajan an soti'); return; }
+  if (source.id === dest.id){ showToast('Chwazi yon lòt kont — pa menm kont lan'); return; }
+  if (!isFinite(amount) || amount <= 0){ showToast('Mete yon kantite kòb valab'); return; }
+  if (walletBalance(source) - amount < 0){ showToast('Balans kont sa a pa ase pou transfè sa a'); return; }
+  const g = goals.find(x => x.savingsWalletId === dest.id);
+  const reason = g ? `Ajoute lajan nan Epay "${g.title}"` : `Transfè pou ${dest.name}`;
+  const now = todayISO();
+  const time = new Date().toTimeString().slice(0,5);
+  const category = g ? g.title : dest.name;
+  tx.push({ id: uid(), type:'expense', amount, description: reason, category, walletId: source.id, date: now, time, goalId: g ? g.id : undefined, reason });
+  tx.push({ id: uid(), type:'income', amount, description: reason, category, walletId: dest.id, date: now, time, goalId: g ? g.id : undefined, reason });
+  persistTx();
+  if (g){
+    g.currentSavings = (Number(g.currentSavings) || 0) + amount;
+    persistGoals();
+    if (typeof syncAllGoalAutoStatuses === 'function') syncAllGoalAutoStatuses();
+    if (typeof syncAllProjectStatusesFromGoals === 'function') syncAllProjectStatusesFromGoals();
+  }
+  document.getElementById('addMoneyToWalletModalOverlay').classList.remove('open');
+  if (typeof renderFinance === 'function') renderFinance();
+  renderGoals();
+  showToast('Lajan ajoute ✓');
+});
 
 function executeGoalFinancialAction(action){
   if (!action || action.status !== 'ready') return null; // pa validé ankò, oswa deja trete — pa fè anyen (pa gen chanjman)
