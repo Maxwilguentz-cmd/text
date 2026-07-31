@@ -1925,7 +1925,7 @@ function coachDebitCardInsight(){
   const spendLast = usdTx.filter(t=>t.type==='expense'&&t.date.slice(0,7)===lastMonth).reduce((s,t)=>s+t.amount,0);
   const balance = usdWallets.reduce((s,w)=>s+walletBalance(w),0);
   const byCat = {};
-  usdTx.filter(t=>t.type==='expense'&&t.date.slice(0,7)===thisMonth).forEach(t => { byCat[t.category] = (byCat[t.category]||0) + t.amount; });
+  usdTx.filter(t=>t.type==='expense'&&t.date.slice(0,7)===thisMonth&&!t.goalId).forEach(t => { byCat[t.category] = (byCat[t.category]||0) + t.amount; });
   const topCat = Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0] || null;
   const avgDaily = spendThis / Math.max(1, new Date().getDate());
   return { balance, spendThis, spendLast, topCat, avgDaily };
@@ -3951,12 +3951,18 @@ function totalUsdBalance(){ return wallets.filter(w => walletCurrency(w) === 'US
 function monthTx(){ const m = new Date().toISOString().slice(0,7); return tx.filter(t => t.date.slice(0,7) === m); }
 function monthExpenseByCategory(){
   const map = {};
-  monthTx().filter(t => t.type==='expense' && isHtgTx(t)).forEach(t => { map[t.category] = (map[t.category]||0) + t.amount; });
+  // `t.goalId` sèlman prezan sou tranzaksyon transfè entèn ki kreye lè yon
+  // Abitid kontribye nan Bidjè espesyal yon Objektif Finansye (Pati 4/4) —
+  // yo pa dwe konte nan estatistik Depans pa Kategori paske se pa yon
+  // vrè depans nan yon kategori, se yon transfè kont Objektif la.
+  monthTx().filter(t => t.type==='expense' && isHtgTx(t) && !t.goalId).forEach(t => { map[t.category] = (map[t.category]||0) + t.amount; });
   return map;
 }
 function monthIncomeByCategory(){
   const map = {};
-  monthTx().filter(t => t.type==='income' && isHtgTx(t)).forEach(t => { map[t.category] = (map[t.category]||0) + t.amount; });
+  // Menm rezon an: pa konte tranzaksyon "revni" ki soti nan transfè entèn
+  // Objektif Finansye a (t.goalId) nan estatistik Revni pa Kategori.
+  monthTx().filter(t => t.type==='income' && isHtgTx(t) && !t.goalId).forEach(t => { map[t.category] = (map[t.category]||0) + t.amount; });
   return map;
 }
 
@@ -7473,18 +7479,39 @@ document.getElementById('deleteGoalBtn').addEventListener('click', () => {
 // ==========================================
 let pendingGoalIdForNewHabit = null;
 
+// Si Objektif la poko sove (n ap kreye yon Nouvo Objektif), sove l kounye a
+// (menm lojik ki dèyè saveGoalBtn) pou l ka gen yon vrè ID anvan nou lye yon
+// Abitid avè l — konsa TOUT aksyon Abitid ki disponib nan Modifye Objektif
+// yo disponib menm jan an pandan w ap kreye yon Nouvo Objektif tou.
+function ensureGoalSavedForHabitAction(){
+  if (editingGoalId) return editingGoalId;
+  const title = document.getElementById('goalTitle').value.trim();
+  if (!title){ showToast('Mete yon tit pou objektif la anvan'); return null; }
+  document.getElementById('saveGoalBtn').click(); // itilize menm lojik anrejistreman an, pa yon kopi
+  const newGoal = goals[goals.length - 1];
+  if (!newGoal) return null;
+  openGoalModal(newGoal.id); // re-ouvri menm Objektif la, kounye a an mòd Modifye
+  return newGoal.id;
+}
+
 (function initGoalAddHabitButton(){
   const btn = document.getElementById('goalAddHabitBtn');
   const overlay = document.getElementById('goalModalOverlay');
   if (!btn || !overlay) return;
-  const syncVisibility = () => { btn.hidden = !editingGoalId; };
-  new MutationObserver(syncVisibility).observe(overlay, { attributes:true, attributeFilter:['class'] });
-  syncVisibility();
+  // Bouton "Ajoute Abitid" la disponib kit ou ap Modifye yon Objektif, kit
+  // ou ap kreye yon Nouvo Objektif — ensureGoalSavedForHabitAction soti pa
+  // ba a jere kreyasyon an si l poko sove.
+  btn.hidden = false;
   btn.addEventListener('click', () => {
-    if (!editingGoalId) return;
-    pendingGoalIdForNewHabit = editingGoalId;
+    const goalId = ensureGoalSavedForHabitAction();
+    if (!goalId) return;
+    pendingGoalIdForNewHabit = goalId;
     document.getElementById('goalModalOverlay').classList.remove('open'); // kache Modifye Objektif pandan Nouvo Abitid la parèt
     openHabitModal(null); // itilize fòm kreyasyon Abitid ki egziste deja — pa kreye yon lòt fòm
+    // Abitid ki fèt apati yon Objektif dwe gen menm Kategori ak Objektif la
+    const g = goals.find(x => x.id === goalId);
+    const catInput = document.getElementById('habitCategory');
+    if (g && catInput) catInput.value = GOAL_CATEGORY[g.category] || g.category || '';
   });
 })();
 
@@ -7538,7 +7565,8 @@ function updateHabitGoalSavingsFieldVisibility(){
 // financial action) fè transfè reyèl la.
 // ==========================================
 document.getElementById('goalQuickAddHabitBtn')?.addEventListener('click', () => {
-  if (!editingGoalId) return;
+  const goalId = ensureGoalSavedForHabitAction();
+  if (!goalId) return;
   const sourceWalletId = document.getElementById('goalSourceWallet').value;
   if (!sourceWalletId){ showToast('Chwazi yon Wallet de Depa anvan'); return; }
   document.getElementById('goalQuickAddHabitAmount').value = '';
@@ -7554,7 +7582,8 @@ document.getElementById('saveGoalQuickAddHabitBtn').addEventListener('click', ()
   if (!g || !sourceWalletId){ showToast('Chwazi yon Wallet de Depa anvan'); return; }
   if (!isFinite(amount) || amount <= 0){ showToast('Mete yon kantite kòb valab'); return; }
   const habitId = uid();
-  habits.push({ id: habitId, name: g.title, description:'', frequency:'daily', category:'', goal:'', reminder:false, completions:[], createdAt: new Date().toISOString() });
+  // Abitid ki fèt apati yon Objektif dwe gen menm Kategori ak Objektif la.
+  habits.push({ id: habitId, name: g.title, description:'', frequency:'daily', category: GOAL_CATEGORY[g.category] || g.category || '', goal:'', reminder:false, completions:[], createdAt: new Date().toISOString() });
   persistHabits();
   linkHabitToGoal(goalId, habitId);
   setGoalHabitContribution(goalId, habitId, amount, 'HTG');
@@ -7578,6 +7607,14 @@ document.getElementById('saveHabitBtn').addEventListener('click', () => {
   // Abitid ki fenk kreye a se dènye eleman nan lis la (Habit modil la push li nan menm klik la)
   const habitId = editingHabitId || (habits[habits.length - 1] && habits[habits.length - 1].id);
   if (habitId){
+    const habitObj = habits.find(h => h.id === habitId);
+    const gForCat = goals.find(x => x.id === goalId);
+    if (habitObj && gForCat){
+      // Abitid ki fèt (oswa lye) apati yon Objektif dwe toujou gen menm
+      // Kategori ak Objektif la — pa kite chan Kategori a vid oswa diferan.
+      habitObj.category = GOAL_CATEGORY[gForCat.category] || gForCat.category || '';
+      persistHabits();
+    }
     linkHabitToGoal(goalId, habitId);
     if (isFinite(savingsAmount) && savingsAmount > 0){
       setGoalHabitContribution(goalId, habitId, savingsAmount, 'HTG'); // chak fwa abitid la fèt, ajoute nan budje objektif la epi rekalkile pousantaj la
@@ -10186,7 +10223,9 @@ function computeStats(start, end){
   const income = txRange.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
   const expense = txRange.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const expenseByCat = {};
-  txRange.filter(t=>t.type==='expense').forEach(t => { expenseByCat[t.category] = (expenseByCat[t.category]||0) + t.amount; });
+  // `t.goalId` = tranzaksyon transfè entèn Bidjè Objektif Finansye a (pa yon
+  // vrè depans nan yon kategori) — pa konte l nan estatistik pa Kategori.
+  txRange.filter(t=>t.type==='expense'&&!t.goalId).forEach(t => { expenseByCat[t.category] = (expenseByCat[t.category]||0) + t.amount; });
 
   const lessonLog = (learning.lessonLog||[]).filter(inRange);
   const studyDays = new Set(lessonLog).size;
