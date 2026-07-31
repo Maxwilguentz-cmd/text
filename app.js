@@ -11,8 +11,13 @@ const STATUSES = [
 ];
 const PRIORITY = {low:'Ba', medium:'Mwayen', high:'Wo', urgent:'Ijan'};
 const GOAL_CATEGORY = {personal:'Pèsonèl', finance:'Finans', learning:'Aprantisaj', health:'Sante', career:'Karyè', business:'Biznis'};
-const GOAL_STATUS = {'not-started':'Poko kòmanse', 'in-progress':'An kou', 'almost-complete':'Prèske Fini', completed:'Konplete', delayed:'An Reta', failed:'Echwe', paused:'Sispann', archived:'Achive'};
+// 'idea' ak 'todo' se estati espesyal ki sèvi SÈLMAN pou Objektif Finansye
+// (Pati: Estati Otomatik Finans) — pwogresyon an se Ide -> Todo -> An Kou
+// -> Prèske Fini -> Fini, dapre kantite lajan ki sere deja (wè computeAutoGoalStatus).
+const GOAL_STATUS = {'idea':'Ide', 'todo':'Todo', 'not-started':'Poko kòmanse', 'in-progress':'An kou', 'almost-complete':'Prèske Fini', completed:'Konplete', delayed:'An Reta', failed:'Echwe', paused:'Sispann', archived:'Achive'};
 const GOAL_STATUS_STYLE = {
+  idea: { bg:'var(--surface-2)', fg:'var(--text-dim)' },
+  todo: { bg:'var(--surface-2)', fg:'var(--text-faint)' },
   'not-started': { bg:'var(--surface-2)', fg:'var(--text-dim)' },
   'in-progress': { bg:'var(--blue-soft, rgba(59,130,246,.14))', fg:'var(--blue)' },
   'almost-complete': { bg:'var(--orange-soft)', fg:'var(--orange)' },
@@ -33,6 +38,7 @@ const PROJECT_STATUSES = [
   {key:'idea', label:'Ide'},
   {key:'todo', label:'Todo'},
   {key:'in-progress', label:'An Kou'},
+  {key:'almost-complete', label:'Prèske Fini'}, // sèlman itilize pou Pwojè ki lye ak Objektif Finansye
   {key:'testing', label:'Tès'},
   {key:'completed', label:'Fini'},
 ];
@@ -1018,15 +1024,56 @@ function syncProjectStatusFromGoal(p){
   if (!p || !p.goalId) return false;
   const g = goals.find(x => x.id === p.goalId);
   if (!g) return false;
-  // Pati 49/50 fix: `g.progress` sèl se yon chan manyèl ki pa toujou ajou (pw. Objektif
-  // ki swiv pa Milestones/Finans/Aprantisaj kite `g.progress` a 0 pandan pwogrè REYÈL la
-  // (goalMilestoneProgress, sous verite ki itilize toupatou nan rès sistèm nan — Goal List,
-  // Dashboard, Statistics, Auto-Status) rive 100%). Sa te fè Project rete "idea"/"in-progress"
-  // menm lè Objektif la reyèlman fini. Nou itilize goalMilestoneProgress(g) pou rete konsistan.
-  const pct = goalMilestoneProgress(g);
-  const newStatus = pct >= 100 ? 'completed' : pct >= 51 ? 'testing' : pct >= 1 ? 'in-progress' : 'idea';
+  let newStatus;
+  if (g.isFinancial){
+    // Objektif Finansye: Pwojè lye a swiv menm estati espesyal la
+    // (Ide -> Todo -> An Kou -> Prèske Fini -> Fini) ak computeAutoGoalStatus,
+    // olye de lojik jeneral tach/pwogrè a.
+    newStatus = computeAutoGoalStatus(g);
+    if (!PROJECT_STATUSES.some(s => s.key === newStatus)) newStatus = 'idea';
+  } else {
+    // Pati 49/50 fix: `g.progress` sèl se yon chan manyèl ki pa toujou ajou (pw. Objektif
+    // ki swiv pa Milestones/Finans/Aprantisaj kite `g.progress` a 0 pandan pwogrè REYÈL la
+    // (goalMilestoneProgress, sous verite ki itilize toupatou nan rès sistèm nan — Goal List,
+    // Dashboard, Statistics, Auto-Status) rive 100%). Sa te fè Project rete "idea"/"in-progress"
+    // menm lè Objektif la reyèlman fini. Nou itilize goalMilestoneProgress(g) pou rete konsistan.
+    const pct = goalMilestoneProgress(g);
+    newStatus = pct >= 100 ? 'completed' : pct >= 51 ? 'testing' : pct >= 1 ? 'in-progress' : 'idea';
+  }
   if (p.status !== newStatus){ p.status = newStatus; return true; }
   return false;
+}
+// ==========================================
+// OBJEKTIF FINANSYE -> PWOJÈ otomatik
+// Chak Objektif Finansye dwe toujou gen yon Pwojè ki lye avè l pou l ka
+// parèt nan modil Pwojè a — kit li se yon Objektif ki fèk kreye, kit se
+// yon ansyen Objektif Finansye ki te deja la anvan chanjman sa a.
+// ==========================================
+function ensureProjectForFinancialGoal(g){
+  if (!g || !g.isFinancial) return false;
+  const existing = projects.find(p => p.goalId === g.id);
+  if (existing){
+    if (existing.name !== g.title){ existing.name = g.title; return true; }
+    return false;
+  }
+  projects.push({
+    id: uid(),
+    createdAt: new Date().toISOString(),
+    name: g.title,
+    description: '',
+    status: computeAutoGoalStatus(g),
+    deadline: g.deadline || '',
+    notes: '',
+    tasks: [],
+    files: [],
+    goalId: g.id,
+  });
+  return true;
+}
+function ensureProjectsForAllFinancialGoals(){
+  let changed = false;
+  goals.forEach(g => { if (ensureProjectForFinancialGoal(g)) changed = true; });
+  return changed;
 }
 // ==========================================
 // GOAL FINANSYE <-> PWOJE — tach "Achte"
@@ -1063,6 +1110,7 @@ function ensureGoalPurchaseTask(p){
 }
 function syncAllProjectStatusesFromGoals(){
   let changed = false;
+  if (typeof ensureProjectsForAllFinancialGoals === 'function' && ensureProjectsForAllFinancialGoals()) changed = true;
   projects.forEach(p => {
     if (syncProjectStatusFromGoal(p)) changed = true;
     if (ensureGoalPurchaseTask(p)) changed = true;
@@ -6726,6 +6774,17 @@ function goalRealProgressForStatus(g){
 // rive 100% -> 'failed', pa 'completed').
 function computeAutoGoalStatus(g){
   const pct = goalRealProgressForStatus(g);
+  // Objektif Finansye: pwogresyon espesyal ki pa depann sou dat limit —
+  // Ide (poko gen yon goud sere) -> Todo (kòmanse sere) -> An Kou ->
+  // Prèske Fini -> Fini (lè Estime a rive).
+  if (g.isFinancial){
+    if (pct >= 100) return 'completed';
+    const saved = Number(g.currentSavings) || 0;
+    if (saved <= 0) return 'idea';
+    if (pct >= 80) return 'almost-complete';
+    if (pct >= 25) return 'in-progress';
+    return 'todo';
+  }
   if (pct >= 100) return 'completed';
   // Dat limit (opsyonèl) — sèl kote nou ka distenge 'delayed' ak 'failed'.
   // San dat limit, nou pa gen okenn baz pou jije tan; nou rete sou pwogrè.
@@ -8667,8 +8726,9 @@ function renderGoals(){
       const pct = goalMilestoneProgress(g);
       // Pati 39/50: ti maak depandans sou kat la, san chanje ankenn lòt kalkil
       const depStatus = (g.dependsOn && g.dependsOn.length) ? computeGoalDependencyStatus(g.id) : null;
-      // Pati 48/50: badge koneksyon + eksplikasyon pwogrè + apèsi aktivite (done sèlman, pa gen nouvo sove)
-      const { connections, progressExplanation, activityPreview } = goalUxHighlights(g);
+      // Badge koneksyon sèlman — istorik/aktivite pa parèt nan ti grid la,
+      // yo rete sèlman nan Detay Objektif la (renderGoalDetailsHistory).
+      const { connections } = goalUxHighlights(g);
       const el = document.createElement('div');
       el.className = 'card goal-card';
       el.innerHTML = `
@@ -8687,8 +8747,6 @@ function renderGoals(){
         </div>
         ${connections.length ? `<div class="goal-connection-badges">${connections.map(c => `<span class="goal-connection-badge">${c.icon} ${c.label}</span>`).join('')}</div>` : ''}
         <div class="goal-progress-row"><div class="mini-progress"><span style="width:${pct}%;background:${priorityColor(g.priority)}"></span></div><b>${pct}%</b></div>
-        ${progressExplanation ? `<div class="goal-progress-explain">"${escapeHtml(progressExplanation)}"</div>` : ''}
-        ${activityPreview.length ? `<div class="goal-activity-preview">${activityPreview.map(a => `<div class="goal-activity-preview-row"><span class="dot"></span>${a.date} — ${escapeHtml(a.reason)}</div>`).join('')}</div>` : ''}
       `;
       el.addEventListener('click', () => openGoalDetailsModal(g.id));
       list.appendChild(el);
