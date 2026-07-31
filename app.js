@@ -628,8 +628,8 @@ function computeGoalFinanceSyncStatus(goalId){
 function renderGoalFinanceSyncStatus(){
   const box = document.getElementById('goalFinanceSyncStatus');
   if (!box) return;
-  if (!editingGoalId){ box.hidden = true; return; }
-  const status = computeGoalFinanceSyncStatus(editingGoalId);
+  if (!goalDetailsId){ box.hidden = true; return; } // box la kounye a nan Detay Objektif la, pa nan Modifye Objektif
+  const status = computeGoalFinanceSyncStatus(goalDetailsId);
   if (!status){ box.hidden = true; return; }
   box.hidden = false;
   document.getElementById('goalSyncWallet').textContent = status.walletNames.length ? status.walletNames.join(', ') : '— Pa gen —';
@@ -6932,6 +6932,7 @@ function renderGoalDetailsModal(){
   } else {
     financeRow.hidden = true;
   }
+  if (typeof renderGoalFinanceSyncStatus === 'function') renderGoalFinanceSyncStatus();
 
   // ---- Dat (Pati 4/4: Dat Kòmansman ak Estati vs Tan deplase soti Edit Goal) ----
   const trackInfo = g.deadline ? computeGoalDeadlineTracking(g) : null;
@@ -7360,9 +7361,14 @@ function updateHabitGoalSavingsFieldVisibility(){
   const g = pendingGoalIdForNewHabit ? goals.find(x => x.id === pendingGoalIdForNewHabit) : null;
   const show = !!(g && g.category === 'finance');
   wrap.hidden = !show;
-  if (!show){
+  const nameInput = document.getElementById('habitName');
+  if (show){
+    // Abitid Epay la dwe pote non Objektif la (menm jan ak "+ Ajoute yon Abitid" rapid la)
+    if (nameInput){ nameInput.value = g.title; nameInput.readOnly = true; }
+  } else {
     const inp = document.getElementById('habitGoalSavingsAmount');
     if (inp) inp.value = '';
+    if (nameInput) nameInput.readOnly = false;
   }
 }
 
@@ -7429,6 +7435,8 @@ document.getElementById('saveHabitBtn').addEventListener('click', () => {
     linkHabitToGoal(goalId, habitId);
     if (isFinite(savingsAmount) && savingsAmount > 0){
       setGoalHabitContribution(goalId, habitId, savingsAmount, 'HTG'); // chak fwa abitid la fèt, ajoute nan budje objektif la epi rekalkile pousantaj la
+      const gForWallet = goals.find(x => x.id === goalId);
+      if (gForWallet && gForWallet.walletId) setGoalHabitContributionWallet(goalId, habitId, gForWallet.walletId); // itilize Wallet de Depa ki te deja chwazi a — pou yon vrè tranzaksyon kreye chak fwa abitid la fèt
     }
     if (typeof recordGoalHabitProgressHistory === 'function') recordGoalHabitProgressHistory(goalId, habitId, 'habit-linked');
     if (typeof refreshGoalHabitContributionTotals === 'function') refreshGoalHabitContributionTotals(goalId);
