@@ -2811,19 +2811,17 @@ async function coachCallDirectApi(userText){
   try{
     const history = coachChat.slice(-12).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
     history.push({ role:'user', content:userText });
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const sysMsg = { role:'system', content: `Ou se Coach AI la nan app OSLife la. Reponn an Kreyòl Ayisyen, kout e dirèk. Kontèks itilizatè a: ${JSON.stringify(buildAiContext())}` };
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method:'POST',
       headers:{
         'Content-Type':'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
+        'Authorization': 'Bearer ' + apiKey
       },
       body: JSON.stringify({
-        model:'claude-sonnet-4-6',
+        model:'gpt-4o-mini',
         max_tokens:1000,
-        system: `Ou se Coach AI la nan app OSLife la. Reponn an Kreyòl Ayisyen, kout e dirèk. Kontèks itilizatè a: ${JSON.stringify(buildAiContext())}`,
-        messages: history
+        messages: [sysMsg, ...history]
       }),
       signal: controller.signal
     });
@@ -2831,13 +2829,13 @@ async function coachCallDirectApi(userText){
     if (!res.ok){
       let detail = '';
       try{ const errJson = await res.json(); detail = (errJson && errJson.error && errJson.error.message) || ''; }catch(e){}
-      console.error('Erè API Anthropic (' + res.status + '):', detail || '(pa gen detay)');
+      console.error('Erè API OpenAI (' + res.status + '):', detail || '(pa gen detay)');
       return { ok:false, reason:'server-error', status:res.status, detail };
     }
     const data = await res.json();
-    const textBlock = (data.content||[]).find(b => b.type === 'text');
-    if (!textBlock) return { ok:false, reason:'bad-response' };
-    return { ok:true, reply: textBlock.text, action:null };
+    const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!text) return { ok:false, reason:'bad-response' };
+    return { ok:true, reply: text, action:null };
   }catch(e){
     clearTimeout(timeoutId);
     return { ok:false, reason: (e && e.name === 'AbortError') ? 'timeout' : 'network-error' };
