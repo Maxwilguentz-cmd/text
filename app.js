@@ -96,7 +96,17 @@ const LS = { tasks:'oslife.tasks', templates:'oslife.templates', events:'oslife.
 const ENCRYPTED_KEYS = new Set([LS.wallets, LS.tx, LS.budgets, LS.plans, LS.notes, LS.noteFolders, LS.journal]);
 // Nòt: LS.security pa chifre paske li dwe li SENKWÒN nan demaraj (anvan lock overlay a),
 // e li deja kenbe PIN/modpas la kòm hash sale — jamè an tèks klè.
-function loadLS(key, fallback){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch(e){ return fallback; } }
+function loadLS(key, fallback){
+  try{
+    const v = localStorage.getItem(key);
+    if (v == null) return fallback;
+    const parsed = JSON.parse(v);
+    // Pwoteksyon: si valè ki chifre sou disk lan se tèks literal "null" (pa egzanp apre
+    // yon restore backup ki te gen yon kle vid), pa retounen JS null — sa fè kòd ki li
+    // pwopriyete tankou security.enabled krache yon TypeError chak fwa. Itilize fallback la.
+    return parsed === null ? fallback : parsed;
+  } catch(e){ return fallback; }
+}
 // ==========================================
 // ERROR HANDLING — deteksyon, mesaj senp pou itilizatè a, ak opsyon pou rekipere.
 // Pa janm montre erè teknik (stack trace, "Database Error", elatriye) dirèkteman bay itilizatè a.
