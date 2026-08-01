@@ -2812,15 +2812,10 @@ async function coachCallDirectApi(userText){
     const history = coachChat.slice(-12).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
     history.push({ role:'user', content:userText });
     const sysMsg = { role:'system', content: `Ou se Coach AI la nan app OSLife la. Reponn an Kreyòl Ayisyen, kout e dirèk. Kontèks itilizatè a: ${JSON.stringify(buildAiContext())}` };
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetch('https://oslife-proxy.vercel.app/api/coach', {
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Authorization': 'Bearer ' + apiKey
-      },
+      headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({
-        model:'gpt-4o-mini',
-        max_tokens:1000,
         messages: [sysMsg, ...history]
       }),
       signal: controller.signal
