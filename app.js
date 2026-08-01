@@ -86,7 +86,8 @@ const LS = { tasks:'oslife.tasks', templates:'oslife.templates', events:'oslife.
   plans:'oslife.plans', projects:'oslife.projects', notes:'oslife.notes', noteFolders:'oslife.noteFolders',
   journal:'oslife.journal', healthLogs:'oslife.healthLogs', healthGoals:'oslife.healthGoals',
   goals:'oslife.goals', learning:'oslife.learning', categories:'oslife.categories', coachChat:'oslife.coachChat',
-  coachBackendUrl:'oslife.coachBackendUrl', dataUsageLogs:'oslife.dataUsageLogs', dataUsageApps:'oslife.dataUsageApps',
+  coachBackendUrl:'oslife.coachBackendUrl', coachApiKey:'oslife.coachApiKey', dataUsageLogs:'oslife.dataUsageLogs', dataUsageApps:'oslife.dataUsageApps',
+  firebaseConfigOverride:'oslife.firebaseConfigOverride',
   scoreHistory:'oslife.scoreHistory', activity:'oslife.activity', missions:'oslife.missions',
   missionsHistory:'oslife.missionsHistory', achievements:'oslife.achievements',
   notifications:'oslife.notifications', personalization:'oslife.personalization', security:'oslife.security',
@@ -2852,6 +2853,53 @@ async function coachCallBackend(userText){
     return { ok:false, reason: (e && e.name === 'AbortError') ? 'timeout' : 'network-error' };
   }
 }
+// ⚠️ TÈS SÈLMAN: rele API Anthropic la DIRÈKTEMAN apati navigatè a, ak kle ki
+// sove nan Paramèt (LS.coachApiKey). Sa ekspoze kle a nan aparèy la (localStorage/
+// devtools) — pa yon patwon ki an sekirite pou yon app piblik/plizyè itilizatè.
+// Itilize "URL Backend" la pito pou pwodiksyon (kle a rete sou sèvè a).
+async function coachCallDirectApi(userText){
+  const apiKey = (loadLS(LS.coachApiKey, '') || '').trim();
+  if (!apiKey) return { ok:false, reason:'no-key' };
+  if (!navigator.onLine) return { ok:false, reason:'offline' };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+  try{
+    const history = coachChat.slice(-12).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
+    history.push({ role:'user', content:userText });
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1000,
+        system: `Ou se Coach AI la nan app OSLife la. Reponn an Kreyòl Ayisyen, kout e dirèk. Kontèks itilizatè a: ${JSON.stringify(buildAiContext())}`,
+        messages: history
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) return { ok:false, reason:'server-error' };
+    const data = await res.json();
+    const textBlock = (data.content||[]).find(b => b.type === 'text');
+    if (!textBlock) return { ok:false, reason:'bad-response' };
+    return { ok:true, reply: textBlock.text, action:null };
+  }catch(e){
+    clearTimeout(timeoutId);
+    return { ok:false, reason: (e && e.name === 'AbortError') ? 'timeout' : 'network-error' };
+  }
+}
+// Chwazi ki mòd itilize: Kle API dirèk (tès) an premye si l konfigire,
+// sinon Backend URL la (mòd sekirize), sinon mòd lokal (règ) ap pran ka a.
+async function coachCallAi(userText){
+  const apiKey = (loadLS(LS.coachApiKey, '') || '').trim();
+  if (apiKey) return coachCallDirectApi(userText);
+  return coachCallBackend(userText);
+}
 async function coachHandleSend(){
   const input = document.getElementById('coachChatInput');
   const text = (input.value || '').trim();
@@ -2859,7 +2907,7 @@ async function coachHandleSend(){
   coachAddMessage('user', escapeHtml(text));
   input.value = '';
   coachShowTyping();
-  const result = await coachCallBackend(text);
+  const result = await coachCallAi(text);
   coachHideTyping();
   if (result.ok){
     let action = null;
@@ -2869,7 +2917,7 @@ async function coachHandleSend(){
     coachAddMessage('ai', coachFormatAiText(result.reply), action);
   } else {
     const fallback = coachRespond(text);
-    const note = result.reason === 'no-url' ? '' :
+    const note = (result.reason === 'no-url' || result.reason === 'no-key') ? '' :
       `<div class="coach-fallback-note"><i data-lucide="cloud-off"></i> Backend pa reponn kounye a — mòd lokal ap itilize.</div>`;
     coachAddMessage('ai', note + fallback);
   }
@@ -10725,6 +10773,13 @@ const firebaseConfig = {
   messagingSenderId: "1044999642",
   appId: "1:1044999642:web:3fa764a9908fbd136324e3"
 };
+// Si moun nan antre pwòp Konfig Firebase pa l nan Paramèt (pou l teste ak yon lòt
+// pwojè Firebase), sèvi ak sa a olye de sa ki kòd sous la — san nou pa bezwen
+// touche/modifye kòd la chak fwa. Kite l vid pou toujou itilize konfig default anwo a.
+function getFirebaseConfig(){
+  const override = loadLS(LS.firebaseConfigOverride, null);
+  return (override && override.apiKey) ? override : firebaseConfig;
+}
 
 const SYNC_DB_NAME = 'oslife_sync', SYNC_DB_VERSION = 1;
 let syncDB = null, syncEnabled = false, firestoreDB = null, syncUnsub = null;
@@ -10945,7 +11000,7 @@ function startRealtimeSync(){
 }
 
 // Lis kle 'oslife.*' ki PA fè pati done pou sinkwonize (idantite aparèy, kle chifreman, elatriye).
-const SYNC_EXCLUDE_KEYS = new Set(['oslife.syncCode', 'oslife.deviceId', 'oslife._dek']);
+const SYNC_EXCLUDE_KEYS = new Set(['oslife.syncCode', 'oslife.deviceId', 'oslife._dek', 'oslife.firebaseConfigOverride']);
 function isSyncableKey(key){
   return key.startsWith('oslife.')
     && !SYNC_EXCLUDE_KEYS.has(key)
@@ -10995,14 +11050,14 @@ async function enableCloudSync(code, opts={}){
   syncCode = (code||'').trim();
   if (!syncCode){ showToast('Antre yon kòd sinkwonizasyon dabò'); return; }
   localStorage.setItem('oslife.syncCode', syncCode);
-  if (!firebaseConfig.apiKey){ showToast('⚠️ Ranpli firebaseConfig nan kòd la avan w ka konekte'); setSyncStatus('off'); return; }
+  if (!getFirebaseConfig().apiKey){ showToast('⚠️ Ranpli firebaseConfig nan kòd la avan w ka konekte'); setSyncStatus('off'); return; }
   if (!window.firebase || !window.firebase.initializeApp){
     showToast('Firebase poko fin chaje, n ap eseye ankò...');
     setTimeout(() => enableCloudSync(syncCode, opts), 800);
     return;
   }
   try{
-    if (!window.firebase.apps || !window.firebase.apps.length) window.firebase.initializeApp(firebaseConfig);
+    if (!window.firebase.apps || !window.firebase.apps.length) window.firebase.initializeApp(getFirebaseConfig());
     firestoreDB = window.firebase.firestore();
     syncEnabled = true;
     if (!opts.skipSeed) await seedFullSyncIfNeeded();
@@ -11024,7 +11079,7 @@ async function adoptRemoteAsMaster(code){
   syncCode = (code || syncCode || '').trim();
   if (!syncCode){ showToast('Antre kòd sinkwonizasyon an dabò'); return; }
   if (!firestoreDB){
-    if (!window.firebase.apps || !window.firebase.apps.length) window.firebase.initializeApp(firebaseConfig);
+    if (!window.firebase.apps || !window.firebase.apps.length) window.firebase.initializeApp(getFirebaseConfig());
     firestoreDB = window.firebase.firestore();
   }
   const col = firestoreDB.collection('oslife_sync').doc(syncCode).collection('records');
@@ -11082,10 +11137,10 @@ document.getElementById('syncDisableBtn')?.addEventListener('click', disableClou
 const CLOUD_BACKUP_VERSION = 1;
 async function ensureFirestoreReady(){
   if (firestoreDB) return true;
-  if (!firebaseConfig.apiKey){ showToast('⚠️ Ranpli firebaseConfig nan kòd la avan w ka itilize cloud la'); return false; }
+  if (!getFirebaseConfig().apiKey){ showToast('⚠️ Ranpli firebaseConfig nan kòd la avan w ka itilize cloud la'); return false; }
   if (!window.firebase || !window.firebase.initializeApp){ showToast('Firebase poko fin chaje, eseye ankò nan kèk segond.'); return false; }
   try{
-    if (!window.firebase.apps || !window.firebase.apps.length) window.firebase.initializeApp(firebaseConfig);
+    if (!window.firebase.apps || !window.firebase.apps.length) window.firebase.initializeApp(getFirebaseConfig());
     firestoreDB = window.firebase.firestore();
     return true;
   }catch(e){ console.error(e); showToast('Pa t kapab konekte ak cloud la.'); return false; }
@@ -11198,12 +11253,24 @@ function setCoachBackendStatus(state){
   const input = document.getElementById('coachBackendUrlInput');
   const savedUrl = (loadLS(LS.coachBackendUrl, '') || '').trim();
   if (input) input.value = savedUrl;
-  setCoachBackendStatus(savedUrl ? 'on' : 'off');
+  const keyInput = document.getElementById('coachApiKeyInput');
+  const savedKey = (loadLS(LS.coachApiKey, '') || '').trim();
+  if (keyInput) keyInput.value = savedKey;
+  setCoachBackendStatus(savedKey ? 'on' : (savedUrl ? 'on' : 'off'));
   document.getElementById('coachBackendSaveBtn')?.addEventListener('click', async () => {
     const val = (document.getElementById('coachBackendUrlInput').value || '').trim();
+    const keyVal = (document.getElementById('coachApiKeyInput').value || '').trim();
     saveLS(LS.coachBackendUrl, val);
-    if (!val){ setCoachBackendStatus('off'); showToast('Backend retire — Coach AI ap itilize mòd lokal'); return; }
+    saveLS(LS.coachApiKey, keyVal);
+    if (!val && !keyVal){ setCoachBackendStatus('off'); showToast('Backend/Kle retire — Coach AI ap itilize mòd lokal'); return; }
     setCoachBackendStatus('checking');
+    if (keyVal){
+      // Tès dirèk sou Kle API a (mòd tès sèlman)
+      const result = await coachCallDirectApi('ping');
+      if (result.ok){ setCoachBackendStatus('on'); showToast('Kle API konekte ✓ (mòd tès)'); }
+      else setCoachBackendStatus('error');
+      return;
+    }
     try{
       const controller = new AbortController();
       const t = setTimeout(() => controller.abort(), 8000);
@@ -11224,8 +11291,27 @@ function setCoachBackendStatus(state){
     syncDB = await openSyncDB();
     const input = document.getElementById('syncCodeInput');
     if (input) input.value = syncCode;
+    const cfgInput = document.getElementById('firebaseConfigInput');
+    const savedOverride = loadLS(LS.firebaseConfigOverride, null);
+    if (cfgInput && savedOverride) cfgInput.value = JSON.stringify(savedOverride, null, 2);
+    document.getElementById('firebaseConfigSaveBtn')?.addEventListener('click', () => {
+      const raw = (document.getElementById('firebaseConfigInput').value || '').trim();
+      if (!raw){
+        // Vid = retounen nan konfig default (kòd sous la) — retire override la.
+        saveLS(LS.firebaseConfigOverride, null);
+        showToast('Konfig Firebase retounen nan default la — n ap rechaje...');
+        setTimeout(safeReload, 600);
+        return;
+      }
+      let parsed;
+      try{ parsed = JSON.parse(raw); }catch(e){ showToast('⚠️ JSON envalid — verifye fòma a'); return; }
+      if (!parsed || !parsed.apiKey){ showToast('⚠️ Konfig la dwe gen omwen yon "apiKey"'); return; }
+      saveLS(LS.firebaseConfigOverride, parsed);
+      showToast('Konfig Firebase sove ✓ — n ap rechaje pou teste l...');
+      setTimeout(safeReload, 600);
+    });
     if (!navigator.onLine) setSyncStatus('offline');
-    else if (syncCode && firebaseConfig.apiKey) enableCloudSync(syncCode);
+    else if (syncCode && getFirebaseConfig().apiKey) enableCloudSync(syncCode);
     else setSyncStatus(syncCode ? 'offline' : 'off');
   }catch(e){ console.error('Pa t kapab ouvri IndexedDB pou sync', e); }
 })();
