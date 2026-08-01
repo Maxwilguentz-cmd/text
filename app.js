@@ -248,115 +248,50 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 function seedTasks(){
-  const now = new Date();
-  const d1 = new Date(now); d1.setHours(now.getHours()+5);
-  const d2 = new Date(now); d2.setDate(now.getDate()+2);
-  return [
-    { id:uid(), title:'Fini pwopozisyon BWdepot la', description:'', priority:'urgent', category:'BWdepot', tags:['pwojè'],
-      deadline:d1.toISOString().slice(0,16), reminder:{enabled:true}, subtasks:[{id:uid(),text:'Fè maket la',done:true},{id:uid(),text:'Voye bay kliyan an',done:false}],
-      attachments:[], notes:'', status:'in-progress', recurring:{enabled:false,freq:'weekly'}, createdAt:now.toISOString(), completedAt:null },
-    { id:uid(), title:'Reponn kliyan MW Store', description:'', priority:'high', category:'MW Store', tags:[],
-      deadline:d2.toISOString().slice(0,16), reminder:{enabled:false}, subtasks:[], attachments:[], notes:'', status:'planned',
-      recurring:{enabled:false,freq:'weekly'}, createdAt:now.toISOString(), completedAt:null },
-    { id:uid(), title:'Peye fakti entènèt', description:'', priority:'medium', category:'Finans', tags:[],
-      deadline:'', reminder:{enabled:false}, subtasks:[], attachments:[], notes:'', status:'completed',
-      recurring:{enabled:false,freq:'weekly'}, createdAt:now.toISOString(), completedAt:now.toISOString() },
-  ];
+  // Pa gen travay demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 function seedEvents(){
-  const today = new Date();
-  const d = off => { const x=new Date(today); x.setDate(x.getDate()+off); return localISODate(x); };
-  return [
-    { id:uid(), title:'Leson JavaScript — Fonksyon Flèch', description:'', date:d(0), time:'14:00', location:'', category:'study', reminder:{enabled:true}, recurrence:'none' },
-    { id:uid(), title:'Rankont ak kliyan BWdepot', description:'', date:d(3), time:'10:30', location:'Pétion-Ville', category:'appointment', reminder:{enabled:true}, recurrence:'none' },
-  ];
+  // Pa gen evènman demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 function seedHabits(){
-  const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return localISODate(x); };
-  return [
-    { id:uid(), name:'Li 20 minit', description:'Li yon liv oswa atik chak jou', frequency:'daily', reminder:true, category:'Aprantisaj', goal:'30 jou san rate',
-      completions:[iso(0),iso(1),iso(3),iso(4),iso(5),iso(6)], createdAt:today.toISOString() },
-    { id:uid(), name:'Egzèsis matinal', description:'15 minit egzèsis fizik', frequency:'daily', reminder:true, category:'Sante', goal:'Konsistans chak jou',
-      completions:[iso(0),iso(2),iso(3)], createdAt:today.toISOString() },
-  ];
+  // Pa gen abitid demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 function seedWallets(){
-  return [
-    { id:uid(), name:'Cash', type:'cash', balance:3200 },
-    { id:uid(), name:'MonCash', type:'moncash', balance:5250 },
-    { id:uid(), name:'Sogebank', type:'bank', balance:4000 },
-  ];
+  // Pa gen kont/wallet demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 function seedTx(w){
   // Pa gen tranzaksyon demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
   return [];
 }
 function seedPlans(w){
-  const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()+off); return localISODate(x); };
-  const mon = w.find(x=>x.type==='moncash');
-  return [
-    { id:uid(), operator:'Digicel', type:'unlimited', name:'Illimix 30', price:1900, duration:30, isUnlimited:true,
-      startDate:iso(-28), expireDate:iso(2), walletId:mon?.id||'', notes:'', status:'active', createdAt:today.toISOString() },
-    { id:uid(), operator:'Natcom', type:'internet', name:'Data Pass 5G', price:500, duration:5, isUnlimited:false,
-      startDate:iso(-20), expireDate:iso(-15), walletId:mon?.id||'', notes:'', status:'expired', createdAt:today.toISOString() },
-    { id:uid(), operator:'Natcom', type:'internet', name:'Data Pass 5G', price:500, duration:5, isUnlimited:false,
-      startDate:iso(-13), expireDate:iso(-8), walletId:mon?.id||'', notes:'', status:'expired', createdAt:today.toISOString() },
-    { id:uid(), operator:'Natcom', type:'internet', name:'Data Pass 5G', price:500, duration:5, isUnlimited:false,
-      startDate:iso(-6), expireDate:iso(-1), walletId:mon?.id||'', notes:'', status:'expired', createdAt:today.toISOString() },
-  ];
+  // Pa gen plan entènèt demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 
 function seedProjects(){
-  const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()+off); return localISODate(x); };
-  return [
-    { id:uid(), name:'Refonte sit OSLIFE', description:'Amelyore koub UX pou modil finans lan', status:'in-progress',
-      deadline: iso(12), tasks:[{id:uid(),text:'Fè wireframe',done:true},{id:uid(),text:'Entegre API',done:false},{id:uid(),text:'Tès QA',done:false}],
-      files:[], notes:'', createdAt: today.toISOString() },
-    { id:uid(), name:'Lansman kanpay maketing', description:'', status:'idea',
-      deadline: iso(30), tasks:[{id:uid(),text:'Defini objektif',done:false}], files:[], notes:'', createdAt: today.toISOString() },
-    { id:uid(), name:'Migrasyon done kliyan', description:'Deplase done nan nouvo baz done a', status:'testing',
-      deadline: iso(3), tasks:[{id:uid(),text:'Ekspòte done',done:true},{id:uid(),text:'Enpòte done',done:true},{id:uid(),text:'Valide entegrite',done:false}],
-      files:[], notes:'', createdAt: today.toISOString() },
-  ];
+  // Pa gen pwojè demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 function seedNoteFolders(){
-  return [ {id:'f-general', name:'Jeneral'}, {id:'f-travay', name:'Travay'}, {id:'f-ide', name:'Ide'} ];
+  // Pa gen katab demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 function seedNotes(){
-  const today = new Date();
-  return [
-    { id:uid(), title:'Byenveni nan Nòt', folderId:'f-general', tags:['gid'],
-      bodyHtml:'<p>Sa a se yon nòt egzanp. Ou ka itilize <b>tèks gra</b>, <i>italik</i>, lis, ak plis ankò.</p>', pinned:true, archived:false,
-      createdAt: today.toISOString(), updatedAt: today.toISOString() },
-    { id:uid(), title:'Ide pou pwojè', folderId:'f-ide', tags:['ide','pwojè'],
-      bodyHtml:'<p>Lis kèk ide pou devlope pi devan...</p>', pinned:false, archived:false,
-      createdAt: today.toISOString(), updatedAt: today.toISOString() },
-  ];
+  // Pa gen nòt demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 
 function seedJournal(){
-  const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return localISODate(x); };
-  return [
-    { id:uid(), date: iso(2), mood:4, text:'Jodi a te yon bon jounen. Mwen fè byen nan travay ak BWdepot la e mwen te gen tan pou li yon ti kras.',
-      tags:['travay','refleksyon'], photos:[], createdAt: today.toISOString(), updatedAt: today.toISOString() },
-    { id:uid(), date: iso(1), mood:3, text:'Jounen nòmal, anpil reyinyon men mwen rive fini sa m te planifye a.',
-      tags:['travay'], photos:[], createdAt: today.toISOString(), updatedAt: today.toISOString() },
-    { id:uid(), date: iso(0), mood:5, text:'Mwen santi m trè motive jodi a! Egzèsis maten an te ede anpil.',
-      tags:['sante','motivasyon'], photos:[], createdAt: today.toISOString(), updatedAt: today.toISOString() },
-  ];
+  // Pa gen antre jounal demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 function seedHealthLogs(){
-  const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return localISODate(x); };
-  return [
-    { date: iso(3), water:1250, sleep:6.5, exercise:20, mood:3 },
-    { date: iso(2), water:1750, sleep:7, exercise:0, mood:3 },
-    { date: iso(1), water:2000, sleep:7.5, exercise:30, mood:4 },
-  ];
+  // Pa gen done sante demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 
 // BUG FIX (done "demo" ki parèt tounen apre chak rechajman/restore backup): loadLS() fè
@@ -2964,19 +2899,8 @@ const ICON_CATEGORY = {
 };
 
 function seedActivityLog(){
-  const seed = [
-    { icon: "check-square", color: "var(--blue)", text: "Ou fini travay <b>“Peye fakti entènèt”</b>", offsetMin: 10 },
-    { icon: "graduation-cap", color: "var(--orange)", text: "Ou konplete leson <b>“Fonksyon Flèch”</b>", offsetMin: 60 },
-    { icon: "wallet", color: "var(--green)", text: "Ou ajoute yon depans <b>800 HTG</b>", offsetMin: 180 },
-    { icon: "flame", color: "var(--green)", text: "Ou fè abitid <b>“Li 20 min”</b> jodi a", offsetMin: 300 },
-    { icon: "target", color: "var(--blue)", text: "Objektif <b>“Lanse BWdepot v2”</b> monte a 65%", offsetMin: 1440 },
-  ];
-  const now = Date.now();
-  return seed.map(a => ({
-    id: uid(), icon:a.icon, color:a.color, text:a.text,
-    category: ICON_CATEGORY[a.icon]?.cat || 'general',
-    ts: new Date(now - a.offsetMin*60000).toISOString(),
-  }));
+  // Pa gen istwa aktivite demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 
 let activityLog = loadLS(LS.activity, seedActivityLog());
@@ -6406,15 +6330,8 @@ document.getElementById('saveHealthGoalsBtn').addEventListener('click', () => {
 // GOALS MODULE
 // ==========================================
 function seedGoals(){
-  return [
-    { id: uid(), title:'Lanse BWdepot v2', desc:'Fini ak lansman nouvo vèsyon aplikasyon jesyon depo a.',
-      type:'medium', priority:'high', deadline: isoOffset(todayISO(), 20), progress:65,
-      milestones:[
-        { id: uid(), text:'Fini modil pèman NatCash', done:true },
-        { id: uid(), text:'Tès QA konplè', done:true },
-        { id: uid(), text:'Deplwaman sou pwodiksyon', done:false },
-      ], createdAt: new Date().toISOString() },
-  ];
+  // Pa gen objektif demo pa default ankò — itilizatè a kòmanse ak yon lis vid.
+  return [];
 }
 function persistGoals(){ saveLS(LS.goals, goals); lifeEngineRefresh(); }
 function persistLearning(){ saveLS(LS.learning, learning); lifeEngineRefresh(); renderLevelPanels(); refreshDashboardLearningWidget(); }
