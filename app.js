@@ -227,14 +227,19 @@ async function decryptJSON(raw, fallback){
       const cipher = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
       const key = await getCryptoKey();
       const plainBuf = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, cipher);
-      return JSON.parse(new TextDecoder().decode(plainBuf));
+      const parsed = JSON.parse(new TextDecoder().decode(plainBuf));
+      return parsed === null ? fallback : parsed;
     }catch(e){
       console.error('Erè dekripte done sansib:', e);
       return fallback;
     }
   }
   // Done ansyen (anvan chifreman) — li nòmalman, y ap chifre otomatikman nan pwochen sovgad la.
-  try{ return JSON.parse(raw); }catch(e){ return fallback; }
+  try{
+    const parsed = JSON.parse(raw);
+    // Pwoteksyon: menm bug ak loadLS() — tèks literal "null" pa dwe ekrase fallback la.
+    return parsed === null ? fallback : parsed;
+  }catch(e){ return fallback; }
 }
 let _pendingSecureSaves = 0;
 async function secureSave(lsKey, val){
@@ -318,7 +323,12 @@ function loadLSMaybeEncrypted(lsKey, seedFallback, emptyFallback){
   const raw = localStorage.getItem(lsKey);
   if (raw == null) return seedFallback; // pa gen anyen sou disk ditou — premye itilizasyon, ok pou demo
   if (raw.startsWith(ENC_PREFIX)) return emptyFallback; // done chifre — pann bootSecureModules() korije l
-  try{ return JSON.parse(raw); }catch(e){ return seedFallback; }
+  try{
+    const parsed = JSON.parse(raw);
+    // Menm pwoteksyon ak loadLS(): si valè a se tèks literal "null" (pa egzanp apre yon
+    // sinkwonizasyon/restore ki te pouse yon valè vid), pa retounen JS null.
+    return parsed === null ? seedFallback : parsed;
+  }catch(e){ return seedFallback; }
 }
 
 let tasks = loadLS(LS.tasks, seedTasks());
@@ -9616,7 +9626,10 @@ async function readKeyPlain(lsKey){
   const raw = localStorage.getItem(lsKey);
   if (raw == null) return undefined;
   if (ENCRYPTED_KEYS.has(lsKey)) return await decryptJSON(raw, undefined);
-  try{ return JSON.parse(raw); }catch(e){ return undefined; }
+  try{
+    const parsed = JSON.parse(raw);
+    return parsed === null ? undefined : parsed;
+  }catch(e){ return undefined; }
 }
 async function writeKeyFromBackup(lsKey, val){
   if (val === undefined) return;
@@ -10363,9 +10376,10 @@ async function migrateSecureKey(lsKey, assign){
   const raw = localStorage.getItem(lsKey);
   const current = assign(); // lire valè aktyèl la (seed/fallback) san chanje l
   const val = await decryptJSON(raw, current);
-  assign(val);
+  // Pwoteksyon siplemantè: pa janm kite varyab la vin JS null.
+  assign(val === null ? current : val);
   // Si done a te an tèks klè (anvan chifreman te egziste), chifre l kounye a.
-  if (raw != null && !raw.startsWith(ENC_PREFIX)) secureSave(lsKey, val);
+  if (raw != null && !raw.startsWith(ENC_PREFIX)) secureSave(lsKey, val === null ? current : val);
 }
 async function bootSecureModules(){
   try{
@@ -10694,10 +10708,14 @@ async function decryptJSONWithKey(raw, key, fallback){
       const iv = Uint8Array.from(atob(parts[0]), c => c.charCodeAt(0));
       const cipher = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
       const plainBuf = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, cipher);
-      return JSON.parse(new TextDecoder().decode(plainBuf));
+      const parsed = JSON.parse(new TextDecoder().decode(plainBuf));
+      return parsed === null ? fallback : parsed;
     }catch(e){ return fallback; }
   }
-  try{ return JSON.parse(raw); }catch(e){ return fallback; }
+  try{
+    const parsed = JSON.parse(raw);
+    return parsed === null ? fallback : parsed;
+  }catch(e){ return fallback; }
 }
 async function encryptJSONWithKey(val, key){
   const iv = crypto.getRandomValues(new Uint8Array(12));
