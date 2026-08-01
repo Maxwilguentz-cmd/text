@@ -2883,7 +2883,12 @@ async function coachCallDirectApi(userText){
       signal: controller.signal
     });
     clearTimeout(timeoutId);
-    if (!res.ok) return { ok:false, reason:'server-error' };
+    if (!res.ok){
+      let detail = '';
+      try{ const errJson = await res.json(); detail = (errJson && errJson.error && errJson.error.message) || ''; }catch(e){}
+      console.error('Erè API Anthropic (' + res.status + '):', detail || '(pa gen detay)');
+      return { ok:false, reason:'server-error', status:res.status, detail };
+    }
     const data = await res.json();
     const textBlock = (data.content||[]).find(b => b.type === 'text');
     if (!textBlock) return { ok:false, reason:'bad-response' };
@@ -11058,6 +11063,88 @@ async function seedFullSyncIfNeeded(){
   window.__origLSSetItem.call(localStorage, seededFlagKey, '1');
 }
 
+// Enpòte yon kle AES-GCM apati yon chèn base64 (menm fòma ak oslife._dek).
+async function importDekKey(b64){
+  const keyBytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  return crypto.subtle.importKey('raw', keyBytes, { name:'AES-GCM' }, false, ['encrypt','decrypt']);
+}
+async function decryptJSONWithKey(raw, key, fallback){
+  if (raw == null) return fallback;
+  if (typeof raw === 'string' && raw.startsWith(ENC_PREFIX)){
+    try{
+      const parts = raw.slice(ENC_PREFIX.length).split(':');
+      const iv = Uint8Array.from(atob(parts[0]), c => c.charCodeAt(0));
+      const cipher = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
+      const plainBuf = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, cipher);
+      return JSON.parse(new TextDecoder().decode(plainBuf));
+    }catch(e){ return fallback; }
+  }
+  try{ return JSON.parse(raw); }catch(e){ return fallback; }
+}
+async function encryptJSONWithKey(val, key){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = new TextEncoder().encode(JSON.stringify(val));
+  const cipher = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, data);
+  const ivB64 = btoa(String.fromCharCode(...iv));
+  const cB64 = btoa(String.fromCharCode(...new Uint8Array(cipher)));
+  return ENC_PREFIX + ivB64 + ':' + cB64;
+}
+// BUG FIX (done chifre ki "disparèt" ant aparèy): oslife._dek (kle chifreman Finans/
+// Jounal/Notes) pa janm sinkwonize eksprè pou rezon sekirite — kidonk chak aparèy te
+// jenere PWÒP kle pa li, e done chifre ki soti nan yon lòt aparèy te vin ILIZIB (echèk
+// dekripsyon san mesaj) => sanble yo "pèdi". Fonksyon sa a fè tout aparèy ki itilize
+// menm Kòd Sinkwonizasyon dakò sou YON SÈL kle pataje (sove apa nan Firestore,
+// oslife_sync/{code}.dek), e FIZYONE (pa id) done chifre 2 aparèy yo AVAN chanje kle a,
+// pou pa gen anyen ki pèdi menm si toude aparèy yo te deja gen pwòp done pa yo.
+async function reconcileEncryptionKeyBeforeSync(){
+  try{
+    const rootRef = firestoreDB.collection('oslife_sync').doc(syncCode);
+    const rootSnap = await rootRef.get();
+    const remoteDekB64 = rootSnap.exists ? (rootSnap.data().dek || null) : null;
+    const localDekB64 = localStorage.getItem('oslife._dek') || null;
+
+    if (!remoteDekB64){
+      if (localDekB64) await rootRef.set({ dek: localDekB64 }, { merge:true });
+      return; // premye aparèy la sou kòd sa a — pa gen lòt kle pou rekonsilye
+    }
+    if (localDekB64 && remoteDekB64 === localDekB64) return; // deja menm kle
+
+    const oldKey = localDekB64 ? await importDekKey(localDekB64) : null;
+    const newKey = await importDekKey(remoteDekB64);
+    const col = firestoreDB.collection('oslife_sync').doc(syncCode).collection('records');
+
+    for (const lsKey of ENCRYPTED_KEYS){
+      const localRaw = localStorage.getItem(lsKey);
+      let localPlain = null;
+      if (localRaw != null) localPlain = oldKey ? await decryptJSONWithKey(localRaw, oldKey, null) : (()=>{ try{return JSON.parse(localRaw);}catch(e){return null;} })();
+
+      let remotePlain = null;
+      try{
+        const snap = await col.doc(lsKey).get();
+        if (snap.exists && snap.data().value != null) remotePlain = await decryptJSONWithKey(snap.data().value, newKey, null);
+      }catch(e){ console.error('Pa t ka li done lòt aparèy la pou', lsKey, e); }
+
+      let finalPlain;
+      if (Array.isArray(localPlain) && Array.isArray(remotePlain)){
+        const mergedStr = mergeJSONValues(JSON.stringify(localPlain), JSON.stringify(remotePlain));
+        finalPlain = mergedStr != null ? JSON.parse(mergedStr) : remotePlain;
+      } else {
+        finalPlain = remotePlain != null ? remotePlain : localPlain;
+      }
+      if (finalPlain == null) continue;
+      const reEncrypted = await encryptJSONWithKey(finalPlain, newKey);
+      localStorage.setItem(lsKey, reEncrypted); // pase nan hook la → antre nan 'pending' → monte sou Firestore ak kle a
+    }
+
+    window.__origLSSetItem.call(localStorage, 'oslife._dek', remoteDekB64);
+    _cryptoKeyCache = newKey;
+    showToast('Kle chifreman rekonsilye ant aparèy yo ✓ — done fizyone san pèt');
+  }catch(e){
+    console.error('Erè rekonsilyasyon kle chifreman', e);
+    showToast('⚠️ Pa t ka rekonsilye kle chifreman an — done chifre ka pa parèt byen sou aparèy sa a');
+  }
+}
+
 async function enableCloudSync(code, opts={}){
   syncCode = (code||'').trim();
   if (!syncCode){ showToast('Antre yon kòd sinkwonizasyon dabò'); return; }
@@ -11071,6 +11158,7 @@ async function enableCloudSync(code, opts={}){
   try{
     if (!window.firebase.apps || !window.firebase.apps.length) window.firebase.initializeApp(getFirebaseConfig());
     firestoreDB = window.firebase.firestore();
+    await reconcileEncryptionKeyBeforeSync();
     syncEnabled = true;
     if (!opts.skipSeed) await seedFullSyncIfNeeded();
     startRealtimeSync();
@@ -11280,7 +11368,14 @@ function setCoachBackendStatus(state){
       // Tès dirèk sou Kle API a (mòd tès sèlman)
       const result = await coachCallDirectApi('ping');
       if (result.ok){ setCoachBackendStatus('on'); showToast('Kle API konekte ✓ (mòd tès)'); }
-      else setCoachBackendStatus('error');
+      else {
+        setCoachBackendStatus('error');
+        const reasonLabel = result.reason === 'offline' ? 'ou pa gen koneksyon entènèt'
+          : result.reason === 'timeout' ? 'demand lan pran twò tan (timeout)'
+          : result.reason === 'network-error' ? 'erè rezo (verifye koneksyon w)'
+          : (result.detail || (result.status ? ('kòd ' + result.status) : 'erè enkoni'));
+        showToast('⚠️ Tès kle API a echwe: ' + reasonLabel);
+      }
       return;
     }
     try{
