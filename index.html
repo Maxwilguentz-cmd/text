@@ -1773,6 +1773,14 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <div><div class="lbl">Estati</div><div class="sub" id="syncStatusSub">Dezaktive — pa gen kòd sinkwonizasyon</div></div>
           <div id="syncStatusIc" style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-faint);"><i data-lucide="cloud-off"></i></div>
         </div>
+        <div class="settings-row" style="align-items:flex-start;">
+          <div><div class="lbl">Konfig Firebase (JSON, tès sèlman)</div><div class="sub">⚠️ Kole konfig pwojè Firebase pa w la (Firebase Console &gt; Project Settings &gt; SDK config) si w ap teste ak yon lòt pwojè olye pou w chanje kòd sous la. Kite l vid pou itilize konfig default la.</div></div>
+          <textarea class="field" id="firebaseConfigInput" rows="4" style="width:220px;font-family:var(--font-mono);font-size:11px;" placeholder='{"apiKey":"...","projectId":"..."}'></textarea>
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Sove & Teste Konfig</div><div class="sub">Sove konfig Firebase la epi rechaje pou l pran efè</div></div>
+          <button class="btn btn-primary" id="firebaseConfigSaveBtn">Sove & Teste</button>
+        </div>
         <div class="settings-row">
           <div><div class="lbl">Kòd Sinkwonizasyon</div><div class="sub">Antre menm kòd la sou tout aparèy ou pou senkwonize done yo otomatikman</div></div>
           <input type="text" class="field" id="syncCodeInput" placeholder="ekz. mwen-2026" style="width:160px;">
@@ -1802,11 +1810,15 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <div id="coachBackendStatusIc" style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-faint);"><i data-lucide="server-off"></i></div>
         </div>
         <div class="settings-row">
-          <div><div class="lbl">URL Backend</div><div class="sub">Adrès sèvè ki kenbe kle API a an sekirite — pa gen okenn API key ki dwe antre isit la</div></div>
+          <div><div class="lbl">URL Backend</div><div class="sub">Adrès sèvè ki kenbe kle API a an sekirite — itilize sa pou pwodiksyon</div></div>
           <input type="text" class="field" id="coachBackendUrlInput" placeholder="https://mon-backend.exemple.com" style="width:220px;">
         </div>
         <div class="settings-row">
-          <div><div class="lbl">Sove & Teste</div><div class="sub">Sove URL la epi verifye si backend la reponn</div></div>
+          <div><div class="lbl">Kle API (tès sèlman)</div><div class="sub">⚠️ Pou tès rapid san backend — kle a sove nan aparèy ou (ak nan Firebase si Sync aktive). Pa itilize sa pou yon app piblik.</div></div>
+          <input type="password" class="field" id="coachApiKeyInput" placeholder="sk-ant-..." style="width:220px;" autocomplete="off">
+        </div>
+        <div class="settings-row">
+          <div><div class="lbl">Sove & Teste</div><div class="sub">Sove URL/Kle a epi verifye si l reponn</div></div>
           <button class="btn btn-primary" id="coachBackendSaveBtn">Sove & Teste</button>
         </div>
       </div>
