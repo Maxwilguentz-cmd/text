@@ -10766,6 +10766,15 @@ function idbGetAll(store){
     req.onerror = (e) => reject(e.target.error);
   });
 }
+function idbGet(store, key){
+  return new Promise((resolve, reject) => {
+    if (!syncDB) return resolve(null);
+    const tx = syncDB.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
 function idbDelete(store, key){
   return new Promise((resolve, reject) => {
     if (!syncDB) return resolve(null);
@@ -10898,11 +10907,20 @@ async function flushPendingSync(){
   if (needsReload) safeReload();
 }
 
-function mergeRemoteChange(key, remote){
+async function mergeRemoteChange(key, remote){
   if (!remote || remote.deviceId === deviceId) return; // chanjman pa m ki tounen, inyore
   if (lastSeen[key] === remote.value) return; // menm valè deja, anyen pa chanje
   const localRaw = localStorage.getItem(key);
   if (localRaw === remote.value) { lastSeen[key] = remote.value; return; } // deja idantik, pa gen pou n reload
+  // BUG FIX: si gen yon chanjman LOKAL ki poko monte sou Firestore (toujou nan
+  // 'pending' — pa flush ankò), pa kite yon evènman remote ki rive an menm tan
+  // efase l pandan l poko monte. Sa te ka fè yon done ou fèk sove lokalman
+  // disparèt anvan menm li rive sou Firebase — "sa m voye a se pou l rete".
+  const pendingRec = await idbGet('pending', key);
+  if (pendingRec && pendingRec.updatedAt >= (remote.updatedAt || 0)){
+    scheduleFlush(); // chanjman lokal la egal oswa pi resan — kenbe l, l ap monte lè flush la kouri
+    return;
+  }
   const merged = mergeJSONValues(localRaw, remote.value);
   const finalValue = merged !== null ? merged : remote.value;
   if (finalValue === localRaw){ lastSeen[key] = finalValue; return; } // fusion an bay menm bagay ki te la deja
