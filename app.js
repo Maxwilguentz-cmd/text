@@ -87,7 +87,6 @@ const LS = { tasks:'oslife.tasks', templates:'oslife.templates', events:'oslife.
   journal:'oslife.journal', healthLogs:'oslife.healthLogs', healthGoals:'oslife.healthGoals',
   goals:'oslife.goals', learning:'oslife.learning', categories:'oslife.categories', coachChat:'oslife.coachChat',
   coachBackendUrl:'oslife.coachBackendUrl', coachApiKey:'oslife.coachApiKey', dataUsageLogs:'oslife.dataUsageLogs', dataUsageApps:'oslife.dataUsageApps',
-  firebaseConfigOverride:'oslife.firebaseConfigOverride',
   scoreHistory:'oslife.scoreHistory', activity:'oslife.activity', missions:'oslife.missions',
   missionsHistory:'oslife.missionsHistory', achievements:'oslife.achievements',
   notifications:'oslife.notifications', personalization:'oslife.personalization', security:'oslife.security',
@@ -360,24 +359,41 @@ function seedHealthLogs(){
   ];
 }
 
+// BUG FIX (done "demo" ki parèt tounen apre chak rechajman/restore backup): loadLS() fè
+// JSON.parse() dirèkteman sou valè a. Men pou kle chifre yo (Finans/Notes/Jounal), valè ki
+// sou disk lan se TÈKS CHIFRE (pa yon JSON valab), kidonk JSON.parse te toujou echwe e
+// loadLS() te toujou retounen SEED/DEMO a — kòm si se te premye fwa moun nan louvri app la —
+// jiskaske bootSecureModules() (pi ba, an asenkwòn) rive dekripte e korije valè yo yon ti
+// moman apre. Rezilta a: chak fwa paj la rechaje (ansanm apre yon restore backup), moun nan
+// wè done DEMO yo pou yon ti tan olye pou yo wè "ap chaje..." — sa fè l sanble done reyèl li
+// yo retounen nan default/disparèt. Fonksyon sa a bay yon plasholder VID (pa demo) pandan n
+// ap tann dekripsyon an, si nou detekte se done chifre ki la — pou moun nan pa janm konfonn
+// done demo ak pwòp done pa li.
+function loadLSMaybeEncrypted(lsKey, seedFallback, emptyFallback){
+  const raw = localStorage.getItem(lsKey);
+  if (raw == null) return seedFallback; // pa gen anyen sou disk ditou — premye itilizasyon, ok pou demo
+  if (raw.startsWith(ENC_PREFIX)) return emptyFallback; // done chifre — pann bootSecureModules() korije l
+  try{ return JSON.parse(raw); }catch(e){ return seedFallback; }
+}
+
 let tasks = loadLS(LS.tasks, seedTasks());
 let templates = loadLS(LS.templates, []);
 let events = loadLS(LS.events, seedEvents());
 let habits = loadLS(LS.habits, seedHabits());
 let gami = loadLS(LS.gami, { xp:0, badges:[] });
-let wallets = loadLS(LS.wallets, seedWallets());
-let tx = loadLS(LS.tx, seedTx(wallets));
-let budgets = loadLS(LS.budgets, { period:'monthly', limits:{ 'Manje':6000, 'Transpò':3000, 'Entènèt':2500, 'Abònman':1500 } });
+let wallets = loadLSMaybeEncrypted(LS.wallets, seedWallets(), []);
+let tx = loadLSMaybeEncrypted(LS.tx, seedTx(wallets), []);
+let budgets = loadLSMaybeEncrypted(LS.budgets, { period:'monthly', limits:{ 'Manje':6000, 'Transpò':3000, 'Entènèt':2500, 'Abònman':1500 } }, { period:'monthly', limits:{} });
 // Dlo/Bwason/Custom pa dwe janm gen limit bidjè — yo se kategori espesyal ki pa itilize sistèm bidjè a
 if (budgets.limits){ delete budgets.limits['Dlo']; delete budgets.limits['Bwason']; delete budgets.limits['Custom']; }
-let plans = loadLS(LS.plans, seedPlans(wallets));
+let plans = loadLSMaybeEncrypted(LS.plans, seedPlans(wallets), []);
 let dataUsageLogs = loadLS(LS.dataUsageLogs, []);
 let dataUsageApps = loadLS(LS.dataUsageApps, ['Instagram','Facebook','WhatsApp','TikTok','YouTube','Messenger']);
 let projects = loadLS(LS.projects, seedProjects());
-let noteFolders = loadLS(LS.noteFolders, seedNoteFolders());
-let notes = loadLS(LS.notes, seedNotes());
+let noteFolders = loadLSMaybeEncrypted(LS.noteFolders, seedNoteFolders(), []);
+let notes = loadLSMaybeEncrypted(LS.notes, seedNotes(), []);
 let activeFolderFilter = '';
-let journal = loadLS(LS.journal, seedJournal());
+let journal = loadLSMaybeEncrypted(LS.journal, seedJournal(), []);
 let healthLogs = loadLS(LS.healthLogs, seedHealthLogs());
 let healthGoals = loadLS(LS.healthGoals, { water:2000, sleep:8, exercise:30 });
 // ---- Migrasyon inik: ansyen sistèm "Dlo an vè" (0-8) → nouvo sistèm kantite egzat an ml ----
@@ -10496,12 +10512,8 @@ const firebaseConfig = {
   messagingSenderId: "1044999642",
   appId: "1:1044999642:web:3fa764a9908fbd136324e3"
 };
-// Si moun nan antre pwòp Konfig Firebase pa l nan Paramèt (pou l teste ak yon lòt
-// pwojè Firebase), sèvi ak sa a olye de sa ki kòd sous la — san nou pa bezwen
-// touche/modifye kòd la chak fwa. Kite l vid pou toujou itilize konfig default anwo a.
 function getFirebaseConfig(){
-  const override = loadLS(LS.firebaseConfigOverride, null);
-  return (override && override.apiKey) ? override : firebaseConfig;
+  return firebaseConfig;
 }
 
 const SYNC_DB_NAME = 'oslife_sync', SYNC_DB_VERSION = 1;
@@ -10723,7 +10735,7 @@ function startRealtimeSync(){
 }
 
 // Lis kle 'oslife.*' ki PA fè pati done pou sinkwonize (idantite aparèy, kle chifreman, elatriye).
-const SYNC_EXCLUDE_KEYS = new Set(['oslife.syncCode', 'oslife.deviceId', 'oslife._dek', 'oslife.firebaseConfigOverride']);
+const SYNC_EXCLUDE_KEYS = new Set(['oslife.syncCode', 'oslife.deviceId', 'oslife._dek']);
 function isSyncableKey(key){
   return key.startsWith('oslife.')
     && !SYNC_EXCLUDE_KEYS.has(key)
@@ -11104,25 +11116,6 @@ function setCoachBackendStatus(state){
     syncDB = await openSyncDB();
     const input = document.getElementById('syncCodeInput');
     if (input) input.value = syncCode;
-    const cfgInput = document.getElementById('firebaseConfigInput');
-    const savedOverride = loadLS(LS.firebaseConfigOverride, null);
-    if (cfgInput && savedOverride) cfgInput.value = JSON.stringify(savedOverride, null, 2);
-    document.getElementById('firebaseConfigSaveBtn')?.addEventListener('click', () => {
-      const raw = (document.getElementById('firebaseConfigInput').value || '').trim();
-      if (!raw){
-        // Vid = retounen nan konfig default (kòd sous la) — retire override la.
-        saveLS(LS.firebaseConfigOverride, null);
-        showToast('Konfig Firebase retounen nan default la — n ap rechaje...');
-        setTimeout(safeReload, 600);
-        return;
-      }
-      let parsed;
-      try{ parsed = JSON.parse(raw); }catch(e){ showToast('⚠️ JSON envalid — verifye fòma a'); return; }
-      if (!parsed || !parsed.apiKey){ showToast('⚠️ Konfig la dwe gen omwen yon "apiKey"'); return; }
-      saveLS(LS.firebaseConfigOverride, parsed);
-      showToast('Konfig Firebase sove ✓ — n ap rechaje pou teste l...');
-      setTimeout(safeReload, 600);
-    });
     if (!navigator.onLine) setSyncStatus('offline');
     else if (syncCode && getFirebaseConfig().apiKey) enableCloudSync(syncCode);
     else setSyncStatus(syncCode ? 'offline' : 'off');
