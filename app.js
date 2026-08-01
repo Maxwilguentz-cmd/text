@@ -266,7 +266,7 @@ function seedTasks(){
 }
 function seedEvents(){
   const today = new Date();
-  const d = off => { const x=new Date(today); x.setDate(x.getDate()+off); return x.toISOString().slice(0,10); };
+  const d = off => { const x=new Date(today); x.setDate(x.getDate()+off); return localISODate(x); };
   return [
     { id:uid(), title:'Leson JavaScript — Fonksyon Flèch', description:'', date:d(0), time:'14:00', location:'', category:'study', reminder:{enabled:true}, recurrence:'none' },
     { id:uid(), title:'Rankont ak kliyan BWdepot', description:'', date:d(3), time:'10:30', location:'Pétion-Ville', category:'appointment', reminder:{enabled:true}, recurrence:'none' },
@@ -274,7 +274,7 @@ function seedEvents(){
 }
 function seedHabits(){
   const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); };
+  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return localISODate(x); };
   return [
     { id:uid(), name:'Li 20 minit', description:'Li yon liv oswa atik chak jou', frequency:'daily', reminder:true, category:'Aprantisaj', goal:'30 jou san rate',
       completions:[iso(0),iso(1),iso(3),iso(4),iso(5),iso(6)], createdAt:today.toISOString() },
@@ -295,7 +295,7 @@ function seedTx(w){
 }
 function seedPlans(w){
   const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()+off); return x.toISOString().slice(0,10); };
+  const iso = off => { const x=new Date(today); x.setDate(x.getDate()+off); return localISODate(x); };
   const mon = w.find(x=>x.type==='moncash');
   return [
     { id:uid(), operator:'Digicel', type:'unlimited', name:'Illimix 30', price:1900, duration:30, isUnlimited:true,
@@ -311,7 +311,7 @@ function seedPlans(w){
 
 function seedProjects(){
   const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()+off); return x.toISOString().slice(0,10); };
+  const iso = off => { const x=new Date(today); x.setDate(x.getDate()+off); return localISODate(x); };
   return [
     { id:uid(), name:'Refonte sit OSLIFE', description:'Amelyore koub UX pou modil finans lan', status:'in-progress',
       deadline: iso(12), tasks:[{id:uid(),text:'Fè wireframe',done:true},{id:uid(),text:'Entegre API',done:false},{id:uid(),text:'Tès QA',done:false}],
@@ -340,7 +340,7 @@ function seedNotes(){
 
 function seedJournal(){
   const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); };
+  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return localISODate(x); };
   return [
     { id:uid(), date: iso(2), mood:4, text:'Jodi a te yon bon jounen. Mwen fè byen nan travay ak BWdepot la e mwen te gen tan pou li yon ti kras.',
       tags:['travay','refleksyon'], photos:[], createdAt: today.toISOString(), updatedAt: today.toISOString() },
@@ -352,7 +352,7 @@ function seedJournal(){
 }
 function seedHealthLogs(){
   const today = new Date();
-  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); };
+  const iso = off => { const x=new Date(today); x.setDate(x.getDate()-off); return localISODate(x); };
   return [
     { date: iso(3), water:1250, sleep:6.5, exercise:20, mood:3 },
     { date: iso(2), water:1750, sleep:7, exercise:0, mood:3 },
@@ -686,7 +686,7 @@ function renderGoalFinanceSyncStatus(){
 function offsetDateBefore(dateStr, days){
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0,10);
+  return localISODate(d);
 }
 
 function findGoalCalendarEvent(goalId, eventType){
@@ -2109,7 +2109,7 @@ function renderCoachDailyAssistant(){
 // JAMÈ kontni prive Notes/Journal konplè — sèlman metadata (dat, kantite) pou lòt modil yo.
 function buildAiContext(){
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 45);
-  const cutoffISO = cutoff.toISOString().slice(0, 10);
+  const cutoffISO = localISODate(cutoff);
   return {
     today: todayISO(),
     tasks: tasks.filter(t => !t.completedAt || t.completedAt.slice(0,10) >= cutoffISO).slice(0, 60).map(t => ({
@@ -3031,7 +3031,7 @@ renderActivity();
 
 function formatDayLabel(ts){
   const d = new Date(ts);
-  const iso = d.toISOString().slice(0,10);
+  const iso = localISODate(d);
   const t = todayISO();
   if (iso === t) return "Jodi a";
   if (iso === isoOffset(t,-1)) return "Yè";
@@ -3429,7 +3429,7 @@ function expandOccurrences(item, rangeStart, rangeEnd){
   let d = new Date(item.date + 'T00:00:00');
   let guard = 0;
   while (d <= rangeEnd && guard < 400){
-    if (d >= rangeStart) out.push({...item, date: d.toISOString().slice(0,10)});
+    if (d >= rangeStart) out.push({...item, date: localISODate(d)});
     if (item.recurrence === 'daily') d.setDate(d.getDate()+1);
     else if (item.recurrence === 'weekly') d.setDate(d.getDate()+7);
     else if (item.recurrence === 'monthly') d.setMonth(d.getMonth()+1);
@@ -3490,7 +3490,7 @@ function renderCalMonth(wrap){
   const todayStr = new Date().toDateString();
   for (let i=0;i<42;i++){
     const d = new Date(gridStart); d.setDate(gridStart.getDate()+i);
-    const dISO = d.toISOString().slice(0,10);
+    const dISO = localISODate(d);
     const cell = document.createElement('div');
     cell.className = 'cal-cell' + (d.getMonth() !== m ? ' other' : '') + (d.toDateString() === todayStr ? ' today' : '');
     const dayItems = items.filter(it => it.date === dISO);
@@ -3514,7 +3514,7 @@ function renderCalWeek(wrap){
   cols.className = 'cal-week-cols';
   for (let i=0;i<7;i++){
     const d = new Date(weekStart); d.setDate(weekStart.getDate()+i);
-    const dISO = d.toISOString().slice(0,10);
+    const dISO = localISODate(d);
     const dayItems = items.filter(it => it.date === dISO);
     const col = document.createElement('div');
     col.className = 'cal-week-col';
@@ -3541,7 +3541,7 @@ function renderCalDay(wrap){
   addBtn.className = 'btn btn-primary';
   addBtn.style.marginTop = '14px';
   addBtn.innerHTML = '<i data-lucide="plus"></i> Ajoute evènman jou sa a';
-  addBtn.addEventListener('click', () => openEventModal(null, dayStart.toISOString().slice(0,10)));
+  addBtn.addEventListener('click', () => openEventModal(null, localISODate(dayStart)));
   wrap.appendChild(addBtn);
 }
 
@@ -3601,7 +3601,7 @@ function openEventModal(id, presetDate){
   document.getElementById('eventModalTitle').textContent = ev ? 'Modifye Evènman' : 'Nouvo Evènman';
   document.getElementById('eventTitle').value = ev?.title || '';
   document.getElementById('eventDesc').value = ev?.description || '';
-  document.getElementById('eventDate').value = ev?.date || presetDate || new Date().toISOString().slice(0,10);
+  document.getElementById('eventDate').value = ev?.date || presetDate || localISODate();
   document.getElementById('eventTime').value = ev?.time || '';
   document.getElementById('eventLocation').value = ev?.location || '';
   document.getElementById('eventCategory').value = ev?.category || 'event';
@@ -3648,8 +3648,20 @@ const BADGE_DEFS = [
   { id:'streak7', label:'Semèn Solid', min:7 },
   { id:'streak30', label:'Mwa Fè', min:30 },
 ];
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function isoOffset(base, off){ const d = new Date(base+'T00:00:00'); d.setDate(d.getDate()+off); return d.toISOString().slice(0,10); }
+// BUG FIX: `.toISOString()` konvèti nan UTC — pou yon moun ki nan yon fizo ki
+// DEYÈ UTC (pw. Ayiti, UTC-4/UTC-5), nan aswè (pw. apre 8-9è PM), UTC la deja
+// chanje jou pou DEMEN, kidonk dat lan te parèt 1 jou (oswa kèk è) DAVANS pase
+// dat REYÈL lokal la — sa te vizib patikilyèman nan Finans (dat tranzaksyon).
+// Fonksyon sa a itilize ane/mwa/jou LOKAL aparèy la olye de UTC.
+function localISODate(d){
+  d = d || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function todayISO(){ return localISODate(); }
+function isoOffset(base, off){ const d = new Date(base+'T00:00:00'); d.setDate(d.getDate()+off); return localISODate(d); }
 
 function calcStreaks(h){
   const set = new Set(h.completions||[]);
@@ -4284,7 +4296,7 @@ function incomeBucketKey(dateStr, period){
   if (period === 'weekly'){
     const day = (d.getDay() + 6) % 7; // Lendi = 0
     const monday = new Date(d); monday.setDate(d.getDate() - day);
-    return monday.toISOString().slice(0,10);
+    return localISODate(monday);
   }
   if (period === 'yearly') return dateStr.slice(0,4);
   return dateStr.slice(0,7); // monthly (default)
@@ -4301,11 +4313,11 @@ function incomeSeriesForPeriod(period){
   const keys = [];
   const today = new Date();
   if (period === 'daily'){
-    for (let i=n-1;i>=0;i--){ const d = new Date(); d.setDate(today.getDate()-i); keys.push(d.toISOString().slice(0,10)); }
+    for (let i=n-1;i>=0;i--){ const d = new Date(); d.setDate(today.getDate()-i); keys.push(localISODate(d)); }
   } else if (period === 'weekly'){
     const day = (today.getDay() + 6) % 7;
     const thisMonday = new Date(today); thisMonday.setDate(today.getDate()-day);
-    for (let i=n-1;i>=0;i--){ const d = new Date(thisMonday); d.setDate(thisMonday.getDate()-i*7); keys.push(d.toISOString().slice(0,10)); }
+    for (let i=n-1;i>=0;i--){ const d = new Date(thisMonday); d.setDate(thisMonday.getDate()-i*7); keys.push(localISODate(d)); }
   } else if (period === 'yearly'){
     for (let i=n-1;i>=0;i--){ keys.push(String(today.getFullYear()-i)); }
   } else {
@@ -5174,7 +5186,7 @@ function computeExpireFromStart(){
   if (start && dur > 0){
     const d = new Date(start + 'T00:00:00');
     d.setDate(d.getDate() + dur);
-    document.getElementById('planExpireDate').value = d.toISOString().slice(0,10);
+    document.getElementById('planExpireDate').value = localISODate(d);
   }
 }
 ['planStartDate','planDuration'].forEach(id => document.getElementById(id).addEventListener('change', computeExpireFromStart));
@@ -5288,7 +5300,7 @@ document.getElementById('duplicatePlanBtn').addEventListener('click', () => {
   if (!src.isUnlimited && src.duration){
     const d = new Date(start + 'T00:00:00');
     d.setDate(d.getDate() + src.duration);
-    newPlan.expireDate = d.toISOString().slice(0,10);
+    newPlan.expireDate = localISODate(d);
   }
   plans.push(newPlan);
   createPlanTransaction(newPlan);
@@ -9497,7 +9509,7 @@ function runGoalSyncScenarioTests(){
       const steps = [];
       const goalId = 'test-goal-4', habitId = 'test-habit-4';
       const courseKey = Object.keys(LEARNING_COURSES)[0];
-      const futureDeadline = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().slice(0,10); })();
+      const futureDeadline = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return localISODate(d); })();
       const g = {
         id: goalId, title:'Vin Devlopè Web', type:'personal', category:'personal', priority:'high',
         status:'in-progress', autoStatus:true, progress:0, milestones:[], deadline: futureDeadline,
@@ -10313,8 +10325,8 @@ function enumDates(start, end){
   while (d <= end && guard < 400){ out.push(d); d = isoOffset(d, 1); guard++; }
   return out;
 }
-function startOfWeekISO(iso){ const d = new Date(iso+'T00:00:00'); const day = (d.getDay()+6)%7; d.setDate(d.getDate()-day); return d.toISOString().slice(0,10); }
-function endOfMonthISO(iso){ const d = new Date(iso.slice(0,7)+'-01T00:00:00'); d.setMonth(d.getMonth()+1); d.setDate(0); return d.toISOString().slice(0,10); }
+function startOfWeekISO(iso){ const d = new Date(iso+'T00:00:00'); const day = (d.getDay()+6)%7; d.setDate(d.getDate()-day); return localISODate(d); }
+function endOfMonthISO(iso){ const d = new Date(iso.slice(0,7)+'-01T00:00:00'); d.setMonth(d.getMonth()+1); d.setDate(0); return localISODate(d); }
 function statsPeriodRange(period, refISO){
   refISO = refISO || todayISO();
   if (period === 'daily') return [refISO, refISO];
@@ -10327,7 +10339,7 @@ function statsPrevPeriodRange(period, refISO){
   refISO = refISO || todayISO();
   if (period === 'daily') return statsPeriodRange('daily', isoOffset(refISO,-1));
   if (period === 'weekly') return statsPeriodRange('weekly', isoOffset(refISO,-7));
-  if (period === 'monthly'){ const d = new Date(refISO.slice(0,7)+'-01T00:00:00'); d.setMonth(d.getMonth()-1); return statsPeriodRange('monthly', d.toISOString().slice(0,10)); }
+  if (period === 'monthly'){ const d = new Date(refISO.slice(0,7)+'-01T00:00:00'); d.setMonth(d.getMonth()-1); return statsPeriodRange('monthly', localISODate(d)); }
   if (period === 'yearly'){ const y = parseInt(refISO.slice(0,4),10)-1; return statsPeriodRange('yearly', y+'-06-15'); }
   return statsPeriodRange(period, refISO);
 }
@@ -11185,7 +11197,7 @@ async function backupToCloud(){
     const payload = {
       backupVersion: CLOUD_BACKUP_VERSION,
       appVersion: (data.__meta && data.__meta.version) || 1,
-      backupDate: now.toISOString().slice(0,10),
+      backupDate: localISODate(now),
       backupTime: now.toTimeString().slice(0,8),
       updatedAt: now.getTime(),
       device: (navigator.platform || '') + ' · ' + (navigator.userAgent || '').slice(0,120),
