@@ -2798,13 +2798,8 @@ function coachRespond(raw){
   if (/mèsi|bon travay|ok/.test(q)) return `Avèk plezi Wilguentz! Mwen la pou ede w rete sou pis la. 💪`;
   return `Mwen ka ede w ak tach, aprantisaj, lajan, objektif oswa abitid ou. Poze m yon kesyon sou youn nan sa yo.`;
 }
-// ⚠️ TÈS SÈLMAN: rele API Anthropic la DIRÈKTEMAN apati navigatè a, ak kle ki
-// sove nan Paramèt (LS.coachApiKey). Sa ekspoze kle a nan aparèy la (localStorage/
-// devtools) — pa yon patwon ki an sekirite pou yon app piblik/plizyè itilizatè,
-// men se sa n ap itilize pandan n ap fè tès.
+// Backend proxy la kenbe kle a an sekirite sou sèvè a — frontend pa janm manyen okenn kle.
 async function coachCallDirectApi(userText){
-  const apiKey = (loadLS(LS.coachApiKey, '') || '').trim();
-  if (!apiKey) return { ok:false, reason:'no-key' };
   if (!navigator.onLine) return { ok:false, reason:'offline' };
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -2836,11 +2831,9 @@ async function coachCallDirectApi(userText){
     return { ok:false, reason: (e && e.name === 'AbortError') ? 'timeout' : 'network-error' };
   }
 }
-// Chwazi ki mòd itilize: Kle API dirèk si l konfigire, sinon mòd lokal (règ) pran ka a.
+// Backend la toujou aktive — plis pa gen mòd "san kle".
 async function coachCallAi(userText){
-  const apiKey = (loadLS(LS.coachApiKey, '') || '').trim();
-  if (apiKey) return coachCallDirectApi(userText);
-  return { ok:false, reason:'no-key' };
+  return coachCallDirectApi(userText);
 }
 async function coachHandleSend(){
   const input = document.getElementById('coachChatInput');
@@ -10979,25 +10972,10 @@ function setCoachBackendStatus(state){
   if (window.lucide) lucide.createIcons();
 }
 (function initCoachBackendSettings(){
-  const keyInput = document.getElementById('coachApiKeyInput');
-  const savedKey = (loadLS(LS.coachApiKey, '') || '').trim();
-  if (keyInput) keyInput.value = savedKey;
-  setCoachBackendStatus(savedKey ? 'on' : 'off');
-  document.getElementById('coachBackendSaveBtn')?.addEventListener('click', async () => {
-    const keyVal = (document.getElementById('coachApiKeyInput').value || '').trim();
-    saveLS(LS.coachApiKey, keyVal);
-    if (!keyVal){ setCoachBackendStatus('off'); showToast('Kle API retire — Coach AI ap itilize mòd lokal'); return; }
-    setCoachBackendStatus('checking');
-    const result = await coachCallDirectApi('ping');
-    if (result.ok){ setCoachBackendStatus('on'); showToast('Kle API konekte ✓ (mòd tès)'); }
-    else {
-      setCoachBackendStatus('error');
-      const reasonLabel = result.reason === 'offline' ? 'ou pa gen koneksyon entènèt'
-        : result.reason === 'timeout' ? 'demand lan pran twò tan (timeout)'
-        : result.reason === 'network-error' ? 'erè rezo (verifye koneksyon w)'
-        : (result.detail || (result.status ? ('kòd ' + result.status) : 'erè enkoni'));
-      showToast('⚠️ Tès kle API a echwe: ' + reasonLabel);
-    }
+  setCoachBackendStatus('checking');
+  coachCallDirectApi('ping').then(result => {
+    if (result.ok){ setCoachBackendStatus('on'); }
+    else { setCoachBackendStatus('error'); }
   });
 })();
 
