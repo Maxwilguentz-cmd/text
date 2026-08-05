@@ -195,6 +195,10 @@ async function restoreFromIndexedDBIfMissing(){
 // Kle a jenere yon sèl fwa epi rete sou aparèy la — okenn done sansib pa janm ekri an tèks klè.
 // ==========================================
 const ENC_PREFIX = 'OSENC1:';
+// Kle ki echwe dekripe (kle chifreman pa matche/koripi) — pandan yo nan lis sa a,
+// AUKENN sovgad pa dwe rive sou yo, pou nou pa ekrase done orijinal yo ak yon
+// vèsyon vid/pa defo. Sa anpeche pèt done total lè secureSave ta rele apre yon echèk dekripaj.
+const secureLockedKeys = new Set();
 let _cryptoKeyCache = null;
 async function getCryptoKey(){
   if (_cryptoKeyCache) return _cryptoKeyCache;
@@ -218,7 +222,7 @@ async function encryptJSON(val){
   const cB64 = btoa(String.fromCharCode(...new Uint8Array(cipher)));
   return ENC_PREFIX + ivB64 + ':' + cB64;
 }
-async function decryptJSON(raw, fallback){
+async function decryptJSON(raw, fallback, onCryptoFail){
   if (raw == null) return fallback;
   if (typeof raw === 'string' && raw.startsWith(ENC_PREFIX)){
     try{
@@ -231,6 +235,7 @@ async function decryptJSON(raw, fallback){
       return parsed === null ? fallback : parsed;
     }catch(e){
       console.error('Erè dekripte done sansib:', e);
+      if (typeof onCryptoFail === 'function') onCryptoFail(e);
       return fallback;
     }
   }
@@ -243,6 +248,13 @@ async function decryptJSON(raw, fallback){
 }
 let _pendingSecureSaves = 0;
 async function secureSave(lsKey, val){
+  if (secureLockedKeys.has(lsKey)){
+    console.error('Sovgad sekirize bloke pou evite pèt done:', lsKey);
+    if (typeof showToast === 'function'){
+      showToast('⚠️ Sovgad bloke pou "' + lsKey.replace('oslife.', '') + '" — dekripaj te echwe pi bonè. Restore yon backup anvan w kontinye edite modil sa a.');
+    }
+    return false;
+  }
   _pendingSecureSaves++;
   try{
     const enc = await encryptJSON(val);
@@ -10361,7 +10373,18 @@ document.getElementById('statsExportPdfBtn').addEventListener('click', () => {
 async function migrateSecureKey(lsKey, assign){
   const raw = localStorage.getItem(lsKey);
   const current = assign(); // lire valè aktyèl la (seed/fallback) san chanje l
-  const val = await decryptJSON(raw, current);
+  let cryptoFailed = false;
+  const val = await decryptJSON(raw, current, () => { cryptoFailed = true; });
+  if (cryptoFailed){
+    // Dekripaj echwe (kle chifreman pa matche/koripi) — PA touche done chifre ki
+    // deja sou disk lan, e bloke tout sovgad fiti pou modil sa a. San sa a, yon
+    // sovgad ta ka ekrase orijinal la ak yon vèsyon vid pou tout tan.
+    secureLockedKeys.add(lsKey);
+    if (typeof showToast === 'function'){
+      showToast('⚠️ Pa t kapab dekripte "' + lsKey.replace('oslife.', '') + '" — sovgad dezaktive pou modil sa a pou pwoteje done ou. Restore yon backup oswa kontakte sipò.');
+    }
+    return; // pa asiyen fallback, pa risk ekrase disk lan
+  }
   // Pwoteksyon siplemantè: pa janm kite varyab la vin JS null.
   assign(val === null ? current : val);
   // Si done a te an tèks klè (anvan chifreman te egziste), chifre l kounye a.
