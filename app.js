@@ -4688,7 +4688,11 @@ function addBudgetDraftCat(){
   const cat = input.value.trim();
   if (!cat || cat === 'Dlo' || cat === 'Bwason' || cat === 'Custom') { showToast('Non sa a pa disponib pou bidjè'); return; }
   if (budgetDraftCats.includes(cat)) { showToast('Kategori sa a deja gen bidjè'); return; }
-  budgetDraftCats.push(cat);
+  // Si se yon non tou nèf ki pa deja nan lis kategori depans yo, ajoute l la
+  // tou — sinon li pa ta janm parèt nan dropdown "Kategori" lè w antre yon
+  // depans, e bidjè a pa t ap janm konte anyen (yo pa t "lye" ansanm).
+  const finalCat = addCustomTxCategory('expense', cat) || cat;
+  budgetDraftCats.push(finalCat);
   input.value = '';
   renderBudgetsManageList();
 }
