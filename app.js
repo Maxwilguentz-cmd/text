@@ -91,7 +91,8 @@ const LS = { tasks:'oslife.tasks', templates:'oslife.templates', events:'oslife.
   missionsHistory:'oslife.missionsHistory', achievements:'oslife.achievements',
   notifications:'oslife.notifications', personalization:'oslife.personalization', security:'oslife.security',
   autoBackup:'oslife.autoBackup', statsPrefs:'oslife.statsPrefs', waterMigratedV2:'oslife.waterMigratedV2',
-  pendingGoalFinancialActions:'oslife.pendingGoalFinancialActions', customTxCats:'oslife.customTxCats' };
+  pendingGoalFinancialActions:'oslife.pendingGoalFinancialActions', customTxCats:'oslife.customTxCats',
+  subscriptions:'oslife.subscriptions' };
 // Kle ki kenbe done sansib — yo dwe toujou chifre anvan yo antre nan LocalStorage/IndexedDB.
 const ENCRYPTED_KEYS = new Set([LS.wallets, LS.tx, LS.budgets, LS.plans, LS.notes, LS.noteFolders, LS.journal]);
 // Nòt: LS.security pa chifre paske li dwe li SENKWÒN nan demaraj (anvan lock overlay a),
@@ -1123,6 +1124,7 @@ const NAV_ITEMS = [
   ]},
   { section: "Lavi", items: [
     { icon: "wallet", label: "Finans", view:"finance" },
+    { icon: "repeat", label: "Abònman", view:"subscriptions" },
     { icon: "graduation-cap", label: "Aprantisaj", view:"learning" },
     { icon: "target", label: "Objektif", view:"goals" },
     { icon: "folder-kanban", label: "Pwojè", view:"projects" },
@@ -1203,6 +1205,7 @@ function showView(view){
   if (view === 'calendar') renderCalendar();
   if (view === 'habits') renderHabits();
   if (view === 'finance') renderFinance();
+  if (view === 'subscriptions') renderSubscriptions();
   if (view === 'internet') renderPlans();
   if (view === 'projects') renderProjects();
   if (view === 'notes') renderNotes();
@@ -3893,6 +3896,79 @@ renderMissions();
 // FINANCE MODULE
 // ==========================================
 const EXPENSE_CATS = ['Manje','Transpò','Entènèt','Abònman','Dlo','Bwason','Custom'];
+
+// ==========================================
+// ABÒNMAN (Netflix, Spotify, Claude, elt.) — swiv rekiran ak revant pou kliyan
+// ==========================================
+let subscriptions = loadLS(LS.subscriptions, []);
+function persistSubscriptions(){ saveLS(LS.subscriptions, subscriptions); }
+const SUB_ICON_MAP = {
+  netflix:'clapperboard', spotify:'music', 'disney':'sparkles', youtube:'youtube',
+  claude:'bot', chatgpt:'bot', 'chat gpt':'bot', gpt:'bot', gemini:'bot', copilot:'bot',
+  amazon:'shopping-bag', prime:'shopping-bag', apple:'apple', hbo:'tv', max:'tv',
+  crunchyroll:'tv', playstation:'gamepad-2', xbox:'gamepad-2', canva:'palette', icloud:'cloud',
+};
+function guessSubIcon(name){
+  const n = (name || '').toLowerCase();
+  for (const k in SUB_ICON_MAP){ if (n.includes(k)) return SUB_ICON_MAP[k]; }
+  return 'repeat';
+}
+// Pwochen dat renouvèlman: kòmanse nan startDate, ajoute cycleDays (defo 30)
+// jiskaske li depase jodi a.
+function subNextRenewal(sub){
+  const cycle = Number(sub.cycleDays) || 30;
+  const today = new Date(todayISO() + 'T00:00:00');
+  let d = new Date((sub.startDate || todayISO()) + 'T00:00:00');
+  if (isNaN(d.getTime())) return today;
+  while (d.getTime() <= today.getTime()) d = new Date(d.getTime() + cycle * 86400000);
+  return d;
+}
+function subDaysLeft(sub){
+  const next = subNextRenewal(sub);
+  const today = new Date(todayISO() + 'T00:00:00');
+  return Math.round((next.getTime() - today.getTime()) / 86400000);
+}
+function renderSubscriptions(){
+  const wrap = document.getElementById('subscriptionsList');
+  if (!wrap) return;
+  if (!subscriptions.length){
+    wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:13.5px;">
+      Ou poko gen abònman. Klike "Nouvo Abònman" oswa ajoute yon depans nan Finans ak kategori "Abònman".
+    </div>`;
+    return;
+  }
+  const sorted = [...subscriptions].sort((a,b) => subDaysLeft(a) - subDaysLeft(b));
+  wrap.innerHTML = sorted.map(s => {
+    const wallet = wallets.find(w => w.id === s.walletId);
+    const cur = wallet ? walletCurrency(wallet) : 'HTG';
+    const daysLeft = subDaysLeft(s);
+    const daysColor = daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--orange)' : 'var(--text-dim)';
+    const benefit = s.forClient ? (Number(s.clientPrice || 0) - Number(s.price || 0)) : null;
+    return `<div class="card" style="padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;flex-shrink:0;color:var(--blue);"><i data-lucide="${guessSubIcon(s.service)}"></i></div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+          <strong>${escapeHtml(s.service)}</strong>
+          <span style="color:${daysColor};font-weight:600;font-size:13px;white-space:nowrap;">${daysLeft <= 0 ? 'Renouvle jodi a' : daysLeft + ' jou'}</span>
+        </div>
+        <div class="sub" style="font-size:13px;color:var(--text-dim);margin-top:2px;">${fmtMoney(s.price, cur)} · ${wallet ? escapeHtml(wallet.name) : 'Pa gen kont'}</div>
+        ${s.forClient ? `<div style="margin-top:6px;font-size:13px;line-height:1.5;">
+          <div>👤 ${escapeHtml(s.clientName || '—')}${s.clientPhone ? ' · ' + escapeHtml(s.clientPhone) : ''}</div>
+          ${s.accountEmail ? `<div style="color:var(--text-dim);">✉️ ${escapeHtml(s.accountEmail)}</div>` : ''}
+          <div style="color:${benefit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:600;">Benefis: ${benefit >= 0 ? '+' : ''}${fmtMoney(benefit, cur)}</div>
+        </div>` : ''}
+      </div>
+      <button class="icon-btn" onclick="deleteSubscription('${s.id}')" title="Efase"><i data-lucide="trash-2"></i></button>
+    </div>`;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+function deleteSubscription(id){
+  subscriptions = subscriptions.filter(s => s.id !== id);
+  persistSubscriptions();
+  renderSubscriptions();
+  showToast('Abònman efase');
+}
 const INCOME_CATS = ['Salè','Lajan Resevwa','Depo','Kat Debi','Kado','Biznis','Lòt'];
 
 // ---- Kategori Depans/Revni Pèsonalize (ajoute pa itilizatè a, Pw. "Bay Yon Moun Lajan") ----
@@ -4316,8 +4392,10 @@ function updateTxAmountLabel(){
 function updateTxCategoryExtras(cat){
   const dlo = document.getElementById('txDloFields');
   const bwason = document.getElementById('txBwasonFields');
+  const abon = document.getElementById('txAbonmanFields');
   dlo.classList.toggle('open', cat === 'Dlo');
   bwason.classList.toggle('open', cat === 'Bwason');
+  if (abon) abon.classList.toggle('open', cat === 'Abònman');
   if (window.lucide) lucide.createIcons();
 }
 // ---- Montre/kache ti chan pou kreye yon nouvo kategori pèsonalize ----
@@ -4374,6 +4452,16 @@ function openTxModal(id){
   document.getElementById('txDrinkUnit').value = t?.drinkUnit || 'ml';
   updateTxCategoryExtras(document.getElementById('txCategory').value);
   updateTxNewCategoryVisibility(document.getElementById('txCategory').value);
+  // Abònman: repopile chan yo si n ap modifye yon tranzaksyon ki deja lye ak yon abònman
+  const linkedSub = t?.subId ? subscriptions.find(s => s.id === t.subId) : null;
+  document.getElementById('txSubService').value = linkedSub?.service || '';
+  document.getElementById('txSubStartDate').value = linkedSub?.startDate || todayISO();
+  document.getElementById('txSubForClient').checked = !!linkedSub?.forClient;
+  document.getElementById('txSubClientFields').style.display = linkedSub?.forClient ? 'block' : 'none';
+  document.getElementById('txSubClientName').value = linkedSub?.clientName || '';
+  document.getElementById('txSubClientPhone').value = linkedSub?.clientPhone || '';
+  document.getElementById('txSubAccountEmail').value = linkedSub?.accountEmail || '';
+  document.getElementById('txSubClientPrice').value = linkedSub?.clientPrice ?? '';
   document.getElementById('txModalOverlay').classList.add('open');
 }
 document.getElementById('txType').addEventListener('change', e => {
@@ -4386,9 +4474,18 @@ document.getElementById('txCategory').addEventListener('change', e => {
   updateTxCategoryExtras(e.target.value);
   updateTxNewCategoryVisibility(e.target.value);
 });
+document.getElementById('txSubForClient')?.addEventListener('change', e => {
+  document.getElementById('txSubClientFields').style.display = e.target.checked ? 'block' : 'none';
+});
 document.getElementById('txWallet').addEventListener('change', updateTxAmountLabel);
 document.getElementById('txWallet').addEventListener('change', updateTxCashStatusVisibility);
 document.getElementById('newTxBtn').addEventListener('click', () => openTxModal(null));
+document.getElementById('newSubBtn')?.addEventListener('click', () => {
+  openTxModal(null);
+  document.getElementById('txCategory').value = 'Abònman';
+  updateTxCategoryExtras('Abònman');
+  document.getElementById('txSubStartDate').value = todayISO();
+});
 document.getElementById('closeTxModal').addEventListener('click', () => document.getElementById('txModalOverlay').classList.remove('open'));
 document.getElementById('txModalOverlay').addEventListener('click', e => { if (e.target.id === 'txModalOverlay') document.getElementById('txModalOverlay').classList.remove('open'); });
 // ==========================================
@@ -4500,6 +4597,12 @@ document.getElementById('saveTxBtn').addEventListener('click', () => {
   // Dlo/Bwason: valide chan siplemantè yo (fòm nan toujou kenbe Montan/Kont/Dat/elatriye ki te la deja)
   let waterMl = null;
   let drinkName = '', drinkType = 'sugary', drinkMl = null;
+  let subService = '';
+  if (category === 'Abònman'){
+    subService = document.getElementById('txSubService').value.trim();
+    if (!subService){ showToast('Mete non sèvis abònman an (Pw. Netflix)'); return; }
+    if (!document.getElementById('txSubStartDate').value){ showToast('Mete dat abònman an kòmanse'); return; }
+  }
   if (category === 'Dlo'){
     const waterAmount = parseFloat(document.getElementById('txWaterAmount').value);
     const waterUnit = document.getElementById('txWaterUnit').value;
@@ -4543,6 +4646,30 @@ document.getElementById('saveTxBtn').addEventListener('click', () => {
     data.drinkType = drinkType;
     data.drinkQty = parseFloat(document.getElementById('txDrinkQty').value);
     data.drinkUnit = document.getElementById('txDrinkUnit').value;
+  }
+
+  if (category === 'Abònman'){
+    const forClient = document.getElementById('txSubForClient').checked;
+    const subData = {
+      service: subService,
+      price: amount,
+      walletId: data.walletId,
+      startDate: document.getElementById('txSubStartDate').value || todayISO(),
+      cycleDays: 30,
+      forClient,
+      clientName: forClient ? document.getElementById('txSubClientName').value.trim() : '',
+      clientPhone: forClient ? document.getElementById('txSubClientPhone').value.trim() : '',
+      accountEmail: document.getElementById('txSubAccountEmail').value.trim(),
+      clientPrice: forClient ? (parseFloat(document.getElementById('txSubClientPrice').value) || 0) : null,
+    };
+    const existingT = editingTxId ? tx.find(x => x.id === editingTxId) : null;
+    let subId = existingT?.subId;
+    const existingSub = subId ? subscriptions.find(s => s.id === subId) : null;
+    if (existingSub) Object.assign(existingSub, subData);
+    else { subId = uid(); subscriptions.push({ id: subId, createdAt: new Date().toISOString(), ...subData }); }
+    persistSubscriptions();
+    data.subId = subId;
+    if (!data.description) data.description = subService;
   }
 
   if (editingTxId) Object.assign(tx.find(x => x.id === editingTxId), data);
@@ -10534,7 +10661,13 @@ function safeReload(){
 async function onLocalStorageChange(key, rawValue){
   if (!key || !key.startsWith('oslife.')) return;
   if (key === 'oslife.syncCode' || key === 'oslife.deviceId') return;
-  if (Date.now() < syncBootGraceUntil) return; // ekriti demaraj (dekripaj/reankripte) — pa sync sa
+  // Grace period demaraj la se sèlman pou evite konfonn ekriti automatik
+  // migrasyon/re-chifreman (bootSecureModules) ak yon vrè modifikasyon
+  // itilizatè. Li DWE aplike sèlman sou kle CHIFRE yo — si l aplike sou
+  // tout kle (tankou objektif/abitid), yon objektif ou abitid ou kreye
+  // nan 3 premye segond apre chajman app la pa janm antre nan sync, e li
+  // ka disparèt lè yon lòt aparèy voye yon vèsyon ki pa gen li.
+  if (ENCRYPTED_KEYS.has(key) && Date.now() < syncBootGraceUntil) return;
   if (lastSeen[key] === rawValue) return;
   lastSeen[key] = rawValue;
   const rec = { key, value: rawValue, updatedAt: Date.now(), version: ((lastVersions[key]||0)+1), deviceId };
@@ -10639,7 +10772,19 @@ async function mergeRemoteChange(key, remote){
     return;
   }
   const merged = mergeJSONValues(localRaw, remote.value);
-  const finalValue = merged !== null ? merged : remote.value;
+  // SÈLMAN ekri lè fusion an REYISI (2 lis JSON valid). Si fusion an echwe
+  // (null) pou nenpòt rezon (done cloud domaje/pa valid, elt.), PA janm
+  // ranplase done lokal yo ak vèsyon remote a san kesyon — sa te ka efase
+  // net yon objektif/abitid ou fèk kreye si cloud lan te gen yon vèsyon
+  // pi vye oswa domaje. Nan ka sa a, kenbe lokal la e mete l nan pending
+  // pou l re-eseye monte vèsyon lokal (pi resan) an sou cloud lan.
+  if (merged === null){
+    console.error('Fusion done sync echwe pou', key, '— kenbe vèsyon lokal la, pa ekrase l.');
+    await idbPut('pending', { key, value: localRaw, updatedAt: Date.now(), version:(lastVersions[key]||0)+1, deviceId });
+    if (syncEnabled) scheduleFlush();
+    return;
+  }
+  const finalValue = merged;
   if (finalValue === localRaw){ lastSeen[key] = finalValue; return; } // fusion an bay menm bagay ki te la deja
   window.__origLSSetItem.call(localStorage, key, finalValue);
   lastSeen[key] = finalValue;
@@ -10861,6 +11006,11 @@ function disableCloudSync(){
 
 window.addEventListener('online',  () => { if (syncEnabled) flushPendingSync(); });
 window.addEventListener('offline', () => setSyncStatus('offline'));
+// Filè sekirite: si itilizatè a kite/fèmen app la touswit apre yon chanjman
+// (anvan 600ms debounce la rive), pa kite chanjman an disparèt san monte sou
+// cloud lan — fòse yon flush iminan lè paj la vin envizib/fèmen.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && syncEnabled) flushPendingSync(); });
+window.addEventListener('pagehide', () => { if (syncEnabled) flushPendingSync(); });
 
 // Entèsepte localStorage.setItem YON SÈL FWA pou kaptire TOUT chanjman done
 // (tasks, habits, finance, notes, journal, elatriye) san modifye chak fonksyon persist* yo.
