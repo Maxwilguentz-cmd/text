@@ -1200,7 +1200,7 @@ function showView(view){
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-' + view));
   document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === view));
   trackModuleVisit(view);
-  if (view === 'dashboard') renderMissions();
+  if (view === 'dashboard'){ renderMissions(); refreshDashboardSubWidget(); }
   if (view === 'tasks') renderTasks();
   if (view === 'calendar') renderCalendar();
   if (view === 'habits') renderHabits();
@@ -3901,7 +3901,24 @@ const EXPENSE_CATS = ['Manje','Transpò','Entènèt','Abònman','Dlo','Bwason','
 // ABÒNMAN (Netflix, Spotify, Claude, elt.) — swiv rekiran ak revant pou kliyan
 // ==========================================
 let subscriptions = loadLS(LS.subscriptions, []);
-function persistSubscriptions(){ saveLS(LS.subscriptions, subscriptions); }
+function persistSubscriptions(){ saveLS(LS.subscriptions, subscriptions); refreshDashboardSubWidget(); }
+function refreshDashboardSubWidget(){
+  const wrap = document.getElementById('dashSubList');
+  if (!wrap) return;
+  if (!subscriptions.length){
+    wrap.innerHTML = `<div class="stat-line"><span>Ou pa gen abònman</span></div>`;
+    return;
+  }
+  const soonest = [...subscriptions].sort((a,b) => subDaysLeft(a) - subDaysLeft(b)).slice(0, 3);
+  wrap.innerHTML = soonest.map(s => {
+    const daysLeft = subDaysLeft(s);
+    const color = daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--orange)' : 'var(--text)';
+    return `<div class="stat-line"><span>${escapeHtml(s.service)}</span><b style="color:${color};">${daysLeft <= 0 ? 'Jodi a' : daysLeft + ' jou'}</b></div>`;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+document.getElementById('dashSubWidget')?.addEventListener('click', () => showView('subscriptions'));
+refreshDashboardSubWidget();
 const SUB_ICON_MAP = {
   netflix:'clapperboard', spotify:'music', 'disney':'sparkles', youtube:'youtube',
   claude:'bot', chatgpt:'bot', 'chat gpt':'bot', gpt:'bot', gemini:'bot', copilot:'bot',
