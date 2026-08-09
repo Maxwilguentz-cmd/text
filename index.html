@@ -2529,6 +2529,11 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <option value="damaged">Gate/Domaje</option>
         </select></div>
       </div>
+      <div id="itemDamagedDateWrap" hidden>
+        <label>Dat li vin Gate/Domaje</label>
+        <input type="date" id="itemDamagedDate">
+        <div class="hint"><i data-lucide="trending-down"></i> Si l gate twò vit apre dat achte/resevwa a, sa ap desann Life Score ou.</div>
+      </div>
       <div><label>Dat (achte oswa resevwa)</label><input type="date" id="itemDate"></div>
 
       <div style="margin:12px 0 6px;">
@@ -2568,6 +2573,16 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <div><label>Garanti (mwa, opsyonèl)</label><input type="number" id="itemWarrantyMonths" placeholder="Pw. 12" min="0" step="1"></div>
         </div>
       </div></div>
+
+      <!-- LYEN AK OBJEKTIF: opsyonèl, sèlman pou referans — pa chanje estati Objektif la -->
+      <div style="margin-top:12px;">
+        <label>Lye ak Objektif (opsyonèl)</label>
+        <select id="itemGoalLink"><option value="">— Okenn —</option></select>
+      </div>
+      <label id="itemShowInListWrap" style="display:flex;align-items:center;gap:8px;margin:10px 0 2px;font-size:13.5px;font-weight:500;" hidden>
+        <input type="checkbox" id="itemShowInList" checked> Montre atik sa a nan lis prensipal paj Atik la
+      </label>
+      <div class="hint" id="itemGoalLinkHint" hidden><i data-lucide="info"></i> Lyen sa a se sèlman pou referans — li pa chanje estati Objektif la otomatikman.</div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="deleteItemBtn" hidden>Efase</button>
@@ -2592,6 +2607,9 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       <div class="goal-details-grid">
         <div class="goal-details-field"><span class="lbl">Kategori</span><span class="val" id="itemDetailsCategory">—</span></div>
         <div class="goal-details-field"><span class="lbl">Dat</span><span class="val" id="itemDetailsDate">—</span></div>
+        <div class="goal-details-field" id="itemDetailsGoalWrap" hidden><span class="lbl">Objektif Lye</span><span class="val" id="itemDetailsGoal">—</span></div>
+        <div class="goal-details-field" id="itemDetailsDamagedWrap" hidden><span class="lbl">Dat li Domaje</span><span class="val" id="itemDetailsDamagedDate">—</span></div>
+        <div class="goal-details-field" id="itemDetailsPenaltyWrap" hidden><span class="lbl">Enpak Life Score</span><span class="val" id="itemDetailsPenalty" style="color:var(--red);">—</span></div>
       </div>
 
       <div id="itemDetailsBoughtWrap" hidden>
