@@ -92,7 +92,7 @@ const LS = { tasks:'oslife.tasks', templates:'oslife.templates', events:'oslife.
   notifications:'oslife.notifications', personalization:'oslife.personalization', security:'oslife.security',
   autoBackup:'oslife.autoBackup', statsPrefs:'oslife.statsPrefs', waterMigratedV2:'oslife.waterMigratedV2',
   pendingGoalFinancialActions:'oslife.pendingGoalFinancialActions', customTxCats:'oslife.customTxCats',
-  subscriptions:'oslife.subscriptions' };
+  subscriptions:'oslife.subscriptions', items:'oslife.items' };
 // Kle ki kenbe done sansib — yo dwe toujou chifre anvan yo antre nan LocalStorage/IndexedDB.
 const ENCRYPTED_KEYS = new Set([LS.wallets, LS.tx, LS.budgets, LS.plans, LS.notes, LS.noteFolders, LS.journal]);
 // Nòt: LS.security pa chifre paske li dwe li SENKWÒN nan demaraj (anvan lock overlay a),
@@ -1125,6 +1125,7 @@ const NAV_ITEMS = [
   { section: "Lavi", items: [
     { icon: "wallet", label: "Finans", view:"finance" },
     { icon: "repeat", label: "Abònman", view:"subscriptions" },
+    { icon: "shirt", label: "Atik", view:"items" },
     { icon: "graduation-cap", label: "Aprantisaj", view:"learning" },
     { icon: "target", label: "Objektif", view:"goals" },
     { icon: "folder-kanban", label: "Pwojè", view:"projects" },
@@ -1206,6 +1207,7 @@ function showView(view){
   if (view === 'habits') renderHabits();
   if (view === 'finance') renderFinance();
   if (view === 'subscriptions') renderSubscriptions();
+  if (view === 'items') renderItems();
   if (view === 'internet') renderPlans();
   if (view === 'projects') renderProjects();
   if (view === 'notes') renderNotes();
@@ -1793,7 +1795,7 @@ const VIEW_LABELS = {
   dashboard:'Dashboard', tasks:'Tach', calendar:'Kalandriye', habits:'Abitid', finance:'Finans',
   learning:'Aprantisaj', goals:'Objektif', projects:'Pwojè', achievements:'Achievements', notes:'Nòt',
   journal:'Jounal', health:'Sante', internet:'Entènèt', timeline:'Istwa Lavi', coach:'Coach AI', settings:'Paramèt',
-  statistics:'Estatistik',
+  statistics:'Estatistik', subscriptions:'Abònman', items:'Atik',
 };
 
 function renderPersonalizationPanel(){
@@ -4069,6 +4071,217 @@ function checkSubscriptionNotifications(){
     });
   });
 }
+// ==========================================
+// ATIK (Rad, Chosèt, Akseswa, Elektwonik — achte oswa resevwa kòm kado)
+// Pati 1: Fondasyon — modèl done, lis, ak fòm kreye/modifye.
+// Entegrasyon Finans, lyen ak Objektif, ak enpak Life Score ap vini nan
+// pwochen pati yo.
+// ==========================================
+const ITEM_CATEGORIES = ['Rad','Chosèt','Akseswa','Elektwonik'];
+const ITEM_CONDITIONS = { new:'Nèf', good:'Bon', damaged:'Gate/Domaje' };
+const ITEM_CONDITION_COLOR = { new:'var(--green)', good:'var(--blue)', damaged:'var(--red)' };
+let items = loadLS(LS.items, []);
+function persistItems(){ saveLS(LS.items, items); }
+function guessItemIcon(cat){
+  return { 'Rad':'shirt', 'Chosèt':'footprints', 'Akseswa':'watch', 'Elektwonik':'smartphone' }[cat] || 'package';
+}
+function renderItems(){
+  const wrap = document.getElementById('itemsList');
+  if (!wrap) return;
+  if (!items.length){
+    wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:13.5px;">
+      Ou poko gen atik. Klike "Nouvo Atik" pou ajoute rad, chosèt, akseswa oswa elektwonik ou achte oswa resevwa kòm kado.
+    </div>`;
+    return;
+  }
+  const visible = items.filter(it => it.showInList !== false);
+  if (!visible.length){
+    wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:13.5px;">
+      Tout atik ou yo kache nan lis la (paske yo lye ak yon Objektif ki fini). Ale nan "Modifye" yon atik pou chanje sa.
+    </div>`;
+    return;
+  }
+  const sorted = [...visible].sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  wrap.innerHTML = sorted.map(it => {
+    const condColor = ITEM_CONDITION_COLOR[it.condition] || 'var(--text-dim)';
+    const modeLabel = it.mode === 'gift' ? `Kado ${it.giftFrom ? '· ' + escapeHtml(it.giftFrom) : ''}` : (() => {
+      const wallet = wallets.find(w => w.id === it.walletId);
+      const cur = wallet ? walletCurrency(wallet) : 'HTG';
+      return it.price != null ? fmtMoney(it.price, cur) : 'Achte';
+    })();
+    return `<div class="card" style="padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;" onclick="openItemDetailsModal('${it.id}')">
+      <div style="width:38px;height:38px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;flex-shrink:0;color:var(--blue);"><i data-lucide="${guessItemIcon(it.category)}"></i></div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+          <strong>${escapeHtml(it.name)}</strong>
+          <span class="pill" style="background:color-mix(in srgb, ${condColor} 16%, transparent);color:${condColor};">${ITEM_CONDITIONS[it.condition] || it.condition}</span>
+        </div>
+        <div class="sub" style="font-size:13px;color:var(--text-dim);margin-top:2px;">${escapeHtml(it.category)} · ${modeLabel} · ${it.date || '—'}</div>
+      </div>
+      <button class="icon-btn" onclick="event.stopPropagation();deleteItem('${it.id}')" title="Efase"><i data-lucide="trash-2"></i></button>
+    </div>`;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+function deleteItem(id){
+  items = items.filter(it => it.id !== id);
+  persistItems();
+  renderItems();
+  showToast('Atik efase');
+}
+
+// ---- Fòm Nouvo/Modifye Atik ----
+let editingItemId = null;
+function updateItemModeFields(){
+  const mode = document.querySelector('input[name="itemMode"]:checked')?.value || 'bought';
+  document.getElementById('itemBoughtFields').classList.toggle('open', mode === 'bought');
+  document.getElementById('itemGiftFields').classList.toggle('open', mode === 'gift');
+  if (window.lucide) lucide.createIcons();
+}
+function updateItemCategoryFields(){
+  const cat = document.getElementById('itemCategory').value;
+  document.getElementById('itemElectronicsFields').classList.toggle('open', cat === 'Elektwonik');
+  if (window.lucide) lucide.createIcons();
+}
+function populateItemWalletSelect(){
+  const sel = document.getElementById('itemWallet');
+  if (sel) sel.innerHTML = wallets.map(w => `<option value="${w.id}">${escapeHtml(w.name)} (${walletCurrency(w)})</option>`).join('');
+}
+function openItemModal(id){
+  editingItemId = id || null;
+  const it = id ? items.find(x => x.id === id) : null;
+  document.getElementById('itemModalTitle').textContent = it ? 'Modifye Atik' : 'Nouvo Atik';
+  document.getElementById('itemName').value = it?.name || '';
+  document.getElementById('itemCategory').value = it?.category || ITEM_CATEGORIES[0];
+  document.getElementById('itemCondition').value = it?.condition || 'new';
+  document.getElementById('itemDate').value = it?.date || todayISO();
+  populateItemWalletSelect();
+  const mode = it?.mode || 'bought';
+  document.querySelectorAll('input[name="itemMode"]').forEach(r => r.checked = r.value === mode);
+  document.getElementById('itemWallet').value = it?.walletId || wallets[0]?.id || '';
+  document.getElementById('itemPrice').value = it?.price ?? '';
+  document.getElementById('itemGiftFrom').value = it?.giftFrom || '';
+  document.getElementById('itemHasCharger').value = it?.hasCharger == null ? '' : (it.hasCharger ? 'yes' : 'no');
+  document.getElementById('itemWarrantyMonths').value = it?.warrantyMonths ?? '';
+  updateItemModeFields();
+  updateItemCategoryFields();
+  document.getElementById('deleteItemBtn').hidden = !it;
+  document.getElementById('itemModalOverlay').classList.add('open');
+}
+function closeItemModal(){ document.getElementById('itemModalOverlay').classList.remove('open'); }
+document.getElementById('newItemBtn')?.addEventListener('click', () => openItemModal(null));
+document.getElementById('closeItemModal')?.addEventListener('click', closeItemModal);
+document.getElementById('itemModalOverlay')?.addEventListener('click', e => { if (e.target.id === 'itemModalOverlay') closeItemModal(); });
+document.querySelectorAll('input[name="itemMode"]').forEach(r => r.addEventListener('change', updateItemModeFields));
+document.getElementById('itemCategory')?.addEventListener('change', updateItemCategoryFields);
+document.getElementById('deleteItemBtn')?.addEventListener('click', () => {
+  if (!editingItemId) return;
+  deleteItem(editingItemId);
+  closeItemModal();
+});
+document.getElementById('saveItemBtn')?.addEventListener('click', () => {
+  const name = document.getElementById('itemName').value.trim();
+  if (!name){ showToast('Mete non atik la'); return; }
+  const category = document.getElementById('itemCategory').value;
+  const condition = document.getElementById('itemCondition').value;
+  const date = document.getElementById('itemDate').value || todayISO();
+  const mode = document.querySelector('input[name="itemMode"]:checked')?.value || 'bought';
+
+  const data = { name, category, condition, date, mode, showInList: true };
+  if (mode === 'bought'){
+    const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+    if (!price){ showToast('Mete pri atik la'); return; }
+    data.walletId = document.getElementById('itemWallet').value;
+    data.price = price;
+    data.giftFrom = null;
+  } else {
+    const giftFrom = document.getElementById('itemGiftFrom').value.trim();
+    if (!giftFrom){ showToast('Mete non moun ki bay kado a'); return; }
+    data.giftFrom = giftFrom;
+    data.walletId = null;
+    data.price = null;
+  }
+  if (category === 'Elektwonik'){
+    const chargerVal = document.getElementById('itemHasCharger').value;
+    data.hasCharger = chargerVal === '' ? null : (chargerVal === 'yes');
+    const warranty = document.getElementById('itemWarrantyMonths').value;
+    data.warrantyMonths = warranty ? parseFloat(warranty) : null;
+  } else {
+    data.hasCharger = null;
+    data.warrantyMonths = null;
+  }
+
+  if (editingItemId){
+    const it = items.find(x => x.id === editingItemId);
+    Object.assign(it, data);
+  } else {
+    items.push({ id: uid(), createdAt: new Date().toISOString(), showInList: true, ...data });
+  }
+  persistItems();
+  renderItems();
+  closeItemModal();
+  showToast('Atik anrejistre ✓');
+});
+
+// ---- Detay Atik (li sèlman — modifye/efase soti nan modal sa a) ----
+let itemDetailsId = null;
+function openItemDetailsModal(id){
+  itemDetailsId = id;
+  const it = items.find(x => x.id === id);
+  if (!it) return;
+  const condColor = ITEM_CONDITION_COLOR[it.condition] || 'var(--text-dim)';
+
+  document.getElementById('itemDetailsTitle').textContent = it.name;
+  const statusEl = document.getElementById('itemDetailsStatus');
+  statusEl.textContent = ITEM_CONDITIONS[it.condition] || it.condition;
+  statusEl.style.background = 'rgba(255,255,255,.22)';
+  statusEl.style.color = '#fff';
+
+  document.getElementById('itemDetailsCategory').textContent = it.category;
+  document.getElementById('itemDetailsDate').textContent = it.date || '—';
+
+  const wallet = it.walletId ? wallets.find(w => w.id === it.walletId) : null;
+  const cur = wallet ? walletCurrency(wallet) : 'HTG';
+  const boughtWrap = document.getElementById('itemDetailsBoughtWrap');
+  const giftWrap = document.getElementById('itemDetailsGiftWrap');
+  if (it.mode === 'gift'){
+    boughtWrap.hidden = true;
+    giftWrap.hidden = false;
+    document.getElementById('itemDetailsGiftFrom').textContent = it.giftFrom || '—';
+  } else {
+    giftWrap.hidden = true;
+    boughtWrap.hidden = false;
+    document.getElementById('itemDetailsWallet').textContent = wallet ? wallet.name : '—';
+    document.getElementById('itemDetailsPrice').textContent = it.price != null ? fmtMoney(it.price, cur) : '—';
+  }
+
+  const elecWrap = document.getElementById('itemDetailsElecWrap');
+  if (it.category === 'Elektwonik'){
+    elecWrap.hidden = false;
+    document.getElementById('itemDetailsCharger').textContent = it.hasCharger == null ? '—' : (it.hasCharger ? 'Wi' : 'Non');
+    document.getElementById('itemDetailsWarranty').textContent = it.warrantyMonths ? `${it.warrantyMonths} mwa` : '—';
+  } else {
+    elecWrap.hidden = true;
+  }
+
+  document.getElementById('itemDetailsModalOverlay').classList.add('open');
+  if (window.lucide) lucide.createIcons();
+}
+function closeItemDetailsModal(){ document.getElementById('itemDetailsModalOverlay').classList.remove('open'); }
+document.getElementById('closeItemDetailsModal')?.addEventListener('click', closeItemDetailsModal);
+document.getElementById('itemDetailsModalOverlay')?.addEventListener('click', e => { if (e.target.id === 'itemDetailsModalOverlay') closeItemDetailsModal(); });
+document.getElementById('itemDetailsDeleteBtn')?.addEventListener('click', () => {
+  if (!itemDetailsId) return;
+  deleteItem(itemDetailsId);
+  closeItemDetailsModal();
+});
+document.getElementById('itemDetailsEditBtn')?.addEventListener('click', () => {
+  if (!itemDetailsId) return;
+  const id = itemDetailsId;
+  closeItemDetailsModal();
+  openItemModal(id);
+});
+
 const INCOME_CATS = ['Salè','Lajan Resevwa','Depo','Kat Debi','Kado','Biznis','Lòt'];
 
 // ---- Kategori Depans/Revni Pèsonalize (ajoute pa itilizatè a, Pw. "Bay Yon Moun Lajan") ----
