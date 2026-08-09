@@ -1339,7 +1339,7 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
         <h2>Atik</h2>
         <button class="btn btn-primary" id="newItemBtn"><i data-lucide="plus"></i> Nouvo Atik</button>
       </div>
-      <div class="hint" style="margin-bottom:14px;"><i data-lucide="info"></i> Swiv rad, chosèt, akseswa ak elektwonik ou achte oswa resevwa kòm kado.</div>
+      <div class="hint" style="margin-bottom:14px;"><i data-lucide="info"></i> Swiv rad, chosèt, akseswa ak elektwonik ou achte oswa resevwa kòm kado. Mòd "Achte" kreye yon depans nan Finans otomatikman; mòd "Kado" pa touche Finans ditou.</div>
       <div id="itemsList"></div>
     </section>
 
@@ -2061,6 +2061,35 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           </div>
         </div>
         <div class="hint"><i data-lucide="repeat"></i> App la ap swiv konbyen jou ki rete nan paj Abònman.</div>
+      </div></div>
+
+      <!-- ATIK: rad, chosèt, akseswa, elektwonik achte — kreye tou yon antre nan lis Atik -->
+      <div class="tx-extra-fields" id="txAtikFields"><div class="tx-extra-fields-inner">
+        <div><label>Non Atik</label><input type="text" id="txAtikName" placeholder="Pw. Soulye Nike, Mont Apple Watch..."></div>
+        <div class="form-row">
+          <div><label>Kategori Atik</label><select id="txAtikCategory">
+            <option value="Rad">Rad</option>
+            <option value="Chosèt">Chosèt</option>
+            <option value="Akseswa">Akseswa</option>
+            <option value="Elektwonik">Elektwonik</option>
+          </select></div>
+          <div><label>Eta</label><select id="txAtikCondition">
+            <option value="new">Nèf</option>
+            <option value="good">Bon</option>
+            <option value="damaged">Gate/Domaje</option>
+          </select></div>
+        </div>
+        <div id="txAtikElecFields" hidden>
+          <div class="form-row">
+            <div><label>Gen Chaje Ladan l?</label><select id="txAtikHasCharger">
+              <option value="">— Pa presize —</option>
+              <option value="yes">Wi</option>
+              <option value="no">Non</option>
+            </select></div>
+            <div><label>Garanti (mwa, opsyonèl)</label><input type="number" id="txAtikWarrantyMonths" placeholder="Pw. 12" min="0" step="1"></div>
+          </div>
+        </div>
+        <div class="hint"><i data-lucide="shirt"></i> App la ap ajoute atik sa a nan paj Atik la tou.</div>
       </div></div>
 
       <!-- ESTATI PEMAN: parèt sèlman pou depans sou kont Kach -->
