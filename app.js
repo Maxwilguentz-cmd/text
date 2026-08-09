@@ -3897,7 +3897,7 @@ renderMissions();
 // ==========================================
 // FINANCE MODULE
 // ==========================================
-const EXPENSE_CATS = ['Manje','Transpò','Entènèt','Abònman','Dlo','Bwason','Custom'];
+const EXPENSE_CATS = ['Manje','Transpò','Entènèt','Abònman','Atik','Dlo','Bwason','Custom'];
 
 // ==========================================
 // ABÒNMAN (Netflix, Spotify, Claude, elt.) — swiv rekiran ak revant pou kliyan
@@ -4188,10 +4188,12 @@ document.getElementById('saveItemBtn')?.addEventListener('click', () => {
   const mode = document.querySelector('input[name="itemMode"]:checked')?.value || 'bought';
 
   const data = { name, category, condition, date, mode, showInList: true };
+  let price = null, walletId = null;
   if (mode === 'bought'){
-    const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+    price = parseFloat(document.getElementById('itemPrice').value) || 0;
     if (!price){ showToast('Mete pri atik la'); return; }
-    data.walletId = document.getElementById('itemWallet').value;
+    walletId = document.getElementById('itemWallet').value;
+    data.walletId = walletId;
     data.price = price;
     data.giftFrom = null;
   } else {
@@ -4211,14 +4213,44 @@ document.getElementById('saveItemBtn')?.addEventListener('click', () => {
     data.warrantyMonths = null;
   }
 
-  if (editingItemId){
-    const it = items.find(x => x.id === editingItemId);
-    Object.assign(it, data);
+  const existingItem = editingItemId ? items.find(x => x.id === editingItemId) : null;
+
+  // ---- Entegrasyon Finans: mòd "Achte" kreye/modifye yon vrè tranzaksyon Finans ----
+  if (mode === 'bought'){
+    const txData = {
+      type: 'expense', amount: price, description: name, category: 'Atik',
+      walletId, date, time: new Date().toTimeString().slice(0,5),
+    };
+    let txId = existingItem?.txId;
+    const existingTx = txId ? tx.find(t => t.id === txId) : null;
+    if (existingTx) Object.assign(existingTx, txData);
+    else { txId = uid(); tx.push({ id: txId, itemId: editingItemId || null, ...txData }); }
+    persistTx();
+    bumpCategory('finance', -1);
+    data.txId = txId;
+  } else if (existingItem?.txId){
+    // Te Achte anvan, kounye a li vin Kado — retire tranzaksyon Finans lye a.
+    tx = tx.filter(t => t.id !== existingItem.txId);
+    persistTx();
+    data.txId = null;
+  }
+
+  let itemId = editingItemId;
+  if (existingItem){
+    Object.assign(existingItem, data);
   } else {
-    items.push({ id: uid(), createdAt: new Date().toISOString(), showInList: true, ...data });
+    itemId = uid();
+    items.push({ id: itemId, createdAt: new Date().toISOString(), showInList: true, ...data });
+  }
+  // Si nou fèk kreye tranzaksyon an pou yon nouvo atik, ale fikse itemId sou tranzaksyon an.
+  if (mode === 'bought' && !editingItemId){
+    const t = tx.find(x => x.id === data.txId);
+    if (t) t.itemId = itemId;
+    persistTx();
   }
   persistItems();
   renderItems();
+  if (document.getElementById('view-finance') && !document.getElementById('view-finance').hidden) renderFinance();
   closeItemModal();
   showToast('Atik anrejistre ✓');
 });
@@ -4404,7 +4436,7 @@ function getFilteredTx(){
   }).sort((a,b) => b.date.localeCompare(a.date));
 }
 
-const TX_ICONS = { 'Manje':'utensils', 'Transpò':'car', 'Entènèt':'wifi', 'Abònman':'repeat', 'Custom':'shapes',
+const TX_ICONS = { 'Manje':'utensils', 'Transpò':'car', 'Entènèt':'wifi', 'Abònman':'repeat', 'Atik':'shirt', 'Custom':'shapes',
   'Dlo':'droplet', 'Bwason':'cup-soda',
   'Salè':'briefcase', 'Lajan Resevwa':'hand-coins', 'Depo':'landmark', 'Kat Debi':'credit-card',
   'Kado':'gift', 'Biznis':'store', 'Lòt':'circle-dollar-sign' };
@@ -4706,11 +4738,20 @@ function updateTxCategoryExtras(cat){
   const dlo = document.getElementById('txDloFields');
   const bwason = document.getElementById('txBwasonFields');
   const abon = document.getElementById('txAbonmanFields');
+  const atik = document.getElementById('txAtikFields');
   dlo.classList.toggle('open', cat === 'Dlo');
   bwason.classList.toggle('open', cat === 'Bwason');
   if (abon) abon.classList.toggle('open', cat === 'Abònman');
+  if (atik) atik.classList.toggle('open', cat === 'Atik');
+  updateTxAtikElectronicsVisibility();
   if (window.lucide) lucide.createIcons();
 }
+function updateTxAtikElectronicsVisibility(){
+  const wrap = document.getElementById('txAtikElecFields');
+  if (!wrap) return;
+  wrap.hidden = document.getElementById('txAtikCategory')?.value !== 'Elektwonik';
+}
+document.getElementById('txAtikCategory')?.addEventListener('change', updateTxAtikElectronicsVisibility);
 // ---- Montre/kache ti chan pou kreye yon nouvo kategori pèsonalize ----
 function updateTxNewCategoryVisibility(cat){
   const wrap = document.getElementById('txNewCategoryWrap');
@@ -4775,6 +4816,14 @@ function openTxModal(id){
   document.getElementById('txSubClientPhone').value = linkedSub?.clientPhone || '';
   document.getElementById('txSubAccountEmail').value = linkedSub?.accountEmail || '';
   document.getElementById('txSubClientPrice').value = linkedSub?.clientPrice ?? '';
+  // Atik: repopile chan yo si n ap modifye yon tranzaksyon ki deja lye ak yon atik
+  const linkedItem = t?.itemId ? items.find(i => i.id === t.itemId) : null;
+  document.getElementById('txAtikName').value = linkedItem?.name || '';
+  document.getElementById('txAtikCategory').value = linkedItem?.category || ITEM_CATEGORIES[0];
+  document.getElementById('txAtikCondition').value = linkedItem?.condition || 'new';
+  document.getElementById('txAtikHasCharger').value = linkedItem?.hasCharger == null ? '' : (linkedItem.hasCharger ? 'yes' : 'no');
+  document.getElementById('txAtikWarrantyMonths').value = linkedItem?.warrantyMonths ?? '';
+  updateTxAtikElectronicsVisibility();
   document.getElementById('txModalOverlay').classList.add('open');
 }
 document.getElementById('txType').addEventListener('change', e => {
@@ -4911,10 +4960,15 @@ document.getElementById('saveTxBtn').addEventListener('click', () => {
   let waterMl = null;
   let drinkName = '', drinkType = 'sugary', drinkMl = null;
   let subService = '';
+  let atikName = '';
   if (category === 'Abònman'){
     subService = document.getElementById('txSubService').value.trim();
     if (!subService){ showToast('Mete non sèvis abònman an (Pw. Netflix)'); return; }
     if (!document.getElementById('txSubStartDate').value){ showToast('Mete dat abònman an kòmanse'); return; }
+  }
+  if (category === 'Atik'){
+    atikName = document.getElementById('txAtikName').value.trim();
+    if (!atikName){ showToast('Mete non atik la'); return; }
   }
   if (category === 'Dlo'){
     const waterAmount = parseFloat(document.getElementById('txWaterAmount').value);
@@ -4983,6 +5037,40 @@ document.getElementById('saveTxBtn').addEventListener('click', () => {
     persistSubscriptions();
     data.subId = subId;
     if (!data.description) data.description = subService;
+  }
+
+  if (category === 'Atik'){
+    const atikCategory = document.getElementById('txAtikCategory').value;
+    const atikCondition = document.getElementById('txAtikCondition').value;
+    const itemData = {
+      name: atikName,
+      category: atikCategory,
+      condition: atikCondition,
+      date: data.date,
+      mode: 'bought',
+      walletId: data.walletId,
+      price: amount,
+      giftFrom: null,
+      showInList: true,
+    };
+    if (atikCategory === 'Elektwonik'){
+      const chargerVal = document.getElementById('txAtikHasCharger').value;
+      itemData.hasCharger = chargerVal === '' ? null : (chargerVal === 'yes');
+      const warranty = document.getElementById('txAtikWarrantyMonths').value;
+      itemData.warrantyMonths = warranty ? parseFloat(warranty) : null;
+    } else {
+      itemData.hasCharger = null;
+      itemData.warrantyMonths = null;
+    }
+    const existingT = editingTxId ? tx.find(x => x.id === editingTxId) : null;
+    let itemId = existingT?.itemId;
+    const existingItem = itemId ? items.find(x => x.id === itemId) : null;
+    if (existingItem) Object.assign(existingItem, itemData);
+    else { itemId = uid(); items.push({ id: itemId, createdAt: new Date().toISOString(), ...itemData }); }
+    persistItems();
+    if (typeof renderItems === 'function' && document.getElementById('view-items') && !document.getElementById('view-items').hidden) renderItems();
+    data.itemId = itemId;
+    if (!data.description) data.description = atikName;
   }
 
   if (editingTxId) Object.assign(tx.find(x => x.id === editingTxId), data);
