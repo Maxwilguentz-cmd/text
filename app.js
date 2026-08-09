@@ -3962,7 +3962,6 @@ function renderSubscriptions(){
     const cur = wallet ? walletCurrency(wallet) : 'HTG';
     const daysLeft = subDaysLeft(s);
     const daysColor = daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--orange)' : 'var(--text-dim)';
-    const benefit = s.forClient ? (Number(s.clientPrice || 0) - Number(s.price || 0)) : null;
     return `<div class="card" style="padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;" onclick="openSubDetailsModal('${s.id}')">
       <div style="width:38px;height:38px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;flex-shrink:0;color:var(--blue);"><i data-lucide="${guessSubIcon(s.service)}"></i></div>
       <div style="flex:1;min-width:0;">
@@ -3971,11 +3970,6 @@ function renderSubscriptions(){
           <span style="color:${daysColor};font-weight:600;font-size:13px;white-space:nowrap;">${daysLeft <= 0 ? 'Renouvle jodi a' : daysLeft + ' jou'}</span>
         </div>
         <div class="sub" style="font-size:13px;color:var(--text-dim);margin-top:2px;">${fmtMoney(s.price, cur)} · ${wallet ? escapeHtml(wallet.name) : 'Pa gen kont'}</div>
-        ${s.forClient ? `<div style="margin-top:6px;font-size:13px;line-height:1.5;">
-          <div>👤 ${escapeHtml(s.clientName || '—')}${s.clientPhone ? ' · ' + escapeHtml(s.clientPhone) : ''}</div>
-          ${s.accountEmail ? `<div style="color:var(--text-dim);">✉️ ${escapeHtml(s.accountEmail)}</div>` : ''}
-          <div style="color:${benefit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:600;">Benefis: ${benefit >= 0 ? '+' : ''}${fmtMoney(benefit, cur)}</div>
-        </div>` : ''}
       </div>
       <button class="icon-btn" onclick="event.stopPropagation();deleteSubscription('${s.id}')" title="Efase"><i data-lucide="trash-2"></i></button>
     </div>`;
