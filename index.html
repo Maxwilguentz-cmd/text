@@ -2427,6 +2427,50 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
     </div>
   </div>
 </div>
+
+<!-- ================= SUBSCRIPTION DETAILS MODAL ================= -->
+<div class="modal-overlay" id="subDetailsModalOverlay">
+  <div class="modal goal-details-modal">
+    <div class="modal-head"><h3>Detay Abònman</h3><button class="icon-btn" id="closeSubDetailsModal" aria-label="Fèmen"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="goal-details-summary">
+        <div class="goal-details-summary-top">
+          <div class="goal-details-summary-title" id="subDetailsTitle">—</div>
+          <span class="goal-details-summary-status" id="subDetailsStatus">—</span>
+        </div>
+        <div class="goal-details-summary-track"><span id="subDetailsBar" style="width:0%;"></span></div>
+        <div class="goal-details-summary-bottom">
+          <b id="subDetailsPct">0%</b>
+          <span class="goal-details-summary-days"><i data-lucide="calendar-clock" style="width:13px;height:13px;"></i> <span id="subDetailsDaysLeft">—</span></span>
+        </div>
+      </div>
+
+      <div class="goal-details-section-title">Enfòmasyon Jeneral</div>
+      <div class="goal-details-grid">
+        <div class="goal-details-field"><span class="lbl">Wallet</span><span class="val" id="subDetailsWallet">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Pri</span><span class="val" id="subDetailsPrice">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Dat li Kòmanse</span><span class="val" id="subDetailsStartDate">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Pwochen Renouvèlman</span><span class="val" id="subDetailsNextDate">—</span></div>
+      </div>
+
+      <div id="subDetailsClientWrap" hidden>
+        <div class="goal-details-section-title">Kliyan</div>
+        <div class="goal-details-grid">
+          <div class="goal-details-field"><span class="lbl">Non</span><span class="val" id="subDetailsClientName">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Telefòn</span><span class="val" id="subDetailsClientPhone">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Imèl Kont lan</span><span class="val" id="subDetailsAccountEmail">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Konbyen Peye</span><span class="val" id="subDetailsClientPrice">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Benefis</span><span class="val" id="subDetailsBenefit">—</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="subDetailsDeleteBtn">Efase</button>
+      <button class="btn btn-primary" id="subDetailsEditBtn" style="margin-left:auto;">Modifye</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="goalModalOverlay">
   <div class="modal">
     <div class="modal-head"><h3 id="goalModalTitle">Nouvo Objektif</h3><button class="icon-btn" id="closeGoalModal"><i data-lucide="x"></i></button></div>
