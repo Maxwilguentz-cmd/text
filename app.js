@@ -3919,6 +3919,7 @@ function refreshDashboardSubWidget(){
 }
 document.getElementById('dashSubWidget')?.addEventListener('click', () => showView('subscriptions'));
 refreshDashboardSubWidget();
+checkSubscriptionNotifications();
 const SUB_ICON_MAP = {
   netflix:'clapperboard', spotify:'music', 'disney':'sparkles', youtube:'youtube',
   claude:'bot', chatgpt:'bot', 'chat gpt':'bot', gpt:'bot', gemini:'bot', copilot:'bot',
@@ -3948,6 +3949,7 @@ function subDaysLeft(sub){
 function renderSubscriptions(){
   const wrap = document.getElementById('subscriptionsList');
   if (!wrap) return;
+  checkSubscriptionNotifications();
   if (!subscriptions.length){
     wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:13.5px;">
       Ou poko gen abònman. Klike "Nouvo Abònman" oswa ajoute yon depans nan Finans ak kategori "Abònman".
@@ -3961,7 +3963,7 @@ function renderSubscriptions(){
     const daysLeft = subDaysLeft(s);
     const daysColor = daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--orange)' : 'var(--text-dim)';
     const benefit = s.forClient ? (Number(s.clientPrice || 0) - Number(s.price || 0)) : null;
-    return `<div class="card" style="padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;">
+    return `<div class="card" style="padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;" onclick="openSubDetailsModal('${s.id}')">
       <div style="width:38px;height:38px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;flex-shrink:0;color:var(--blue);"><i data-lucide="${guessSubIcon(s.service)}"></i></div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
@@ -3975,7 +3977,7 @@ function renderSubscriptions(){
           <div style="color:${benefit >= 0 ? 'var(--green)' : 'var(--red)'};font-weight:600;">Benefis: ${benefit >= 0 ? '+' : ''}${fmtMoney(benefit, cur)}</div>
         </div>` : ''}
       </div>
-      <button class="icon-btn" onclick="deleteSubscription('${s.id}')" title="Efase"><i data-lucide="trash-2"></i></button>
+      <button class="icon-btn" onclick="event.stopPropagation();deleteSubscription('${s.id}')" title="Efase"><i data-lucide="trash-2"></i></button>
     </div>`;
   }).join('');
   if (window.lucide) lucide.createIcons();
@@ -3985,6 +3987,93 @@ function deleteSubscription(id){
   persistSubscriptions();
   renderSubscriptions();
   showToast('Abònman efase');
+}
+
+// ---- Detay Abònman (li sèlman — modifye/efase soti nan modal sa a) ----
+let subDetailsId = null;
+function subCyclePct(sub){
+  const cycle = Number(sub.cycleDays) || 30;
+  const next = subNextRenewal(sub);
+  const start = new Date(next.getTime() - cycle * 86400000);
+  const today = new Date(todayISO() + 'T00:00:00');
+  const elapsed = (today.getTime() - start.getTime()) / 86400000;
+  return Math.max(0, Math.min(100, Math.round((elapsed / cycle) * 100)));
+}
+function openSubDetailsModal(id){
+  subDetailsId = id;
+  const s = subscriptions.find(x => x.id === id);
+  if (!s) return;
+  const wallet = wallets.find(w => w.id === s.walletId);
+  const cur = wallet ? walletCurrency(wallet) : 'HTG';
+  const daysLeft = subDaysLeft(s);
+  const pct = subCyclePct(s);
+  const barColor = daysLeft <= 3 ? 'var(--red)' : daysLeft <= 7 ? 'var(--orange)' : 'var(--blue)';
+
+  document.getElementById('subDetailsTitle').textContent = s.service;
+  const statusEl = document.getElementById('subDetailsStatus');
+  statusEl.textContent = daysLeft <= 3 ? 'Ap Ekspire Byento' : 'Aktif';
+  statusEl.style.background = daysLeft <= 3 ? 'color-mix(in srgb, var(--red) 16%, transparent)' : 'color-mix(in srgb, var(--green) 16%, transparent)';
+  statusEl.style.color = daysLeft <= 3 ? 'var(--red)' : 'var(--green)';
+  const bar = document.getElementById('subDetailsBar');
+  bar.style.width = pct + '%';
+  bar.style.background = barColor;
+  document.getElementById('subDetailsPct').textContent = pct + '%';
+  document.getElementById('subDetailsDaysLeft').textContent = daysLeft <= 0 ? 'Renouvle jodi a' : daysLeft + ' jou rete';
+
+  document.getElementById('subDetailsWallet').textContent = wallet ? wallet.name : '—';
+  document.getElementById('subDetailsPrice').textContent = fmtMoney(s.price, cur);
+  document.getElementById('subDetailsStartDate').textContent = s.startDate || '—';
+  document.getElementById('subDetailsNextDate').textContent = subNextRenewal(s).toISOString().slice(0,10);
+
+  const clientWrap = document.getElementById('subDetailsClientWrap');
+  if (s.forClient){
+    clientWrap.hidden = false;
+    const benefit = Number(s.clientPrice || 0) - Number(s.price || 0);
+    document.getElementById('subDetailsClientName').textContent = s.clientName || '—';
+    document.getElementById('subDetailsClientPhone').textContent = s.clientPhone || '—';
+    document.getElementById('subDetailsAccountEmail').textContent = s.accountEmail || '—';
+    document.getElementById('subDetailsClientPrice').textContent = s.clientPrice != null ? fmtMoney(s.clientPrice, cur) : '—';
+    const benEl = document.getElementById('subDetailsBenefit');
+    benEl.textContent = (benefit >= 0 ? '+' : '') + fmtMoney(benefit, cur);
+    benEl.style.color = benefit >= 0 ? 'var(--green)' : 'var(--red)';
+  } else {
+    clientWrap.hidden = true;
+  }
+  document.getElementById('subDetailsModalOverlay').classList.add('open');
+  if (window.lucide) lucide.createIcons();
+}
+function closeSubDetailsModal(){ document.getElementById('subDetailsModalOverlay').classList.remove('open'); }
+document.getElementById('closeSubDetailsModal').addEventListener('click', closeSubDetailsModal);
+document.getElementById('subDetailsModalOverlay').addEventListener('click', e => { if (e.target.id === 'subDetailsModalOverlay') closeSubDetailsModal(); });
+document.getElementById('subDetailsDeleteBtn').addEventListener('click', () => {
+  if (!subDetailsId) return;
+  deleteSubscription(subDetailsId);
+  closeSubDetailsModal();
+});
+document.getElementById('subDetailsEditBtn').addEventListener('click', () => {
+  if (!subDetailsId) return;
+  const linkedTx = tx.find(t => t.subId === subDetailsId);
+  closeSubDetailsModal();
+  if (linkedTx) openTxModal(linkedTx.id);
+  else showView('finance');
+});
+
+// ---- Notifikasyon: avèti lè yon abònman ap ekspire (3j, 1j, jodi a) ----
+function checkSubscriptionNotifications(){
+  const t = todayISO();
+  subscriptions.forEach(s => {
+    const left = subDaysLeft(s);
+    if (left !== 3 && left !== 1 && left !== 0) return;
+    const label = left === 0 ? 'renouvle jodi a' : `ap renouvle nan ${left} jou`;
+    pushNotification({
+      icon: 'repeat',
+      color: left === 0 ? 'var(--red)' : 'var(--orange)',
+      title: `Abònman ${s.service}`,
+      body: `Abònman "${s.service}" ${label}${s.forClient ? ' (pou ' + (s.clientName || 'yon kliyan') + ')' : ''}.`,
+      view: 'subscriptions',
+      dedupeKey: `sub-${s.id}-${left}-${t}`,
+    });
+  });
 }
 const INCOME_CATS = ['Salè','Lajan Resevwa','Depo','Kat Debi','Kado','Biznis','Lòt'];
 
