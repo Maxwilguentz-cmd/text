@@ -1318,6 +1318,16 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       </div>
     </section>
 
+    <!-- ================= ABÒNMAN VIEW ================= -->
+    <section class="view" id="view-subscriptions" hidden>
+      <div class="view-head">
+        <h2>Abònman</h2>
+        <button class="btn btn-primary" id="newSubBtn"><i data-lucide="plus"></i> Nouvo Abònman</button>
+      </div>
+      <div class="hint" style="margin-bottom:14px;"><i data-lucide="info"></i> Ajoute yon abònman apati la a — l ap kreye yon depans nan Finans otomatikman.</div>
+      <div id="subscriptionsList"></div>
+    </section>
+
     <!-- ================= JOURNAL VIEW ================= -->
     <section class="view" id="view-journal" hidden>
       <div class="view-head">
@@ -2008,6 +2018,34 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
           <div><label>Inite</label><select id="txDrinkUnit"><option value="ml">ml</option><option value="L">L</option></select></div>
         </div>
         <div class="hint"><i data-lucide="sparkles"></i> AI ap analize enpak li sou Sante selon tip bwason an.</div>
+      </div></div>
+
+      <!-- ABÒNMAN: swiv rekiran, ka pou tèt ou oswa pou revann bay yon kliyan -->
+      <div class="tx-extra-fields" id="txAbonmanFields"><div class="tx-extra-fields-inner">
+        <div class="form-row">
+          <div><label>Sèvis</label><input type="text" id="txSubService" placeholder="Pw. Netflix, Spotify..." list="txSubServiceList">
+            <datalist id="txSubServiceList">
+              <option value="Netflix"><option value="Spotify"><option value="Disney+"><option value="YouTube Premium">
+              <option value="Claude"><option value="ChatGPT"><option value="Amazon Prime"><option value="Apple Music">
+              <option value="HBO Max"><option value="iCloud+">
+            </datalist>
+          </div>
+          <div><label>Dat li Kòmanse</label><input type="date" id="txSubStartDate"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13.5px;font-weight:500;">
+          <input type="checkbox" id="txSubForClient"> Se pou yon kliyan (m ap revann li)
+        </label>
+        <div id="txSubClientFields" style="display:none;">
+          <div class="form-row">
+            <div><label>Non Kliyan</label><input type="text" id="txSubClientName" placeholder="Pw. Jean"></div>
+            <div><label>Telefòn Kliyan</label><input type="text" id="txSubClientPhone" placeholder="Pw. 3712xxxx"></div>
+          </div>
+          <div class="form-row">
+            <div><label>Imèl Kont lan</label><input type="text" id="txSubAccountEmail" placeholder="imèl Netflix/Disney..."></div>
+            <div><label>Konbyen Kliyan Peye</label><input type="number" id="txSubClientPrice" placeholder="Pw. 250" min="0" step="any"></div>
+          </div>
+        </div>
+        <div class="hint"><i data-lucide="repeat"></i> App la ap swiv konbyen jou ki rete nan paj Abònman.</div>
       </div></div>
 
       <!-- ESTATI PEMAN: parèt sèlman pou depans sou kont Kach -->
