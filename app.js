@@ -4080,6 +4080,21 @@ function checkSubscriptionNotifications(){
 const ITEM_CATEGORIES = ['Rad','Chosèt','Akseswa','Elektwonik'];
 const ITEM_CONDITIONS = { new:'Nèf', good:'Bon', damaged:'Gate/Domaje' };
 const ITEM_CONDITION_COLOR = { new:'var(--green)', good:'var(--blue)', damaged:'var(--red)' };
+// ---- Enpak sou Life Score: yon atik ki gate vit (anvan sèy la) fè Life Score desann. ----
+// Pri pa patisipe nan kalkil la — se vitès li gate ki konte, pa valè lajan an. Sa vle di
+// règ sa a aplike menm jan pou atik Achte AK atik Kado.
+const ITEM_DAMAGE_THRESHOLD_DAYS = 30; // si li gate anvan 30 jou, gen penalite
+const ITEM_DAMAGE_MAX_PENALTY = 8; // pi gwo penalite posib (gate menm jou a)
+function computeItemDamagePenalty(acquireDateStr, damagedDateStr){
+  if (!acquireDateStr || !damagedDateStr) return 0;
+  const acquire = new Date(acquireDateStr + 'T00:00:00');
+  const damaged = new Date(damagedDateStr + 'T00:00:00');
+  if (isNaN(acquire.getTime()) || isNaN(damaged.getTime())) return 0;
+  const daysToGate = Math.max(0, Math.round((damaged.getTime() - acquire.getTime()) / 86400000));
+  if (daysToGate >= ITEM_DAMAGE_THRESHOLD_DAYS) return 0; // dire ase — pa gen penalite
+  const severity = (ITEM_DAMAGE_THRESHOLD_DAYS - daysToGate) / ITEM_DAMAGE_THRESHOLD_DAYS; // 0..1, pi pre 1 = gate pi vit
+  return Math.max(1, Math.round(severity * ITEM_DAMAGE_MAX_PENALTY));
+}
 let items = loadLS(LS.items, []);
 function persistItems(){ saveLS(LS.items, items); }
 function guessItemIcon(cat){
@@ -4124,7 +4139,9 @@ function renderItems(){
   if (window.lucide) lucide.createIcons();
 }
 function deleteItem(id){
-  items = items.filter(it => it.id !== id);
+  const it = items.find(x => x.id === id);
+  if (it?.lifeScorePenaltyApplied) bumpCategory('finance', it.lifeScorePenaltyApplied); // ranvèse penalite Life Score si te gen youn
+  items = items.filter(x => x.id !== id);
   persistItems();
   renderItems();
   showToast('Atik efase');
@@ -4143,10 +4160,33 @@ function updateItemCategoryFields(){
   document.getElementById('itemElectronicsFields').classList.toggle('open', cat === 'Elektwonik');
   if (window.lucide) lucide.createIcons();
 }
+function updateItemConditionFields(){
+  const isDamaged = document.getElementById('itemCondition').value === 'damaged';
+  const wrap = document.getElementById('itemDamagedDateWrap');
+  wrap.hidden = !isDamaged;
+  if (isDamaged && !document.getElementById('itemDamagedDate').value){
+    document.getElementById('itemDamagedDate').value = todayISO();
+  }
+}
+document.getElementById('itemCondition')?.addEventListener('change', updateItemConditionFields);
 function populateItemWalletSelect(){
   const sel = document.getElementById('itemWallet');
   if (sel) sel.innerHTML = wallets.map(w => `<option value="${w.id}">${escapeHtml(w.name)} (${walletCurrency(w)})</option>`).join('');
 }
+function populateItemGoalSelect(currentGoalId){
+  const sel = document.getElementById('itemGoalLink');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Okenn —</option>' +
+    goals.map(g => `<option value="${g.id}">${escapeHtml(g.title)}${g.status==='completed'?' (Fini)':''}</option>`).join('');
+  sel.value = currentGoalId || '';
+  updateItemShowInListVisibility();
+}
+function updateItemShowInListVisibility(){
+  const goalId = document.getElementById('itemGoalLink')?.value || '';
+  document.getElementById('itemShowInListWrap').hidden = !goalId;
+  document.getElementById('itemGoalLinkHint').hidden = !goalId;
+}
+document.getElementById('itemGoalLink')?.addEventListener('change', updateItemShowInListVisibility);
 function openItemModal(id){
   editingItemId = id || null;
   const it = id ? items.find(x => x.id === id) : null;
@@ -4154,6 +4194,7 @@ function openItemModal(id){
   document.getElementById('itemName').value = it?.name || '';
   document.getElementById('itemCategory').value = it?.category || ITEM_CATEGORIES[0];
   document.getElementById('itemCondition').value = it?.condition || 'new';
+  document.getElementById('itemDamagedDate').value = it?.damagedDate || '';
   document.getElementById('itemDate').value = it?.date || todayISO();
   populateItemWalletSelect();
   const mode = it?.mode || 'bought';
@@ -4163,8 +4204,11 @@ function openItemModal(id){
   document.getElementById('itemGiftFrom').value = it?.giftFrom || '';
   document.getElementById('itemHasCharger').value = it?.hasCharger == null ? '' : (it.hasCharger ? 'yes' : 'no');
   document.getElementById('itemWarrantyMonths').value = it?.warrantyMonths ?? '';
+  populateItemGoalSelect(it?.goalId || '');
+  document.getElementById('itemShowInList').checked = it?.showInList !== false;
   updateItemModeFields();
   updateItemCategoryFields();
+  updateItemConditionFields();
   document.getElementById('deleteItemBtn').hidden = !it;
   document.getElementById('itemModalOverlay').classList.add('open');
 }
@@ -4188,6 +4232,9 @@ document.getElementById('saveItemBtn')?.addEventListener('click', () => {
   const mode = document.querySelector('input[name="itemMode"]:checked')?.value || 'bought';
 
   const data = { name, category, condition, date, mode, showInList: true };
+  const goalId = document.getElementById('itemGoalLink').value || null;
+  data.goalId = goalId;
+  data.showInList = goalId ? document.getElementById('itemShowInList').checked : true;
   let price = null, walletId = null;
   if (mode === 'bought'){
     price = parseFloat(document.getElementById('itemPrice').value) || 0;
@@ -4214,6 +4261,32 @@ document.getElementById('saveItemBtn')?.addEventListener('click', () => {
   }
 
   const existingItem = editingItemId ? items.find(x => x.id === editingItemId) : null;
+
+  // ---- Enpak sou Life Score: si atik la fèk make "Gate", oswa dat li gate a chanje,
+  // kalkile/rekalkile penalite a. Si li pa "Gate" ankò, ranvèse ansyen penalite a. ----
+  const prevCondition = existingItem?.condition || null;
+  const prevDamagedDate = existingItem?.damagedDate || null;
+  const prevPenalty = existingItem?.lifeScorePenaltyApplied || 0;
+  let lifeScoreMsg = '';
+  if (condition === 'damaged'){
+    const damagedDate = document.getElementById('itemDamagedDate').value || todayISO();
+    data.damagedDate = damagedDate;
+    if (prevCondition !== 'damaged' || prevDamagedDate !== damagedDate){
+      if (prevCondition === 'damaged' && prevPenalty) bumpCategory('finance', prevPenalty); // ranvèse ansyen penalite a anvan
+      const penalty = computeItemDamagePenalty(date, damagedDate);
+      data.lifeScorePenaltyApplied = penalty;
+      if (penalty > 0){
+        bumpCategory('finance', -penalty);
+        lifeScoreMsg = ` Li gate vit apre dat li te ${mode==='gift'?'resevwa':'achte'} a — Life Score ou desann ${penalty} pwen.`;
+      }
+    } else {
+      data.lifeScorePenaltyApplied = prevPenalty;
+    }
+  } else {
+    data.damagedDate = null;
+    data.lifeScorePenaltyApplied = 0;
+    if (prevCondition === 'damaged' && prevPenalty) bumpCategory('finance', prevPenalty); // pa "Gate" ankò — ranvèse penalite a
+  }
 
   // ---- Entegrasyon Finans: mòd "Achte" kreye/modifye yon vrè tranzaksyon Finans ----
   if (mode === 'bought'){
@@ -4252,7 +4325,7 @@ document.getElementById('saveItemBtn')?.addEventListener('click', () => {
   renderItems();
   if (document.getElementById('view-finance') && !document.getElementById('view-finance').hidden) renderFinance();
   closeItemModal();
-  showToast('Atik anrejistre ✓');
+  showToast('Atik anrejistre ✓' + lifeScoreMsg);
 });
 
 // ---- Detay Atik (li sèlman — modifye/efase soti nan modal sa a) ----
@@ -4271,6 +4344,29 @@ function openItemDetailsModal(id){
 
   document.getElementById('itemDetailsCategory').textContent = it.category;
   document.getElementById('itemDetailsDate').textContent = it.date || '—';
+  const goalWrap = document.getElementById('itemDetailsGoalWrap');
+  const linkedGoal = it.goalId ? goals.find(g => g.id === it.goalId) : null;
+  if (linkedGoal){
+    goalWrap.hidden = false;
+    document.getElementById('itemDetailsGoal').textContent = linkedGoal.title;
+  } else {
+    goalWrap.hidden = true;
+  }
+  const damagedWrap = document.getElementById('itemDetailsDamagedWrap');
+  const penaltyWrap = document.getElementById('itemDetailsPenaltyWrap');
+  if (it.condition === 'damaged' && it.damagedDate){
+    damagedWrap.hidden = false;
+    document.getElementById('itemDetailsDamagedDate').textContent = it.damagedDate;
+    if (it.lifeScorePenaltyApplied){
+      penaltyWrap.hidden = false;
+      document.getElementById('itemDetailsPenalty').textContent = `-${it.lifeScorePenaltyApplied} pwen (Finans)`;
+    } else {
+      penaltyWrap.hidden = true;
+    }
+  } else {
+    damagedWrap.hidden = true;
+    penaltyWrap.hidden = true;
+  }
 
   const wallet = it.walletId ? wallets.find(w => w.id === it.walletId) : null;
   const cur = wallet ? walletCurrency(wallet) : 'HTG';
