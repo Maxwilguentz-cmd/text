@@ -1333,6 +1333,16 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
       <div id="subscriptionsList"></div>
     </section>
 
+    <!-- ================= ATIK VIEW ================= -->
+    <section class="view" id="view-items" hidden>
+      <div class="view-head">
+        <h2>Atik</h2>
+        <button class="btn btn-primary" id="newItemBtn"><i data-lucide="plus"></i> Nouvo Atik</button>
+      </div>
+      <div class="hint" style="margin-bottom:14px;"><i data-lucide="info"></i> Swiv rad, chosèt, akseswa ak elektwonik ou achte oswa resevwa kòm kado.</div>
+      <div id="itemsList"></div>
+    </section>
+
     <!-- ================= JOURNAL VIEW ================= -->
     <section class="view" id="view-journal" hidden>
       <div class="view-head">
@@ -2467,6 +2477,120 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
     <div class="modal-foot">
       <button class="btn btn-ghost" id="subDetailsDeleteBtn">Efase</button>
       <button class="btn btn-primary" id="subDetailsEditBtn" style="margin-left:auto;">Modifye</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: NOUVO / MODIFYE ATIK ================= -->
+<div class="modal-overlay" id="itemModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="itemModalTitle">Nouvo Atik</h3><button class="icon-btn" id="closeItemModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Non Atik</label><input type="text" id="itemName" placeholder="Pw. Soulye Nike, Mont Apple Watch..."></div>
+      <div class="form-row">
+        <div><label>Kategori</label><select id="itemCategory">
+          <option value="Rad">Rad</option>
+          <option value="Chosèt">Chosèt</option>
+          <option value="Akseswa">Akseswa</option>
+          <option value="Elektwonik">Elektwonik</option>
+        </select></div>
+        <div><label>Eta</label><select id="itemCondition">
+          <option value="new">Nèf</option>
+          <option value="good">Bon</option>
+          <option value="damaged">Gate/Domaje</option>
+        </select></div>
+      </div>
+      <div><label>Dat (achte oswa resevwa)</label><input type="date" id="itemDate"></div>
+
+      <div style="margin:12px 0 6px;">
+        <label style="display:block;margin-bottom:6px;">Kijan ou vin genyen l?</label>
+        <div style="display:flex;gap:14px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;">
+            <input type="radio" name="itemMode" value="bought" checked> Achte
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:500;">
+            <input type="radio" name="itemMode" value="gift"> Kado
+          </label>
+        </div>
+      </div>
+
+      <!-- ACHTE: touche Finans, kreye depans -->
+      <div class="tx-extra-fields" id="itemBoughtFields"><div class="tx-extra-fields-inner">
+        <div class="form-row">
+          <div><label>Kont</label><select id="itemWallet"></select></div>
+          <div><label>Pri</label><input type="number" id="itemPrice" placeholder="0" min="0" step="any"></div>
+        </div>
+        <div class="hint"><i data-lucide="wallet"></i> Sa ap kreye yon depans nan Finans, menm jan ak Abònman.</div>
+      </div></div>
+
+      <!-- KADO: pa touche Finans ditou -->
+      <div class="tx-extra-fields" id="itemGiftFields"><div class="tx-extra-fields-inner">
+        <div><label>Ki moun ki bay kado a</label><input type="text" id="itemGiftFrom" placeholder="Pw. Manman, Jean..."></div>
+      </div></div>
+
+      <!-- ELEKTWONIK: chan siplemantè -->
+      <div class="tx-extra-fields" id="itemElectronicsFields"><div class="tx-extra-fields-inner">
+        <div class="form-row">
+          <div><label>Gen Chaje Ladan l?</label><select id="itemHasCharger">
+            <option value="">— Pa presize —</option>
+            <option value="yes">Wi</option>
+            <option value="no">Non</option>
+          </select></div>
+          <div><label>Garanti (mwa, opsyonèl)</label><input type="number" id="itemWarrantyMonths" placeholder="Pw. 12" min="0" step="1"></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteItemBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveItemBtn" style="margin-left:auto;">Anrejistre Atik</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: DETAY ATIK ================= -->
+<div class="modal-overlay" id="itemDetailsModalOverlay">
+  <div class="modal goal-details-modal">
+    <div class="modal-head"><h3>Detay Atik</h3><button class="icon-btn" id="closeItemDetailsModal" aria-label="Fèmen"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div class="goal-details-summary">
+        <div class="goal-details-summary-top">
+          <div class="goal-details-summary-title" id="itemDetailsTitle">—</div>
+          <span class="goal-details-summary-status" id="itemDetailsStatus">—</span>
+        </div>
+      </div>
+
+      <div class="goal-details-section-title">Enfòmasyon Jeneral</div>
+      <div class="goal-details-grid">
+        <div class="goal-details-field"><span class="lbl">Kategori</span><span class="val" id="itemDetailsCategory">—</span></div>
+        <div class="goal-details-field"><span class="lbl">Dat</span><span class="val" id="itemDetailsDate">—</span></div>
+      </div>
+
+      <div id="itemDetailsBoughtWrap" hidden>
+        <div class="goal-details-section-title">Achte</div>
+        <div class="goal-details-grid">
+          <div class="goal-details-field"><span class="lbl">Kont</span><span class="val" id="itemDetailsWallet">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Pri</span><span class="val" id="itemDetailsPrice">—</span></div>
+        </div>
+      </div>
+
+      <div id="itemDetailsGiftWrap" hidden>
+        <div class="goal-details-section-title">Kado</div>
+        <div class="goal-details-grid">
+          <div class="goal-details-field"><span class="lbl">Bay Pa</span><span class="val" id="itemDetailsGiftFrom">—</span></div>
+        </div>
+      </div>
+
+      <div id="itemDetailsElecWrap" hidden>
+        <div class="goal-details-section-title">Elektwonik</div>
+        <div class="goal-details-grid">
+          <div class="goal-details-field"><span class="lbl">Gen Chaje</span><span class="val" id="itemDetailsCharger">—</span></div>
+          <div class="goal-details-field"><span class="lbl">Garanti</span><span class="val" id="itemDetailsWarranty">—</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="itemDetailsDeleteBtn">Efase</button>
+      <button class="btn btn-primary" id="itemDetailsEditBtn" style="margin-left:auto;">Modifye</button>
     </div>
   </div>
 </div>
