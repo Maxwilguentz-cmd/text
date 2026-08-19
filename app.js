@@ -92,7 +92,7 @@ const LS = { tasks:'oslife.tasks', templates:'oslife.templates', events:'oslife.
   notifications:'oslife.notifications', personalization:'oslife.personalization', security:'oslife.security',
   autoBackup:'oslife.autoBackup', statsPrefs:'oslife.statsPrefs', waterMigratedV2:'oslife.waterMigratedV2',
   pendingGoalFinancialActions:'oslife.pendingGoalFinancialActions', customTxCats:'oslife.customTxCats',
-  subscriptions:'oslife.subscriptions', items:'oslife.items' };
+  subscriptions:'oslife.subscriptions', items:'oslife.items', businessProducts:'oslife.businessProducts' };
 // Kle ki kenbe done sansib — yo dwe toujou chifre anvan yo antre nan LocalStorage/IndexedDB.
 const ENCRYPTED_KEYS = new Set([LS.wallets, LS.tx, LS.budgets, LS.plans, LS.notes, LS.noteFolders, LS.journal]);
 // Nòt: LS.security pa chifre paske li dwe li SENKWÒN nan demaraj (anvan lock overlay a),
@@ -5942,6 +5942,13 @@ const BUSINESS_SECTIONS = [
   { key:'financeLink',  icon:'link',          title:'Koneksyon Finans', desc:'Lyen fiti ak Kont ak Tranzaksyon Finans yo.' },
 ];
 
+// ---- Pati 2/10: Enfòmasyon Pwodwi + Pri Angwo (achte) ----
+// Chak pwodwi: { id, name, category, quantity, wholesalePrice, totalCost, createdAt, updatedAt }
+// totalCost toujou rekalkile (quantity * wholesalePrice) — jamè modifye alamen.
+let businessProducts = loadLS(LS.businessProducts, []);
+function persistBusinessProducts(){ saveLS(LS.businessProducts, businessProducts); }
+function bizTotalCost(p){ return (Number(p.quantity) || 0) * (Number(p.wholesalePrice) || 0); }
+
 function renderBusiness(){
   const grid = document.getElementById('businessSectionsGrid');
   if (!grid) return;
@@ -5951,14 +5958,141 @@ function renderBusiness(){
         <i data-lucide="${s.icon}" style="width:16px;height:16px;color:var(--orange);"></i> ${s.title}
       </h4>
       <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">${s.desc}</div>
-      <div class="widget-empty">Estrikti prepare — kontni ap ajoute nan pwochèn pati yo</div>
+      <div id="bizSection-${s.key}"></div>
     </div>
   `).join('');
+  renderBusinessProductInfoSection();
+  renderBusinessPurchaseCostSection();
+  ['extraCosts','pricing','profit','financeLink'].forEach(key => {
+    const wrap = document.getElementById(`bizSection-${key}`);
+    if (wrap) wrap.innerHTML = '<div class="widget-empty">Estrikti prepare — kontni ap ajoute nan pwochèn pati yo</div>';
+  });
   if (window.lucide) lucide.createIcons();
 }
 
-document.getElementById('newBusinessProductBtn')?.addEventListener('click', () => {
-  showToast('Analiz Pwodwi ap disponib nan pwochèn pati yo ✨');
+function renderBusinessProductInfoSection(){
+  const wrap = document.getElementById('bizSection-productInfo');
+  if (!wrap) return;
+  if (!businessProducts.length){
+    wrap.innerHTML = '<div class="widget-empty">Pa gen pwodwi ankò — klike "Nouvo Analiz" pou kòmanse</div>';
+    return;
+  }
+  wrap.innerHTML = businessProducts.map(p => `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;" data-biz-edit="${p.id}">
+      <span>${escapeHtml(p.name)}</span>
+      <b style="font-weight:500;color:var(--text-dim);">${escapeHtml(p.category || '—')}</b>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('[data-biz-edit]').forEach(el => {
+    el.addEventListener('click', () => openBusinessProductModal(businessProducts.find(p => p.id === el.dataset.bizEdit)));
+  });
+}
+
+function renderBusinessPurchaseCostSection(){
+  const wrap = document.getElementById('bizSection-purchaseCost');
+  if (!wrap) return;
+  if (!businessProducts.length){
+    wrap.innerHTML = '<div class="widget-empty">Pa gen done pri acha ankò</div>';
+    return;
+  }
+  const grandTotal = businessProducts.reduce((sum, p) => sum + bizTotalCost(p), 0);
+  wrap.innerHTML = businessProducts.map(p => `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;" data-biz-edit="${p.id}">
+      <span>${escapeHtml(p.name)} <span style="color:var(--text-dim);">(${fmtNum(p.quantity)} × ${fmtHTG(p.wholesalePrice)})</span></span>
+      <b>${fmtHTG(bizTotalCost(p))}</b>
+    </div>
+  `).join('') + `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);"><span>Total Jeneral</span><b>${fmtHTG(grandTotal)}</b></div>`;
+  wrap.querySelectorAll('[data-biz-edit]').forEach(el => {
+    el.addEventListener('click', () => openBusinessProductModal(businessProducts.find(p => p.id === el.dataset.bizEdit)));
+  });
+}
+
+// ---- Business Product Modal ----
+let editingBusinessProductId = null;
+
+function bizProductErrorsEl(){ return document.getElementById('bizProductErrors'); }
+function showBizProductError(msg){
+  const el = bizProductErrorsEl();
+  el.textContent = msg;
+  el.hidden = false;
+}
+function clearBizProductError(){
+  const el = bizProductErrorsEl();
+  el.hidden = true;
+  el.textContent = '';
+}
+
+function updateBizProductTotalLbl(){
+  const qty = parseFloat(document.getElementById('bizProductQty').value);
+  const price = parseFloat(document.getElementById('bizProductPrice').value);
+  const total = (isFinite(qty) ? qty : 0) * (isFinite(price) ? price : 0);
+  document.getElementById('bizProductTotalLbl').textContent = fmtHTG(total);
+}
+
+function openBusinessProductModal(product){
+  editingBusinessProductId = product ? product.id : null;
+  clearBizProductError();
+  document.getElementById('businessProductModalTitle').textContent = product ? 'Modifye Pwodwi' : 'Nouvo Pwodwi';
+  document.getElementById('bizProductName').value = product ? product.name : '';
+  document.getElementById('bizProductCategory').value = product ? (product.category || '') : '';
+  document.getElementById('bizProductQty').value = product ? product.quantity : '';
+  document.getElementById('bizProductPrice').value = product ? product.wholesalePrice : '';
+  document.getElementById('deleteBusinessProductBtn').hidden = !product;
+  updateBizProductTotalLbl();
+  document.getElementById('businessProductModalOverlay').classList.add('open');
+}
+
+function closeBusinessProductModal(){
+  document.getElementById('businessProductModalOverlay').classList.remove('open');
+  editingBusinessProductId = null;
+}
+
+document.getElementById('newBusinessProductBtn')?.addEventListener('click', () => openBusinessProductModal(null));
+document.getElementById('closeBusinessProductModal').addEventListener('click', closeBusinessProductModal);
+document.getElementById('businessProductModalOverlay').addEventListener('click', e => {
+  if (e.target.id === 'businessProductModalOverlay') closeBusinessProductModal();
+});
+['bizProductQty','bizProductPrice'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateBizProductTotalLbl);
+});
+
+document.getElementById('saveBusinessProductBtn').addEventListener('click', () => {
+  const name = document.getElementById('bizProductName').value.trim();
+  const category = document.getElementById('bizProductCategory').value.trim();
+  const qtyRaw = document.getElementById('bizProductQty').value;
+  const priceRaw = document.getElementById('bizProductPrice').value;
+  const quantity = parseFloat(qtyRaw);
+  const wholesalePrice = parseFloat(priceRaw);
+
+  if (!name){ showBizProductError('Mete yon non pou pwodwi a'); return; }
+  if (qtyRaw === '' || !isFinite(quantity) || quantity <= 0){ showBizProductError('Kantite a dwe yon nonb pi gran pase 0'); return; }
+  if (priceRaw === '' || !isFinite(wholesalePrice) || wholesalePrice < 0){ showBizProductError('Pri angwo a dwe yon nonb valab (0 oswa plis)'); return; }
+  clearBizProductError();
+
+  const now = new Date().toISOString();
+  if (editingBusinessProductId){
+    const p = businessProducts.find(x => x.id === editingBusinessProductId);
+    if (p){
+      p.name = name; p.category = category; p.quantity = quantity; p.wholesalePrice = wholesalePrice;
+      p.totalCost = bizTotalCost(p); p.updatedAt = now;
+    }
+  } else {
+    const p = { id: uid(), name, category, quantity, wholesalePrice, createdAt: now, updatedAt: now };
+    p.totalCost = bizTotalCost(p);
+    businessProducts.push(p);
+  }
+  persistBusinessProducts();
+  closeBusinessProductModal();
+  renderBusiness();
+  showToast('Pwodwi anrejistre ✓');
+});
+
+document.getElementById('deleteBusinessProductBtn').addEventListener('click', () => {
+  businessProducts = businessProducts.filter(p => p.id !== editingBusinessProductId);
+  persistBusinessProducts();
+  closeBusinessProductModal();
+  renderBusiness();
+  showToast('Pwodwi efase');
 });
 
 // ==========================================
