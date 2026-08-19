@@ -1124,6 +1124,7 @@ const NAV_ITEMS = [
   ]},
   { section: "Lavi", items: [
     { icon: "wallet", label: "Finans", view:"finance" },
+    { icon: "briefcase", label: "Biznis", view:"business" },
     { icon: "repeat", label: "Abònman", view:"subscriptions" },
     { icon: "shirt", label: "Atik", view:"items" },
     { icon: "graduation-cap", label: "Aprantisaj", view:"learning" },
@@ -1206,6 +1207,7 @@ function showView(view){
   if (view === 'calendar') renderCalendar();
   if (view === 'habits') renderHabits();
   if (view === 'finance') renderFinance();
+  if (view === 'business') renderBusiness();
   if (view === 'subscriptions') renderSubscriptions();
   if (view === 'items') renderItems();
   if (view === 'internet') renderPlans();
@@ -1795,7 +1797,7 @@ const VIEW_LABELS = {
   dashboard:'Dashboard', tasks:'Tach', calendar:'Kalandriye', habits:'Abitid', finance:'Finans',
   learning:'Aprantisaj', goals:'Objektif', projects:'Pwojè', achievements:'Achievements', notes:'Nòt',
   journal:'Jounal', health:'Sante', internet:'Entènèt', timeline:'Istwa Lavi', coach:'Coach AI', settings:'Paramèt',
-  statistics:'Estatistik', subscriptions:'Abònman', items:'Atik',
+  statistics:'Estatistik', subscriptions:'Abònman', items:'Atik', business:'Biznis',
 };
 
 function renderPersonalizationPanel(){
@@ -5910,6 +5912,54 @@ document.getElementById('closePlanModal').addEventListener('click', closePlanMod
 document.getElementById('planModalOverlay').addEventListener('click', e => { if (e.target.id === 'planModalOverlay') closePlanModal(); });
 
 refreshDashboardInternetWidget();
+
+// ==========================================
+// BUSINESS MODULE — FONDASYON (Pati 1/10)
+// ==========================================
+// OBJEKTIF PATI 1: sèlman estrikti paj la + entegrasyon nan navigasyon/router.
+// PA GEN kalkil pwodwi/pri/pwofi/tranzaksyon isit la ankò — sa vin nan
+// pwochèn pati yo (2/10 -> 10/10).
+//
+// ---- Rekonesans achitekti Finans (pou entegrasyon fiti — pa touche) ----
+// Modil Biznis lan PITA ap konekte ak sa yo ki DEJA egziste nan Finans,
+// olye kreye yon dezyèm sistèm finansye oswa yon dezyèm Wallet:
+//   - `wallets` / LS.wallets      -> kont/pòtfèy disponib pou tranzaksyon
+//   - `tx` / LS.tx + persistTx()  -> lis tranzaksyon (income/expense),
+//                                    chak gen { id, walletId, type, amount, category, date }
+//   - `budgets` / LS.budgets      -> limit bidjè pa kategori
+//   - walletBalance(w)            -> kalkil balans yon kont apati tranzaksyon
+//   - EXPENSE_CATS                -> kategori depans ki deja egziste
+//   - secureSave(key, val)        -> menm modèl pèsistans chifre pou itilize
+// Lè Biznis ap anrejistre Achte/Vant pita, li dwe pase pa menm chemen `tx`
+// + persistTx() ki egziste deja — pa dupliye done ni kreye lòt "wallet".
+
+const BUSINESS_SECTIONS = [
+  { key:'productInfo',  icon:'package',       title:'Enfòmasyon Pwodwi', desc:'Non, kategori ak detay pwodwi a.' },
+  { key:'purchaseCost', icon:'shopping-cart', title:'Pri Acha',          desc:'Konbyen pwodwi a te koute pou achte.' },
+  { key:'extraCosts',   icon:'receipt',       title:'Lòt Depans',       desc:'Transpò, taks ak lòt frè anplis.' },
+  { key:'pricing',      icon:'tag',           title:'Pri Vant',         desc:'Pri ou prevwa vann pwodwi a.' },
+  { key:'profit',       icon:'trending-up',   title:'Analiz Pwofi',     desc:'Maj pwofi ak rannman apati kalkil yo.' },
+  { key:'financeLink',  icon:'link',          title:'Koneksyon Finans', desc:'Lyen fiti ak Kont ak Tranzaksyon Finans yo.' },
+];
+
+function renderBusiness(){
+  const grid = document.getElementById('businessSectionsGrid');
+  if (!grid) return;
+  grid.innerHTML = BUSINESS_SECTIONS.map(s => `
+    <div class="card" style="padding:18px;">
+      <h4 style="font-family:var(--font-display);font-size:13.5px;margin-bottom:6px;display:flex;align-items:center;gap:8px;">
+        <i data-lucide="${s.icon}" style="width:16px;height:16px;color:var(--orange);"></i> ${s.title}
+      </h4>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;">${s.desc}</div>
+      <div class="widget-empty">Estrikti prepare — kontni ap ajoute nan pwochèn pati yo</div>
+    </div>
+  `).join('');
+  if (window.lucide) lucide.createIcons();
+}
+
+document.getElementById('newBusinessProductBtn')?.addEventListener('click', () => {
+  showToast('Analiz Pwodwi ap disponib nan pwochèn pati yo ✨');
+});
 
 // ==========================================
 // PROJECTS MODULE
