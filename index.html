@@ -2283,6 +2283,41 @@ select.field, .field-input{background:var(--surface);border:1px solid var(--bord
   </div>
 </div>
 
+<!-- ============ BUSINESS PRODUCT MODAL (Pati 2/10) ============ -->
+<div class="modal-overlay" id="businessProductModalOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="businessProductModalTitle">Nouvo Pwodwi</h3><button class="icon-btn" id="closeBusinessProductModal"><i data-lucide="x"></i></button></div>
+    <div class="modal-body">
+      <div><label>Non Pwodwi</label><input type="text" id="bizProductName" placeholder="Pw. Sak Vwayaj"></div>
+      <div>
+        <label>Kategori Pwodwi</label>
+        <input type="text" id="bizProductCategory" list="bizProductCategoryList" placeholder="Pw. Bagaj, Rad, Elektwonik...">
+        <datalist id="bizProductCategoryList">
+          <option value="Bagaj"></option>
+          <option value="Rad"></option>
+          <option value="Chosèt"></option>
+          <option value="Akseswa"></option>
+          <option value="Elektwonik"></option>
+          <option value="Kosmetik"></option>
+          <option value="Manje/Bwason"></option>
+        </datalist>
+      </div>
+      <div class="form-row">
+        <div><label>Kantite Achte</label><input type="number" id="bizProductQty" placeholder="Pw. 20" min="0" step="any"></div>
+        <div><label>Pri Angwo pa Inite (HTG)</label><input type="number" id="bizProductPrice" placeholder="Pw. 1000" min="0" step="any"></div>
+      </div>
+      <div id="bizProductErrors" style="font-size:11.5px;color:var(--red,#e05252);margin-top:-4px;" hidden></div>
+      <div class="card" style="padding:12px 14px;margin-top:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span>Total Pri Angwo</span><b id="bizProductTotalLbl">0 HTG</b></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="deleteBusinessProductBtn" hidden>Efase</button>
+      <button class="btn btn-primary" id="saveBusinessProductBtn">Anrejistre Pwodwi</button>
+    </div>
+  </div>
+</div>
+
 <!-- QUICK ACTIONS -->
 <!-- ============ PROJECT MODAL ============ -->
 <div class="modal-overlay" id="projectModalOverlay">
